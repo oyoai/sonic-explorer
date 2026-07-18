@@ -30,4 +30,9 @@ def compute_self_similarity_matrix(audio: np.ndarray, sr: int) -> np.ndarray:
         if synced.shape[-1] >= MIN_FRAMES_FOR_RECURRENCE:
             chroma_sync = synced
 
-    return librosa.segment.recurrence_matrix(chroma_sync, mode="affinity", sym=True).astype(np.float32)
+    # self=True: librosa's default (False) explicitly zeroes the main diagonal --
+    # correct for recurrence/repeat-finding (the trivial self-match is noise there),
+    # but wrong for a *self*-similarity matrix, where every moment should read as a
+    # perfect match to itself. Confirmed via inspection: with the default, diag ==
+    # exactly 0.0 across every real song tested, not just "not maximal".
+    return librosa.segment.recurrence_matrix(chroma_sync, mode="affinity", sym=True, self=True).astype(np.float32)

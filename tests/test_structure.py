@@ -1,4 +1,5 @@
 import numpy as np
+import pytest
 
 from sonic_explorer.config import CLAP_SR
 from sonic_explorer.facets.structure import compute_self_similarity_matrix
@@ -24,6 +25,22 @@ def test_self_similarity_matrix_has_finite_values():
 
     assert np.all(np.isfinite(matrix))
     assert matrix.shape[0] > 1
+
+
+def test_self_similarity_matrix_diagonal_is_maximal():
+    """The defining property of a *self*-similarity matrix: every moment must read
+    as a perfect match to itself. librosa.segment.recurrence_matrix defaults to
+    self=False, which explicitly zeroes the diagonal (intentional for recurrence/
+    repeat-finding, wrong here) -- caught by inspecting real output where the
+    diagonal was exactly 0.0 across every song tested, not just non-maximal."""
+    audio = make_sine()
+    matrix = compute_self_similarity_matrix(audio, CLAP_SR)
+    diag = np.diag(matrix)
+
+    assert np.allclose(diag, diag.max())
+    assert diag.max() == pytest.approx(matrix.max(), abs=1e-6)
+    for i in range(matrix.shape[0]):
+        assert matrix[i, i] == matrix[i].max()
 
 
 def test_self_similarity_matrix_falls_back_when_synced_chroma_too_short(monkeypatch):
