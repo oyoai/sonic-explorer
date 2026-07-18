@@ -12,14 +12,18 @@ import numpy as np
 from sonic_explorer.config import ARTIFACTS_DIR
 
 
-def _index_path(facet_name: str) -> Path:
-    return ARTIFACTS_DIR / f"{facet_name}.index"
-
-
 class EmbeddingRepository:
-    def __init__(self, conn: sqlite3.Connection):
+    def __init__(self, conn: sqlite3.Connection, artifacts_dir: str | Path | None = None):
+        """artifacts_dir defaults to the package-local data/artifacts/ (fine for local
+        dev/tests), but Colab callers must pass the Drive-mounted artifacts folder --
+        otherwise the FAISS index would only exist on the ephemeral /content disk and
+        vanish on disconnect, defeating the whole compute-once/resumability point."""
         self.conn = conn
+        self.artifacts_dir = Path(artifacts_dir) if artifacts_dir is not None else ARTIFACTS_DIR
         self._indexes: dict[str, faiss.IndexIDMap2] = {}
+
+    def _index_path(self, facet_name: str) -> Path:
+        return self.artifacts_dir / f"{facet_name}.index"
 
     def _get_or_create_index(self, facet_name: str, dim: int) -> faiss.IndexIDMap2:
         if facet_name not in self._indexes:
@@ -70,20 +74,24 @@ class EmbeddingRepository:
     def index_size(self, facet_name: str) -> int:
         return self._indexes[facet_name].ntotal if facet_name in self._indexes else 0
 
+    def get_vector(self, facet_name: str, segment_id: int) -> np.ndarray:
+        """Fetch a segment's already-computed vector back out of the index --
+        avoids ever needing to reload audio + re-embed for a segment we've already
+        processed (used by retrieval for query-by-segment, and for sanity checks)."""
+        return np.array(self._indexes[facet_name].reconstruct(segment_id), dtype=np.float32)
+
     def save_index(self, facet_name: str) -> None:
         if facet_name not in self._indexes:
             return
-        ARTIFACTS_DIR.mkdir(parents=True, exist_ok=True)
-        faiss.write_index(self._indexes[facet_name], str(_index_path(facet_name)))
+        self.artifacts_dir.mkdir(parents=True, exist_ok=True)
+        faiss.write_index(self._indexes[facet_name], str(self._index_path(facet_name)))
 
     def load_index(self, facet_name: str) -> None:
-        path = _index_path(facet_name)
+        path = self._index_path(facet_name)
         if path.exists():
             self._indexes[facet_name] = faiss.read_index(str(path))
 
     def get_structure_matrix(self, song_id: int) -> np.ndarray:
         """Song-level self-similarity matrix -- the artifact Song X-Ray reads directly,
         outside the facet-vector retrieval path (see structure facet notes, Day 3)."""
-        from sonic_explorer.config import STRUCTURE_DIR
-
-        return np.load(STRUCTURE_DIR / f"{song_id}.npy")
+        return np.load(self.artifacts_dir / "structure" / f"{song_id}.npy")

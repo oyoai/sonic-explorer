@@ -22,6 +22,8 @@ colab = [
 ]
 dev = [
     "pytest",
+    "librosa",
+    "soundfile",
 ]
 
 [build-system]

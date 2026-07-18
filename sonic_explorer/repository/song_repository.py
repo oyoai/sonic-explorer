@@ -40,6 +40,12 @@ class SongRepository:
         song.segments = self.get_segments(song_id)
         return song
 
+    def get_song_by_fma_track_id(self, fma_track_id: int) -> Song | None:
+        row = self.conn.execute("SELECT id FROM songs WHERE fma_track_id = ?", (fma_track_id,)).fetchone()
+        if row is None:
+            return None
+        return self.get_song(row["id"])
+
     def list_songs(self, genre: str | None = None) -> list[Song]:
         if genre is None:
             rows = self.conn.execute("SELECT * FROM songs").fetchall()
