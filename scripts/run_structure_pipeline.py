@@ -26,17 +26,23 @@ def main():
     def on_checkpoint(done, total):
         print(f"  [{done}/{total}] structure matrices computed")
 
-    run_batch_structure(
+    def on_error(track_id, exc):
+        print(f"  WARNING: track {track_id} failed ({type(exc).__name__}: {exc}) -- skipped, will retry next run")
+
+    failed = run_batch_structure(
         manifest_df=manifest,
         audio_dir=AUDIO_DIR,
         song_repo=song_repo,
         structure_dir=STRUCTURE_DIR,
         checkpoint_every=50,
         on_checkpoint=on_checkpoint,
+        on_error=on_error,
     )
 
     n_matrices = len(list(STRUCTURE_DIR.glob("*.npy")))
     print(f"Done. {n_matrices} structure matrices in {STRUCTURE_DIR}")
+    if failed:
+        print(f"{len(failed)} track(s) failed and were skipped: {failed}")
 
 
 if __name__ == "__main__":

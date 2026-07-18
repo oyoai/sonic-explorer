@@ -65,6 +65,32 @@ def test_run_batch_structure_skips_tracks_not_in_db(song_repo, curated_audio, tm
     assert len(list(structure_dir.glob("*.npy"))) == 2
 
 
+def test_run_batch_structure_isolates_per_song_failures(song_repo, curated_audio, tmp_path):
+    """A single malformed/corrupt file (real risk at real-dataset scale) must not
+    take down the whole batch -- regression test for exactly this happening on the
+    real FMA library (a track whose decode was too short even for the framewise
+    chroma fallback)."""
+    audio_dir, manifest = curated_audio
+    song_repo.add_song(Song(filepath="x", fma_track_id=3, title="C", artist="C", genre_top="Folk", duration_sec=10.0))
+    manifest = pd.concat([manifest, pd.DataFrame([{"track_id": 3, "relative_path": "does_not_exist.wav"}])])
+    structure_dir = tmp_path / "structure"
+
+    errors = []
+    failed = run_batch_structure(
+        manifest, audio_dir, song_repo, structure_dir, on_error=lambda track_id, exc: errors.append((track_id, exc))
+    )
+
+    assert failed == [3]
+    assert len(errors) == 1 and errors[0][0] == 3
+
+    song_a = song_repo.get_song_by_fma_track_id(1)
+    song_b = song_repo.get_song_by_fma_track_id(2)
+    song_c = song_repo.get_song_by_fma_track_id(3)
+    assert (structure_dir / f"{song_a.id}.npy").exists()
+    assert (structure_dir / f"{song_b.id}.npy").exists()
+    assert not (structure_dir / f"{song_c.id}.npy").exists()
+
+
 def test_run_batch_structure_is_idempotent(song_repo, curated_audio, tmp_path, monkeypatch):
     audio_dir, manifest = curated_audio
     structure_dir = tmp_path / "structure"
