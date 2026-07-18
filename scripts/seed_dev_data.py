@@ -11,7 +11,7 @@ NOT part of the real pipeline -- dev-only tool, never run against real data.
 import numpy as np
 import soundfile as sf
 
-from sonic_explorer.config import ARTIFACTS_DIR, AUDIO_DIR, CLAP_SR, DB_PATH, STRUCTURE_DIR
+from sonic_explorer.config import ARTIFACTS_DIR, AUDIO_DIR, CLAP_SR, DB_PATH, DEV_DATA_MARKER, STRUCTURE_DIR
 from sonic_explorer.facets.structure import compute_self_similarity_matrix
 from sonic_explorer.models import Song
 from sonic_explorer.pipeline.segment import segment_song
@@ -82,6 +82,8 @@ def main():
             track_id += 1
 
     embedding_repo.save_index("sound")
+    DEV_DATA_MARKER.write_text("Synthetic dev data seeded by scripts/seed_dev_data.py -- delete this file "
+                                "(or overwrite data/artifacts/ with the real sync) once real data lands.\n")
     print(f"Seeded {track_id - 1} songs across {len(GENRES)} genres")
     print(f"DB: {DB_PATH}")
     print(f"Audio: {AUDIO_DIR}")

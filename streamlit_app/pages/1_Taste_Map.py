@@ -8,11 +8,13 @@ import plotly.express as px
 import streamlit as st
 
 from sonic_explorer.analysis.taste_map import compute_taste_map, mean_pool_song_vectors
-from resources import get_repositories
+from resources import get_repositories, show_data_source_banner
 
 st.set_page_config(page_title="Taste Map", page_icon="\U0001F5FA️")
 st.title("Taste Map")
 st.caption("A 2D map of the library clustered by sonic character. Click a point to hear it.")
+
+show_data_source_banner()
 
 song_repo, embedding_repo, retrieval_service = get_repositories()
 
@@ -45,10 +47,17 @@ if df.empty:
     st.info("No embedded songs yet. Run the batch embedding pipeline first.")
     st.stop()
 
+color_by = st.radio(
+    "Color by", options=["cluster", "genre"], horizontal=True,
+    help="'cluster' is what the map discovers on its own (K-means over sound embeddings, no genre "
+         "labels involved). 'genre' overlays the known labels -- compare the two to see whether "
+         "sonic clusters actually line up with genre or cut across it.",
+)
+
 fig = px.scatter(
-    df, x="x", y="y", color="cluster", custom_data=["song_id"],
+    df, x="x", y="y", color=color_by, custom_data=["song_id"],
     hover_data={"title": True, "artist": True, "genre": True, "x": False, "y": False, "cluster": False},
-    title=f"{len(df)} songs, clustered by sound",
+    title=f"{len(df)} songs, colored by {color_by}",
 )
 fig.update_traces(marker=dict(size=10))
 

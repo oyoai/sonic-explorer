@@ -26,6 +26,11 @@ DB_PATH = ARTIFACTS_DIR / "sonic_explorer.db"
 SOUND_INDEX_PATH = ARTIFACTS_DIR / "sound.index"
 STRUCTURE_INDEX_PATH = ARTIFACTS_DIR / "structure.index"
 
+# Marker file written by scripts/seed_dev_data.py -- its presence means the UI is
+# currently pointed at synthetic placeholder data, not the real synced library.
+# Delete it (or just overwrite data/artifacts/ with the real sync) once real data lands.
+DEV_DATA_MARKER = ARTIFACTS_DIR / ".dev_data"
+
 
 def is_colab() -> bool:
     try:

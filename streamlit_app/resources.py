@@ -3,7 +3,7 @@ core package. Every page calls get_repositories() instead of constructing its ow
 
 import streamlit as st
 
-from sonic_explorer.config import ARTIFACTS_DIR, DB_PATH
+from sonic_explorer.config import ARTIFACTS_DIR, DB_PATH, DEV_DATA_MARKER
 from sonic_explorer.repository.db import init_db
 from sonic_explorer.repository.embedding_repository import EmbeddingRepository
 from sonic_explorer.repository.song_repository import SongRepository
@@ -18,3 +18,12 @@ def get_repositories():
     embedding_repo.load_index("sound")
     retrieval_service = RetrievalService(song_repo, embedding_repo)
     return song_repo, embedding_repo, retrieval_service
+
+
+def is_dev_data() -> bool:
+    return DEV_DATA_MARKER.exists()
+
+
+def show_data_source_banner() -> None:
+    if is_dev_data():
+        st.warning("Using synthetic dev data (sine-wave placeholder audio) -- not the real library yet.", icon="\U0001F9EA")

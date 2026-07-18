@@ -5,11 +5,13 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 import streamlit as st
 
-from resources import get_repositories
+from resources import get_repositories, show_data_source_banner
 
 st.set_page_config(page_title="Moment Matcher", page_icon="\U0001F3AF")
 st.title("Moment Matcher")
 st.caption("Pick a moment in a song and find sonically similar moments elsewhere in the library.")
+
+show_data_source_banner()
 
 song_repo, embedding_repo, retrieval_service = get_repositories()
 

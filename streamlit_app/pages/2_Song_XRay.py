@@ -9,11 +9,13 @@ import plotly.graph_objects as go
 import streamlit as st
 
 from sonic_explorer.analysis.taste_map import compute_taste_map, mean_pool_song_vectors
-from resources import get_repositories
+from resources import get_repositories, show_data_source_banner
 
 st.set_page_config(page_title="Song X-Ray", page_icon="\U0001F50D")
 st.title("Song X-Ray")
 st.caption("A song's structural anatomy -- repeated sections show up as bright stripes off the main diagonal.")
+
+show_data_source_banner()
 
 song_repo, embedding_repo, retrieval_service = get_repositories()
 
