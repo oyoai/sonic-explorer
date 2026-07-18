@@ -1,12 +1,16 @@
 """The actual promoted batch job: library-scale version of the single-song embed
 loop in notebooks/audio_deep_dive.ipynb (cells 29-30). Compute-once via
 EmbeddingRepository.status() -- safe to re-run after a Colab disconnect, and skips
-even the audio load (not just the embedding) for songs already fully processed."""
+even the audio load (not just the embedding) for songs already fully processed.
+
+Checkpointing is handled internally (not left to the caller's on_checkpoint
+callback) specifically so embedding_status is only ever marked 'done' for vectors
+that have actually been persisted to disk via save_index() -- see
+EmbeddingRepository.add_to_index() for why that ordering matters."""
 
 from pathlib import Path
 from typing import Callable
 
-import numpy as np
 import pandas as pd
 
 from sonic_explorer.config import CLAP_SR
@@ -31,6 +35,16 @@ def run_batch_embedding(
     import librosa
 
     total = len(manifest_df)
+    pending_confirmation: list[tuple[int, int | None]] = []  # (segment_id, dim), added to FAISS but not yet marked done
+
+    def checkpoint():
+        if not pending_confirmation:
+            return
+        embedding_repo.save_index(facet_name)
+        for seg_id, dim in pending_confirmation:
+            embedding_repo.mark_done(seg_id, facet_name, vector_store_id=seg_id, dim=dim)
+        pending_confirmation.clear()
+
     for i, row in enumerate(manifest_df.itertuples()):
         existing = song_repo.get_song_by_fma_track_id(int(row.track_id))
         if existing and existing.segments and all(
@@ -64,7 +78,12 @@ def run_batch_embedding(
             windows = [audio[int(seg.start_sec * sr):int(seg.end_sec * sr)] for _, seg in pending]
             vectors = sound_facet.embed_batch(windows, sr)
             for (seg_id, _), vector in zip(pending, vectors):
-                embedding_repo.add_vector(facet_name, seg_id, vector)
+                embedding_repo.add_to_index(facet_name, seg_id, vector)
+                pending_confirmation.append((seg_id, vector.shape[-1]))
 
-        if on_checkpoint and (i + 1) % checkpoint_every == 0:
-            on_checkpoint(i + 1, total)
+        if (i + 1) % checkpoint_every == 0:
+            checkpoint()
+            if on_checkpoint:
+                on_checkpoint(i + 1, total)
+
+    checkpoint()  # final flush -- nothing should stay unconfirmed after the run completes

@@ -37,16 +37,38 @@ class EmbeddingRepository:
         ).fetchone()
         return row["status"] if row else "pending"
 
-    def add_vector(self, facet_name: str, segment_id: int, vector: np.ndarray) -> int:
-        """Adds to the facet's FAISS index (id = segment_id) and marks embedding_status 'done'.
-        Returns the vector_store_id (== segment_id, since each facet has its own index)."""
+    def reset_status(self, segment_id: int, facet_name: str) -> None:
+        """Reverts a segment back to 'pending' -- used to repair rows left
+        incorrectly marked 'done' by the pre-fix version of run_batch_embedding
+        (see pipeline/embed_library.py and scripts/repair_orphaned_embeddings.py)."""
+        self.conn.execute(
+            "DELETE FROM embedding_status WHERE segment_id = ? AND facet_name = ?", (segment_id, facet_name)
+        )
+        self.conn.commit()
+
+    def add_to_index(self, facet_name: str, segment_id: int, vector: np.ndarray) -> None:
+        """FAISS add ONLY -- does not touch embedding_status. Batch callers that
+        checkpoint the index periodically (see pipeline/embed_library.py) must use
+        this + defer mark_done() until *after* save_index() actually persists the
+        vector -- otherwise a crash between an immediate mark_done() and the next
+        index checkpoint leaves the DB claiming 'done' for a vector that was never
+        durably saved, which the resumability skip-check then trusts forever."""
         vec = vector.astype(np.float32)
         norm = np.linalg.norm(vec)
         if norm > 0:
             vec = vec / norm
         index = self._get_or_create_index(facet_name, len(vec))
         index.add_with_ids(vec.reshape(1, -1), np.array([segment_id], dtype=np.int64))
-        self.mark_done(segment_id, facet_name, vector_store_id=segment_id, dim=len(vec))
+
+    def add_vector(self, facet_name: str, segment_id: int, vector: np.ndarray) -> int:
+        """Adds to the facet's FAISS index (id = segment_id) AND immediately marks
+        embedding_status 'done' -- fine for callers that save the index right away
+        (dev seeding, tests) or don't checkpoint at all. Batch pipelines that
+        checkpoint periodically should use add_to_index() + deferred mark_done()
+        instead (see run_batch_embedding). Returns the vector_store_id (==
+        segment_id, since each facet has its own index)."""
+        self.add_to_index(facet_name, segment_id, vector)
+        self.mark_done(segment_id, facet_name, vector_store_id=segment_id, dim=vector.shape[-1])
         return segment_id
 
     def mark_done(self, segment_id: int, facet_name: str, vector_store_id: int, dim: int | None = None) -> None:
