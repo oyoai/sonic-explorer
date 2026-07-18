@@ -48,7 +48,11 @@ CREATE TABLE IF NOT EXISTS calibration_ratings (
 
 
 def get_connection(db_path: str | Path) -> sqlite3.Connection:
-    conn = sqlite3.connect(str(db_path))
+    # check_same_thread=False: callers that cache this connection long-lived (e.g.
+    # Streamlit's @st.cache_resource) will see it reused across the framework's
+    # script-rerun thread pool -- reruns are sequential per session, not truly
+    # concurrent, so this is safe for our access pattern.
+    conn = sqlite3.connect(str(db_path), check_same_thread=False)
     conn.execute("PRAGMA foreign_keys = ON")
     conn.row_factory = sqlite3.Row
     return conn
