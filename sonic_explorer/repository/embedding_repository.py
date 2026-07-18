@@ -77,8 +77,10 @@ class EmbeddingRepository:
     def get_vector(self, facet_name: str, segment_id: int) -> np.ndarray:
         """Fetch a segment's already-computed vector back out of the index --
         avoids ever needing to reload audio + re-embed for a segment we've already
-        processed (used by retrieval for query-by-segment, and for sanity checks)."""
-        return np.array(self._indexes[facet_name].reconstruct(segment_id), dtype=np.float32)
+        processed (used by retrieval for query-by-segment, and for sanity checks).
+        FAISS's SWIG binding rejects numpy int types (e.g. from rng.choice(...) or
+        a pandas row) -- cast to plain int defensively."""
+        return np.array(self._indexes[facet_name].reconstruct(int(segment_id)), dtype=np.float32)
 
     def save_index(self, facet_name: str) -> None:
         if facet_name not in self._indexes:

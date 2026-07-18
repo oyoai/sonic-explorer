@@ -7,6 +7,8 @@ CLAP_SR = 48000
 CLAP_MODEL_NAME = "laion/clap-htsat-unfused"
 CLAP_DIM = 512
 
+STRUCTURE_SR = 22050  # standard librosa analysis rate for chroma/beat tracking; independent of CLAP_SR
+
 WINDOW_SEC = 5.0
 HOP_SEC = 2.5  # library-scale hop; wider than the single-song notebook's 1s hop to bound segment count
 
