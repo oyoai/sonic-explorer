@@ -1,0 +1,32 @@
+[project]
+name = "sonic_explorer"
+version = "0.1.0"
+description = "Audio-signal-based music similarity, exploration, and remix engine."
+requires-python = ">=3.10"
+dependencies = [
+    "numpy",
+    "scikit-learn",
+    "faiss-cpu",
+    "plotly",
+    "streamlit",
+    "pandas",
+]
+
+[project.optional-dependencies]
+colab = [
+    "torch",
+    "transformers",
+    "accelerate",
+    "librosa",
+    "soundfile",
+]
+dev = [
+    "pytest",
+]
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+include = ["sonic_explorer*"]
