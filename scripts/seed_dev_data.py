@@ -11,7 +11,8 @@ NOT part of the real pipeline -- dev-only tool, never run against real data.
 import numpy as np
 import soundfile as sf
 
-from sonic_explorer.config import ARTIFACTS_DIR, AUDIO_DIR, CLAP_SR, DB_PATH
+from sonic_explorer.config import ARTIFACTS_DIR, AUDIO_DIR, CLAP_SR, DB_PATH, STRUCTURE_DIR
+from sonic_explorer.facets.structure import compute_self_similarity_matrix
 from sonic_explorer.models import Song
 from sonic_explorer.pipeline.segment import segment_song
 from sonic_explorer.repository.db import init_db
@@ -35,11 +36,13 @@ def make_song_audio(path, freq, duration_sec=SONG_DURATION_SEC, sr=CLAP_SR):
         + 0.01 * rng.standard_normal(len(t))
     ).astype(np.float32)
     sf.write(str(path), audio, sr)
+    return audio
 
 
 def main():
     AUDIO_DIR.mkdir(parents=True, exist_ok=True)
     ARTIFACTS_DIR.mkdir(parents=True, exist_ok=True)
+    STRUCTURE_DIR.mkdir(parents=True, exist_ok=True)
 
     conn = init_db(DB_PATH)
     song_repo = SongRepository(conn)
@@ -54,7 +57,7 @@ def main():
         for i in range(SONGS_PER_GENRE):
             filename = f"dev_{track_id}.wav"
             filepath = AUDIO_DIR / filename
-            make_song_audio(filepath, BASE_FREQ[genre] * (1 + 0.05 * i))
+            audio = make_song_audio(filepath, BASE_FREQ[genre] * (1 + 0.05 * i))
 
             song = Song(
                 filepath=str(filepath),
@@ -72,12 +75,17 @@ def main():
                 vec = genre_centers[genre] + rng.normal(size=EMBED_DIM) * 0.5
                 embedding_repo.add_vector("sound", seg_id, vec.astype(np.float32))
 
+            ssm = compute_self_similarity_matrix(audio, CLAP_SR)
+            np.save(STRUCTURE_DIR / f"{song_id}.npy", ssm)
+
+            print(f"  [{track_id}/{len(GENRES) * SONGS_PER_GENRE}] {song.title}")
             track_id += 1
 
     embedding_repo.save_index("sound")
     print(f"Seeded {track_id - 1} songs across {len(GENRES)} genres")
     print(f"DB: {DB_PATH}")
     print(f"Audio: {AUDIO_DIR}")
+    print(f"Structure matrices: {STRUCTURE_DIR}")
     print(f"Sound index size: {embedding_repo.index_size('sound')}")
 
 
