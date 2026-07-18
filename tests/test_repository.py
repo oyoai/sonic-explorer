@@ -58,6 +58,12 @@ def test_get_song_missing_returns_none(song_repo):
     assert song_repo.get_song(999) is None
 
 
+def test_update_filepath(song_repo):
+    song_id = song_repo.add_song(make_song(track_id=7))
+    song_repo.update_filepath(song_id, "/data/audio/7.mp3")
+    assert song_repo.get_song(song_id).filepath == "/data/audio/7.mp3"
+
+
 def test_list_songs_filters_by_genre(song_repo):
     song_repo.add_song(make_song(track_id=1))
     jazz = Song(

@@ -24,6 +24,10 @@ class SongRepository:
         self.conn.commit()
         return cur.lastrowid
 
+    def update_filepath(self, song_id: int, filepath: str) -> None:
+        self.conn.execute("UPDATE songs SET filepath = ? WHERE id = ?", (filepath, song_id))
+        self.conn.commit()
+
     def get_song(self, song_id: int) -> Song | None:
         row = self.conn.execute("SELECT * FROM songs WHERE id = ?", (song_id,)).fetchone()
         if row is None:
