@@ -6,14 +6,18 @@ venv/
 *.egg-info/
 .pytest_cache/
 
-# data artifacts -- synced from Colab, never committed
+# data artifacts -- synced from Colab, never committed.
+# deploy_data/ is different on purpose: a small stratified subset committed to
+# git so Streamlit Community Cloud has something to run against (see
+# scripts/build_deploy_subset.py) -- these patterns must stay scoped to data/
+# only, or they'd silently also exclude deploy_data/artifacts/*.db and *.index.
 data/audio/
 data/artifacts/
 data/fma_metadata/*.csv
 data/_downloads/
+data/**/*.db
+data/**/*.index
 *.log
-*.db
-*.index
 
 # local env / secrets
 .env

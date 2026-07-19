@@ -8,6 +8,7 @@ import plotly.express as px
 import streamlit as st
 
 from sonic_explorer.analysis.taste_map import compute_taste_map, mean_pool_song_vectors
+from sonic_explorer.config import audio_path_for
 from resources import get_repositories, show_data_source_banner
 
 st.set_page_config(page_title="Taste Map", page_icon="\U0001F5FA️")
@@ -71,6 +72,6 @@ if selected_song_id is not None:
     song = song_repo.get_song(int(selected_song_id))
     st.subheader(f"{song.title} — {song.artist}")
     st.caption(f"Genre: {song.genre_top}")
-    st.audio(song.filepath)
+    st.audio(str(audio_path_for(song)))
 else:
     st.info("Click a point on the map to hear that song.")

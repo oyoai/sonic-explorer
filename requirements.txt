@@ -1,0 +1,7 @@
+# Streamlit Community Cloud reads this at repo root. -e . installs sonic_explorer
+# itself (making it importable) plus pulls in exactly pyproject.toml's base
+# dependencies -- single source of truth, no version drift between local dev and
+# deployment. The colab/dev extras (torch, transformers, librosa) are NOT needed
+# here: the deployed app only reads precomputed artifacts, it never runs CLAP
+# inference or structure computation itself.
+-e .

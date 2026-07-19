@@ -5,6 +5,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 import streamlit as st
 
+from sonic_explorer.config import audio_path_for
 from resources import get_repositories, show_data_source_banner
 
 st.set_page_config(page_title="Moment Matcher", page_icon="\U0001F3AF")
@@ -34,7 +35,7 @@ moment_choice = st.select_slider("Moment", options=range(len(segments)), format_
 query_segment = segments[moment_choice]
 
 st.markdown(f"**Listening at {query_segment.start_sec:.1f}s – {query_segment.end_sec:.1f}s:**")
-st.audio(song.filepath, start_time=query_segment.start_sec)
+st.audio(str(audio_path_for(song)), start_time=query_segment.start_sec)
 
 st.markdown("### Match by: Sound")
 
@@ -51,5 +52,5 @@ else:
         pct = max(0.0, match.score) * 100
         st.markdown(f"**{pct:.0f}% sonic match** — {match.song.title} by {match.song.artist} ({match.song.genre_top})")
         st.caption(f"at {match.segment.start_sec:.1f}s – {match.segment.end_sec:.1f}s")
-        st.audio(match.song.filepath, start_time=match.segment.start_sec)
+        st.audio(str(audio_path_for(match.song)), start_time=match.segment.start_sec)
         st.divider()
