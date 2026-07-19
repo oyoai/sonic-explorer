@@ -88,3 +88,35 @@ def test_compute_taste_map_handles_single_song():
     result = compute_taste_map({1: np.array([1.0, 2.0, 3.0])})
     assert len(result.points) == 1
     assert result.points[0].song_id == 1
+
+
+def test_compute_taste_map_ica_separates_distinct_clusters():
+    rng = np.random.default_rng(0)
+    cluster_a = {i: rng.normal(loc=[10, 10, 10], scale=0.1) for i in range(8)}
+    cluster_b = {i + 100: rng.normal(loc=[-10, -10, -10], scale=0.1) for i in range(8)}
+    song_vectors = {**cluster_a, **cluster_b}
+
+    result = compute_taste_map(song_vectors, n_clusters=2, method="ica")
+
+    assert len(result.points) == 16
+    xs_a = [p.x for p in result.points if p.song_id < 100]
+    xs_b = [p.x for p in result.points if p.song_id >= 100]
+    # clustering (on the full embedding, not the projection) should still cleanly
+    # separate the two groups regardless of which projection method is used for display
+    labels_a = {p.cluster for p in result.points if p.song_id < 100}
+    labels_b = {p.cluster for p in result.points if p.song_id >= 100}
+    assert len(labels_a) == 1
+    assert len(labels_b) == 1
+    assert labels_a != labels_b
+    assert all(np.isfinite(x) for x in xs_a + xs_b)
+
+
+def test_compute_taste_map_ica_handles_empty_and_single_song():
+    assert compute_taste_map({}, method="ica").points == []
+    result = compute_taste_map({1: np.array([1.0, 2.0, 3.0])}, method="ica")
+    assert len(result.points) == 1
+
+
+def test_compute_taste_map_unknown_method_raises():
+    with pytest.raises(ValueError):
+        compute_taste_map({1: np.array([1.0, 2.0])}, method="tsne")

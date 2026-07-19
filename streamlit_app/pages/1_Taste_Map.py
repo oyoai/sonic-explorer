@@ -21,9 +21,9 @@ song_repo, embedding_repo, retrieval_service = get_repositories()
 
 
 @st.cache_data
-def build_taste_map_df(_song_repo, _embedding_repo, cache_key):
+def build_taste_map_df(_song_repo, _embedding_repo, cache_key, method):
     song_vectors = mean_pool_song_vectors(_song_repo, _embedding_repo)
-    result = compute_taste_map(song_vectors)
+    result = compute_taste_map(song_vectors, method=method)
     songs_by_id = {s.id: s for s in _song_repo.list_songs()}
     return pd.DataFrame([
         {
@@ -40,9 +40,17 @@ def build_taste_map_df(_song_repo, _embedding_repo, cache_key):
     ])
 
 
+method = st.radio(
+    "Projection", options=["pca", "ica"], format_func=lambda m: m.upper(), horizontal=True,
+    help="PCA finds the directions of maximum spread across the library. ICA looks for statistically "
+         "independent directions instead -- sometimes these land on more individually-nameable "
+         "qualities than PCA's axes, sometimes they're just as hard to name. Use 'Inspect these axes' "
+         "below to judge for a given library, don't just take the claim on faith.",
+)
+
 # index_size is a crude but effective cache key -- recompute only when the
 # synced embeddings actually change (new batch, more segments done)
-df = build_taste_map_df(song_repo, embedding_repo, embedding_repo.index_size("sound"))
+df = build_taste_map_df(song_repo, embedding_repo, embedding_repo.index_size("sound"), method)
 
 if df.empty:
     st.info("No embedded songs yet. Run the batch embedding pipeline first.")
@@ -55,10 +63,28 @@ color_by = st.radio(
          "sonic clusters actually line up with genre or cut across it.",
 )
 
+with st.expander(f"Inspect these axes ({method.upper()})"):
+    st.caption(
+        "The songs at each axis's extremes -- listen to a few from each end and see if you'd name "
+        "what that axis represents (e.g. 'quiet/ambient vs. loud/aggressive'), or if it doesn't "
+        "resolve into anything nameable. This is the actual test of whether an axis is interpretable, "
+        "not just an assumption about the method."
+    )
+    axis_col1, axis_col2 = st.columns(2)
+    for axis, col in [("x", axis_col1), ("y", axis_col2)]:
+        with col:
+            st.markdown(f"**Axis: {axis}**")
+            st.caption("Highest")
+            for _, row in df.nlargest(3, axis).iterrows():
+                st.caption(f"{row['title']} — {row['artist']} ({row['genre']})")
+            st.caption("Lowest")
+            for _, row in df.nsmallest(3, axis).iterrows():
+                st.caption(f"{row['title']} — {row['artist']} ({row['genre']})")
+
 fig = px.scatter(
     df, x="x", y="y", color=color_by, custom_data=["song_id"],
     hover_data={"title": True, "artist": True, "genre": True, "x": False, "y": False, "cluster": False},
-    title=f"{len(df)} songs, colored by {color_by}",
+    title=f"{len(df)} songs, colored by {color_by} ({method.upper()} projection)",
 )
 fig.update_traces(marker=dict(size=10))
 

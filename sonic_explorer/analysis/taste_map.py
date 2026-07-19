@@ -1,11 +1,21 @@
-"""PCA + K-means over per-song mean-pooled sound embeddings. Plain Python, no
-Streamlit import anywhere in this file -- see spec 8.3's core/interface separation."""
+"""PCA/ICA + K-means over per-song mean-pooled sound embeddings. Plain Python,
+no Streamlit import anywhere in this file -- see spec 8.3's core/interface
+separation.
+
+PCA finds the directions of maximum variance; ICA finds statistically
+independent directions instead -- a real, open question (spec section 6) is
+whether ICA's independent components land on more individually-nameable
+qualities ("sound axes") than PCA's variance-maximizing ones, or are just as
+opaque in practice. compute_taste_map() supports both via `method` so the UI
+can show them side by side rather than picking one -- see
+streamlit_app/pages/1_Taste_Map.py's axis-inspection view, the actual
+evaluation surface for that question."""
 
 from dataclasses import dataclass
 
 import numpy as np
 from sklearn.cluster import KMeans
-from sklearn.decomposition import PCA
+from sklearn.decomposition import PCA, FastICA
 
 from sonic_explorer.repository.embedding_repository import EmbeddingRepository
 from sonic_explorer.repository.song_repository import SongRepository
@@ -43,8 +53,15 @@ class TasteMapResult:
 
 
 def compute_taste_map(
-    song_vectors: dict[int, np.ndarray], n_clusters: int = 8, random_state: int = 42
+    song_vectors: dict[int, np.ndarray], n_clusters: int = 8, random_state: int = 42, method: str = "pca"
 ) -> TasteMapResult:
+    """method: "pca" (variance-maximizing, the Core default) or "ica"
+    (statistically independent components, Strong tier -- see module
+    docstring). Clustering always runs on the full embedding, not the 2D
+    projection, regardless of method -- projection is for display only."""
+    if method not in ("pca", "ica"):
+        raise ValueError(f"Unknown method {method!r}, expected 'pca' or 'ica'")
+
     song_ids = list(song_vectors.keys())
     if not song_ids:
         return TasteMapResult(points=[])
@@ -53,7 +70,11 @@ def compute_taste_map(
 
     if matrix.shape[0] >= 2:
         n_components = min(2, matrix.shape[0], matrix.shape[1])
-        coords = PCA(n_components=n_components, random_state=random_state).fit_transform(matrix)
+        if method == "pca":
+            reducer = PCA(n_components=n_components, random_state=random_state)
+        else:
+            reducer = FastICA(n_components=n_components, random_state=random_state, max_iter=1000)
+        coords = reducer.fit_transform(matrix)
         if n_components == 1:
             coords = np.column_stack([coords[:, 0], np.zeros(len(song_ids))])
     else:
