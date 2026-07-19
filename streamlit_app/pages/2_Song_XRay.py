@@ -10,6 +10,8 @@ import streamlit as st
 
 from sonic_explorer.analysis.taste_map import compute_taste_map, mean_pool_song_vectors
 from sonic_explorer.config import audio_path_for
+from sonic_explorer.facets.fingerprint import structure_fingerprint
+from components.plotting import fingerprint_thumbnail
 from resources import get_repositories, show_data_source_banner
 
 st.set_page_config(page_title="Song X-Ray", page_icon="\U0001F50D")
@@ -33,14 +35,37 @@ st.subheader(f"{song.title} — {song.artist}")
 st.caption(f"Genre: {song.genre_top}")
 st.audio(str(audio_path_for(song)))
 
+# Fetched once, used by both the fingerprint row and the timeline chart below.
+try:
+    timeline = embedding_repo.get_structure_timeline(song.id)
+except FileNotFoundError:
+    timeline = None
+
+try:
+    matrix = embedding_repo.get_structure_matrix(song.id)
+except FileNotFoundError:
+    matrix = None
+
+if matrix is not None or (timeline is not None and timeline.sound_fingerprint is not None):
+    st.markdown("#### Fingerprint")
+    st.caption("A visual identity for the song, derived from its structure and sound -- also usable as an album-art fallback.")
+    col1, col2 = st.columns(2)
+    if matrix is not None:
+        with col1:
+            st.plotly_chart(fingerprint_thumbnail(structure_fingerprint(matrix), "Structure"), width="stretch")
+    if timeline is not None and timeline.sound_fingerprint is not None:
+        with col2:
+            st.plotly_chart(fingerprint_thumbnail(timeline.sound_fingerprint, "Sound"), width="stretch")
+
 st.markdown("#### Structure timeline")
 st.caption(
     "Each colored block is a stretch of the song. Same color = similar-sounding sections "
-    "(e.g. a verse repeating later) -- discovered automatically from the audio, not labeled by us."
+    "(e.g. a verse repeating later) -- discovered automatically from the audio, not labeled by us. "
+    "Click a block to loop just that section."
 )
-try:
-    timeline = embedding_repo.get_structure_timeline(song.id)
 
+selected_segment_idx = None
+if timeline is not None:
     palette = px.colors.qualitative.Set2
     unique_labels = sorted(set(timeline.segment_labels.tolist()))
     color_map = {lab: palette[i % len(palette)] for i, lab in enumerate(unique_labels)}
@@ -55,6 +80,7 @@ try:
         orientation="h",
         marker_color=[color_map[lab] for lab in timeline.segment_labels.tolist()],
         marker_line_width=0,
+        customdata=[[i] for i in range(len(durations))],
         hovertext=hover_text,
         hoverinfo="text",
     ))
@@ -66,8 +92,19 @@ try:
         margin=dict(l=10, r=10, t=10, b=40),
         bargap=0,
     )
-    st.plotly_chart(timeline_fig, width="stretch")
-except FileNotFoundError:
+    event = st.plotly_chart(timeline_fig, width="stretch", on_select="rerun", key="structure_timeline_chart")
+
+    if event and event.selection and event.selection.points:
+        selected_segment_idx = event.selection.points[0]["customdata"][0]
+
+    if selected_segment_idx is not None:
+        seg_start = float(timeline.segment_starts[selected_segment_idx])
+        seg_end = float(timeline.segment_ends[selected_segment_idx])
+        st.markdown(f"**Looping section:** {seg_start:.1f}s – {seg_end:.1f}s")
+        st.audio(str(audio_path_for(song)), start_time=seg_start, end_time=seg_end, loop=True)
+    else:
+        st.caption("Click a colored block above to loop just that section.")
+else:
     st.warning("No structure timeline computed for this song yet.")
 
 st.markdown("#### Position in the Taste Map")
@@ -108,16 +145,15 @@ else:
 
 with st.expander("Technical detail: raw self-similarity matrix"):
     st.caption(
-        "The matrix the timeline above is derived from. Every moment matches itself perfectly, so the "
-        "main diagonal is always brightest; bright parallel stripes off the diagonal mark repeated sections."
+        "The matrix the timeline above is derived from. The main diagonal is deliberately left blank -- "
+        "bright parallel stripes off the diagonal are what mark repeated sections."
     )
-    try:
-        matrix = embedding_repo.get_structure_matrix(song.id)
+    if matrix is not None:
         heatmap = px.imshow(
             matrix, color_continuous_scale="Magma", origin="lower",
             labels=dict(x="beat", y="beat", color="similarity"),
         )
         heatmap.update_layout(height=420)
         st.plotly_chart(heatmap, width="stretch")
-    except FileNotFoundError:
+    else:
         st.warning("No structure matrix computed for this song yet.")

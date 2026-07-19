@@ -2,15 +2,24 @@
 
 ## 1. Vision
 
-A music player and exploration platform where similarity is based on the actual
-**audio signal** — sound, structure, and harmony — not metadata, tags, or genre
-labels. The system is explainable (every match comes with a plain-language reason),
-explorable (a visual map you wander, not a search box you query), and generative
-(it can combine songs into new transitions and mixtapes based on what it's learned
-about them).
+An AI-driven music exploration platform: explore your library by the actual **audio
+signal** — sound, structure, and harmony — not metadata, tags, or genre labels. The
+exploration and the underlying models (facets, embeddings, clustering, fingerprints,
+the agent layer) are the point of the product. Playback exists to support exploring:
+whatever you click on, hover over, or match to should just play, immediately, so
+exploring never feels disconnected from listening. It's in service of the
+exploration, not a separate "player app" identity competing for attention.
 
 **One-line pitch:** *"Explore your music library by how it actually sounds, see why
-things are similar, and let the system remix them for you."*
+things are similar, and let the system remix them for you — while you listen."*
+
+**Playback support** (present wherever exploration happens, not a separate feature
+set): play/pause, seek, and a sense of "what's playing now," available inline in the
+Taste Map, Song X-Ray, Moment Matcher, and Mixtape Builder alike, so clicking a point
+or a match immediately plays it. Loop control for a selected section (from structure
+segmentation) supports close listening while exploring structure. Pitch/speed
+adjustment (regenerate-on-release, reuses the Mixtape Builder's tempo-compatibility
+machinery) supports exploring how a match holds up under small changes.
 
 ---
 
@@ -43,23 +52,147 @@ one default user record) is enough to demonstrate the feature; full accounts wou
 scope with no course-session mapping to justify it.
 
 ### 2.2 Song X-Ray
-Pick any song → see its structural anatomy (self-similarity matrix rendered as a
-visual "shape" — verse/chorus/bridge segmentation) and its position in the Taste Map.
-Makes the structure-analysis work visible as its own feature, not a buried step.
+Pick any song → see its structural anatomy and other per-song visual aspects, plus
+its position in the Taste Map.
+
+**Structure view (Core)**: a segmented timeline as the primary view — a single
+horizontal color-coded bar representing the song's duration, where identical colors
+mean repeated/similar sections (e.g. "green = verse, blue = chorus, green repeats").
+The raw self-similarity matrix is kept as a secondary "technical detail" view
+underneath, not the main thing a viewer sees first. Note: the matrix's diagonal is
+intentionally zeroed by `librosa.segment.recurrence_matrix` (excluding trivial
+self/near-self similarity so it doesn't drown out real repeated-section stripes) —
+this is expected behavior, not a bug, and the visualizations above are designed not
+to rely on a visible diagonal as a landmark.
+
+**Multi-strip view (Strong, sequenced after the radar chart overlay below)**: stacked,
+aligned horizontal strips over the same timeline — waveform + beat grid, energy/
+loudness curve (RMS), spectral brightness (spectral centroid), chroma/key (once the
+harmony facet exists), and the structure segments strip. Richer than more informative
+on its own — sequenced after the radar chart since that has a stronger
+explainability payoff for the same rough effort.
+
+**Radar chart "song DNA" overlay (Strong, build first)**: aggregate each song into a
+handful of per-facet numbers (e.g. average tempo, energy, brightness, harmonic
+complexity, rhythmic density) plotted as a radar/spider chart. Overlaying two songs'
+radar charts (semi-transparent, distinct colors) makes agreement/divergence visually
+obvious at a glance — where shapes overlap, they agree; where one bulges past the
+other, they diverge. Reuses facet computations already being done, so it's cheap
+once per-song aggregate stats exist. Ties directly into Moment Matcher's "why did
+these match" explanation — shown side-by-side with the LLM's text explanation.
+
+**Loop a section (Core)**: trim playback to a selected start/end — most naturally a
+segment from the structure analysis (e.g. loop just the chorus) — and loop it via the
+player, no audio regeneration needed. Part of baseline listening functionality, not
+an add-on.
+
+**Pitch/speed adjustment (Strong)**: not live/continuous — Streamlit's player doesn't
+support manipulating audio while it plays. The realistic version: adjust a
+pitch/speed control, release it, regenerate the clip (`librosa.effects.pitch_shift` /
+`time_stretch`, or `pyrubberband` for higher quality) and reload the player with the
+result. Reuses the same time-stretching machinery the Mixtape Builder already needs
+for tempo-compatible transitions — this is surfacing existing machinery as a
+user-facing control, not new modeling work.
+
+**Radar chart as query (Strong, same tier as the static overlay, additive — not a
+replacement for it)**: let the user drag each radar axis by hand to sculpt a target
+profile (e.g. high energy, low brightness, high rhythmic density) rather than only
+picking an existing song as reference. That target becomes a point in the same
+aggregate-stat space every song lives in, and the system does nearest-neighbor search
+against it — "find songs closest to the shape I just drew." Reuses the exact same
+per-song aggregate stats as the static overlay, so it's a small addition, not new
+infrastructure. After matching, overlay the user's drawn target with the actual
+matched song's radar, so the user can see how close the match really is. This also
+gives the conversational agent layer a natural hook later — a request like "make it
+moodier" can just nudge the same radar values programmatically, sharing one mechanism
+between manual and agent-driven interaction.
+
+On slider release (not continuous drag), automatically re-run the nearest-neighbor
+search and switch playback to the new top match, with a short crossfade (a second or
+two of overlap) rather than an abrupt cut. This is the buildable version of "the
+matched song reacts as I adjust the chart" — Streamlit reruns on each interaction
+rather than maintaining a continuous audio stream, so this fits the framework's grain
+naturally. *(Future work, not planned: continuous real-time audio morphing while
+actively dragging — would need a persistent low-latency audio stream, realistically a
+JS-based web audio app rather than Streamlit; a genuinely different, larger build than
+anything else in this spec.)*
+
+*(Future work, not planned: a richer D3.js/Sigma.js-style interactive network
+visualization for the Taste Map or a "how songs connect" secondary view — genuinely
+more powerful and visually distinctive than what Plotly/PyVis can do within Streamlit,
+but it's a separate JS skillset and embedding approach, a bigger lift than anything
+else in this spec. Plotly (already in use) or PyVis remain the realistic in-scope
+options for interactive graph/network visuals.)*
 
 ### 2.3 Moment Matcher
 Pick a specific ~4–8 second moment in a song → get ranked matches from elsewhere in
 the library, each with a plain-language explanation of *why* it matched. This is the
 core proof-of-concept: does audio-signal similarity actually work.
 
-**Facets** — similarity isn't one thing, so matching happens along three separate,
-independently-computed axes:
-- **Sound/timbre** — CLAP embeddings (or MFCC fallback) — texture, instrumentation
-- **Harmony** — chroma features — key, chord color, tonal similarity
-- **Structure** — self-similarity descriptors — the shape/arrangement of a song
+**Facets** — similarity isn't one thing, so matching happens along several separate,
+independently-computed aspects of a song:
 
-UI framing stays plain-language: a toggle or blend slider — *"Match by: Sound /
-Structure / Harmony"** — never "cosine similarity" or "embedding dimension" on screen.
+*Whole-mix facets:*
+- **Sound/timbre** — CLAP embeddings (or MFCC fallback) — overall texture,
+  instrumentation, production character
+- **Harmony** — chroma features — key, chord color, tonal similarity
+- **Structure** — self-similarity descriptors — the shape/arrangement of a song, with
+  a structural-confidence score (see Song X-Ray) distinguishing clearly-sectioned
+  songs from abstract/through-composed ones
+- **Abstractivity** — the structural-confidence/novelty-curve-flatness measure,
+  exposed as its own facet: how strongly a song repeats in clear sections vs. evolves
+  gradually
+- **Surprise/predictability** — a research-grounded proxy (drawing on music-cognition
+  work on expectation violation, e.g. Huron) measuring how unexpected a moment is
+  given what preceded it — harmonic surprise (prediction error over the chroma time
+  series) and dynamic surprise (sudden energy/RMS jumps after a low-variance stretch)
+  combined into a surprise-over-time curve. This is a proxy correlated with
+  frisson-inducing moments in the research literature, not a direct physiological
+  measurement — framed that way explicitly, not oversold. Distinct from the other
+  facets in that it's about a moment's relationship to what came before it in the
+  same song, not a cross-song comparison.
+
+*Stem-separated facets* (via a pretrained source-separation model, e.g. Demucs —
+splits a track into vocals/drums/bass/other before computing similarity, rather than
+only ever comparing the full mixed-down song):
+- **Vocal** — isolated vocal stem, voice/delivery similarity independent of the
+  backing
+- **Drums** — isolated drum stem
+- **Bass** — isolated bass stem
+- **Instrumental/backing** — the "other" stem (or full mix minus vocals) — general
+  backing-track similarity
+
+*Flagged as harder, real research-level future work, not now:*
+- **Guitar** specifically — mainstream separation models don't isolate guitar as its
+  own stem (it's lumped into "other" along with keys/synths); genuine guitar-only
+  separation is a less mature research area
+- **Effects/accents** (reverb, distortion, delay) — not a separable stem, would need
+  dedicated feature engineering (e.g. reverb decay estimation, distortion/clipping
+  measures) rather than a separation model
+- **Lyrics/meaning** — semantic similarity of what a song's about, via transcription
+  (Whisper or similar) + text embedding, once vocals are isolated
+
+*Set aside, not measurable from audio alone:* frisson itself (a subjective
+physiological response) — the surprise/predictability facet above is the measurable,
+research-grounded proxy, kept explicitly distinct from a frisson claim.
+
+Each stem-separated facet reuses the exact same `Facet` interface and registry as the
+whole-mix ones — a "vocal similarity" facet is just `SoundFacet` run on an isolated
+audio stream rather than the full mix, no architecture change needed.
+
+**Selecting facets — allow any subset, including all, shown side by side rather than
+blended by default:** pick one facet → ranked matches for just that aspect. Pick
+several (or all) → each facet's own top matches shown in its own panel, not averaged
+into one score — a forced average can hide the interesting case where a song matches
+strongly on one facet (e.g. vocal timbre) and not at all on another (e.g.
+instrumental) — which is itself a real, presentable finding, not noise to smooth
+over. The weighted-blend slider (see the radar-chart-as-query feature) still has a
+place *within* this — once a subset is chosen, optionally blend those into one
+combined ranking — but "show each aspect separately" is the default view.
+
+UI framing stays plain-language regardless of how many facets are active: labeled
+toggles/panels per aspect (e.g. "Vocal", "Drums", "Harmony") — never "cosine
+similarity" or "embedding dimension" on screen.
 
 ### 2.4 Mixtape Builder
 Given a starting song (and optionally a vibe/duration request), the system chains
@@ -75,9 +208,61 @@ The agent decides which facet(s) to weight, calls the retrieval/compatibility to
 and returns results with explanations — turning the module toggles into a
 conversation for non-technical users.
 
----
+### 2.6 Song Fingerprints (visual identity, Core + Strong)
+Each song gets a small visual "fingerprint" per facet, used both as an album-art
+fallback (FMA's art coverage is inconsistent — worth checking coverage on the curated
+set early) and as a genuine visual identity throughout the app:
 
-## 3. Underlying Techniques
+- **Structure fingerprint (Core)**: a small downsampled tile of the self-similarity
+  matrix — reuses the existing structure computation, just rendered small.
+- **Sound fingerprint (Core)**: a small mel-spectrogram/MFCC-derived thumbnail —
+  captures acoustic texture visually; doesn't require CLAP, cheap once audio is
+  loaded.
+- **Harmony fingerprint (Strong)**: a small chroma-gram strip, built alongside the
+  harmony facet once it exists.
+- **Composite fingerprint (Strong)**: the three facet fingerprints combined into one
+  image via RGB-channel overlay — structure → red, harmony → green, sound → blue,
+  each normalized to grayscale intensity first. Where all three agree the composite
+  reads bright/white; where they diverge, distinct color casts appear. This is a real
+  technique (comparable to false-color scientific imaging combining separate
+  wavelength channels), not just a visual flourish, and gives a legitimate
+  methodology point: three similarity dimensions encoded as the three channels of one
+  image. Two songs similar in structure but not harmony would show similarly-patterned
+  but differently-colored composites — genuinely informative, not decorative.
+- **Rendering choice**: use perceptually-uniform colormaps (viridis, magma, plasma —
+  matplotlib built-ins) for the individual fingerprints rather than flat two-tone
+  heatmaps — these are an actual data-visualization standard (color intensity maps
+  linearly to value, avoiding misread intensity), and they produce genuinely rich,
+  gradient-like color without being decorative for its own sake. The composite's
+  blended coloring emerges naturally from stacking three continuous channels, giving
+  an organic "beautiful gradient" effect that's actually load-bearing data, not
+  applied polish — this is the intended alternative to decorative gradients/glow
+  effects, which read as generic rather than considered (see UI notes elsewhere in
+  this spec).
+
+### 2.7 Visualization Layer
+
+**Live sound visualization (during playback)**: visual response to the audio as it
+actually plays, not just static pre-computed analysis images — a waveform that
+scrubs/highlights with playback position, a live frequency/spectrum display, or a
+particle/bar visualizer reacting to the audio's amplitude and frequency content in
+real time. Makes listening itself part of the exploration experience, not just a
+background activity while looking at static charts. Can draw on the same underlying
+signal data as the fingerprints (spectral/energy features) — a live view of the same
+information that's shown statically elsewhere.
+
+**Relationship/network graph view**: an alternative way to see how songs relate,
+alongside the Taste Map's spatial view — songs as nodes, edges connecting genuinely
+similar songs (per facet or blended), so relationships are visible as an explicit
+graph rather than only inferred from proximity on a 2D map. Useful as its own
+exploration mode: start at one song, see its direct neighbors, follow an edge to a
+neighbor's neighbors, discover paths through the library rather than only viewing it
+from above. Built with Plotly or PyVis (NetworkX for the underlying graph
+structure/layout) to stay within the existing Python/Streamlit stack — see the
+future-work note earlier in this section on more advanced (D3.js-style) network
+visualization tooling if there's ever room to go further.
+
+---
 
 | Capability | Technique | Course session |
 |---|---|---|

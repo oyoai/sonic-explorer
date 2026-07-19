@@ -145,3 +145,57 @@ def test_search_ranks_closest_vector_first(embedding_repo, song_repo):
 def test_search_on_empty_index_returns_empty_list(embedding_repo):
     results = embedding_repo.search("sound", np.array([1.0, 0.0], dtype=np.float32), k=5)
     assert results == []
+
+
+def test_get_structure_matrix_round_trips(conn, tmp_path):
+    repo = EmbeddingRepository(conn, artifacts_dir=tmp_path)
+    (tmp_path / "structure").mkdir()
+    matrix = np.random.default_rng(0).random((10, 10)).astype(np.float32)
+    np.save(tmp_path / "structure" / "5.npy", matrix)
+
+    loaded = repo.get_structure_matrix(5)
+    assert np.array_equal(loaded, matrix)
+
+
+def test_get_structure_matrix_missing_raises(conn, tmp_path):
+    # uses an isolated tmp artifacts_dir, not the shared embedding_repo fixture's
+    # default (config.ARTIFACTS_DIR) -- that points at this project's real data/
+    # artifacts/, where song_id 999 genuinely exists among the 1400 real songs
+    repo = EmbeddingRepository(conn, artifacts_dir=tmp_path)
+    (tmp_path / "structure").mkdir()
+    with pytest.raises(FileNotFoundError):
+        repo.get_structure_matrix(999)
+
+
+def test_get_structure_timeline_round_trips_including_fingerprint(conn, tmp_path):
+    repo = EmbeddingRepository(conn, artifacts_dir=tmp_path)
+    (tmp_path / "structure").mkdir()
+    fp = np.random.default_rng(0).random((32, 32)).astype(np.float32)
+    np.savez(
+        tmp_path / "structure" / "5_timeline.npz",
+        starts=np.array([0.0, 5.0], dtype=np.float32),
+        ends=np.array([5.0, 10.0], dtype=np.float32),
+        labels=np.array([0, 1], dtype=np.int32),
+        sound_fp=fp,
+    )
+
+    timeline = repo.get_structure_timeline(5)
+    assert list(timeline.segment_starts) == [0.0, 5.0]
+    assert list(timeline.segment_ends) == [5.0, 10.0]
+    assert list(timeline.segment_labels) == [0, 1]
+    assert np.array_equal(timeline.sound_fingerprint, fp)
+
+
+def test_get_structure_timeline_missing_fingerprint_key_is_none(conn, tmp_path):
+    """Backward compat: timeline files written before sound fingerprints existed."""
+    repo = EmbeddingRepository(conn, artifacts_dir=tmp_path)
+    (tmp_path / "structure").mkdir()
+    np.savez(
+        tmp_path / "structure" / "5_timeline.npz",
+        starts=np.array([0.0], dtype=np.float32),
+        ends=np.array([10.0], dtype=np.float32),
+        labels=np.array([0], dtype=np.int32),
+    )
+
+    timeline = repo.get_structure_timeline(5)
+    assert timeline.sound_fingerprint is None

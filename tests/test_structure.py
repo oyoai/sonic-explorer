@@ -33,20 +33,17 @@ def test_self_similarity_matrix_has_finite_values():
     assert matrix.shape[0] > 1
 
 
-def test_self_similarity_matrix_diagonal_is_maximal():
-    """The defining property of a *self*-similarity matrix: every moment must read
-    as a perfect match to itself. librosa.segment.recurrence_matrix defaults to
-    self=False, which explicitly zeroes the diagonal (intentional for recurrence/
-    repeat-finding, wrong here) -- caught by inspecting real output where the
-    diagonal was exactly 0.0 across every song tested, not just non-maximal."""
+def test_self_similarity_matrix_diagonal_is_deliberately_zeroed():
+    """librosa.segment.recurrence_matrix defaults to self=False, which zeroes the
+    main diagonal -- a spec decision, not an oversight: a zeroed diagonal keeps
+    trivial self/near-self similarity from drowning out the real repeated-section
+    stripes, and neither visualization (timeline or matrix) treats the diagonal as
+    a landmark. Pinned as a test so this doesn't silently flip back and forth."""
     audio = make_sine()
     matrix = compute_self_similarity_matrix(audio, CLAP_SR)
     diag = np.diag(matrix)
 
-    assert np.allclose(diag, diag.max())
-    assert diag.max() == pytest.approx(matrix.max(), abs=1e-6)
-    for i in range(matrix.shape[0]):
-        assert matrix[i, i] == matrix[i].max()
+    assert np.allclose(diag, 0.0)
 
 
 def test_self_similarity_matrix_falls_back_when_synced_chroma_too_short(monkeypatch):

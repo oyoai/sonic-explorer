@@ -1,9 +1,15 @@
 """Library-scale structure computation (self-similarity matrix + segmented
-timeline). CPU-only (no CLAP/GPU needed) -- can run locally exactly like
-scripts/acquire_fma.py, or in Colab reusing whatever curated audio is already
-there. Compute-once via checking whether each song's artifacts already exist (no
-embedding_status row for this -- these are song-level artifacts, not per-segment
-facet vectors; see facets/structure.py)."""
+timeline + sound fingerprint). CPU-only (no CLAP/GPU needed) -- can run locally
+exactly like scripts/acquire_fma.py, or in Colab reusing whatever curated audio
+is already there. Compute-once via checking whether each song's artifacts
+already exist (no embedding_status row for this -- these are song-level
+artifacts, not per-segment facet vectors; see facets/structure.py).
+
+The sound fingerprint (facets/fingerprint.py) is computed here, not lazily in
+the Streamlit app, specifically so the deployed app never needs librosa itself
+-- it reuses the same audio load already happening for structure computation
+(one load, two derived artifacts), and the result is just a small array read
+back at display time."""
 
 from pathlib import Path
 from typing import Callable
@@ -12,6 +18,7 @@ import numpy as np
 import pandas as pd
 
 from sonic_explorer.config import STRUCTURE_SR
+from sonic_explorer.facets.fingerprint import sound_fingerprint
 from sonic_explorer.facets.structure import analyze_structure
 from sonic_explorer.repository.song_repository import SongRepository
 
@@ -59,12 +66,14 @@ def run_batch_structure(
             filepath = str(audio_dir / row.relative_path)
             audio, loaded_sr = librosa.load(filepath, sr=sr, mono=True)
             analysis = analyze_structure(audio, loaded_sr)
+            fingerprint = sound_fingerprint(audio, loaded_sr)
             np.save(matrix_path, analysis.matrix)
             np.savez(
                 tl_path,
                 starts=analysis.segment_starts,
                 ends=analysis.segment_ends,
                 labels=analysis.segment_labels,
+                sound_fp=fingerprint,
             )
         except Exception as exc:  # noqa: BLE001 -- deliberately broad, see docstring
             failed_track_ids.append(int(row.track_id))

@@ -127,4 +127,9 @@ class EmbeddingRepository:
         from sonic_explorer.facets.structure import StructureTimeline
 
         data = np.load(self.artifacts_dir / "structure" / f"{song_id}_timeline.npz")
-        return StructureTimeline(segment_starts=data["starts"], segment_ends=data["ends"], segment_labels=data["labels"])
+        return StructureTimeline(
+            segment_starts=data["starts"],
+            segment_ends=data["ends"],
+            segment_labels=data["labels"],
+            sound_fingerprint=data["sound_fp"] if "sound_fp" in data else None,
+        )

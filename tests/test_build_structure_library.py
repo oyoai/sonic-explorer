@@ -59,6 +59,7 @@ def test_run_batch_structure_creates_matrix_and_timeline_per_song(song_repo, cur
     timeline = np.load(timeline_path(structure_dir, song_a.id))
     assert len(timeline["starts"]) == len(timeline["ends"]) == len(timeline["labels"])
     assert timeline["starts"][0] == pytest.approx(0.0, abs=1e-3)
+    assert timeline["sound_fp"].shape == (32, 32)
 
 
 def test_run_batch_structure_skips_tracks_not_in_db(song_repo, curated_audio, tmp_path):

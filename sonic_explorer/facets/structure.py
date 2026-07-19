@@ -41,19 +41,21 @@ MIN_SEGMENT_SEC = 3.0
 
 @dataclass
 class StructureTimeline:
-    """Just the segmented-timeline half of StructureAnalysis -- what
-    EmbeddingRepository.get_structure_timeline() reads back from disk (the
-    matrix and timeline are persisted as separate files, see
-    pipeline/build_structure_library.py)."""
+    """What EmbeddingRepository.get_structure_timeline() reads back from disk --
+    the timeline segments plus the sound fingerprint, which piggybacks on the
+    same .npz file since both are computed from the same audio load in the batch
+    pipeline (see pipeline/build_structure_library.py). The matrix itself is a
+    separate file, read via get_structure_matrix()."""
 
     segment_starts: np.ndarray
     segment_ends: np.ndarray
     segment_labels: np.ndarray
+    sound_fingerprint: np.ndarray | None = None
 
 
 @dataclass
 class StructureAnalysis:
-    matrix: np.ndarray  # self-similarity matrix, frames x frames (diagonal == max)
+    matrix: np.ndarray  # self-similarity matrix, frames x frames (diagonal deliberately zeroed, see analyze_structure)
     segment_starts: np.ndarray  # start_sec per contiguous timeline segment
     segment_ends: np.ndarray  # end_sec per contiguous timeline segment
     segment_labels: np.ndarray  # cluster label (int) per contiguous timeline segment
@@ -123,9 +125,14 @@ def analyze_structure(audio: np.ndarray, sr: int, n_clusters: int = DEFAULT_TIME
             beat_times = librosa.frames_to_time(beat_frames, sr=sr)
             boundaries = np.concatenate([[0.0], beat_times, [duration_sec]])
 
-    # self=True: librosa's default (False) explicitly zeroes the main diagonal --
-    # correct for recurrence/repeat-finding, wrong for a *self*-similarity matrix.
-    matrix = librosa.segment.recurrence_matrix(chroma_sync, mode="affinity", sym=True, self=True).astype(np.float32)
+    # self=False (librosa's default): the main diagonal is deliberately left
+    # zeroed. This was flipped to self=True in an earlier version on the theory
+    # that a *self*-similarity matrix's diagonal should read as a perfect match --
+    # reverted per spec decision: a zeroed diagonal keeps trivial self/near-self
+    # similarity from drowning out the real repeated-section stripes, and neither
+    # visualization here (timeline or matrix) is designed to rely on the diagonal
+    # as a landmark.
+    matrix = librosa.segment.recurrence_matrix(chroma_sync, mode="affinity", sym=True).astype(np.float32)
 
     n_frames = chroma_sync.shape[-1]
     assert len(boundaries) == n_frames + 1, (
