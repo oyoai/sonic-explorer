@@ -21,6 +21,15 @@ spec: [sonic_explorer_spec.md](sonic_explorer_spec.md).
 .venv\Scripts\python.exe -m pytest tests/
 ```
 
+## LLM explanation layer (Moment Matcher)
+
+Match explanations ("why these matched") use the Anthropic API. Copy
+`.streamlit/secrets.toml.example` to `.streamlit/secrets.toml` (gitignored) and
+fill in a real `ANTHROPIC_API_KEY` -- or set the same-named env var for local
+dev. Without a key, Moment Matcher still works, just without the explanation
+line under each match. On Streamlit Community Cloud, set the key via the app's
+Settings -> Secrets instead of committing a file.
+
 ## Compute split
 
 Heavy embedding compute (CLAP inference over the curated library) runs on Google
