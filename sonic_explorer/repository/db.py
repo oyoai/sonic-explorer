@@ -46,6 +46,30 @@ CREATE TABLE IF NOT EXISTS calibration_ratings (
 );
 """
 
+# Columns added after the initial schema. CREATE TABLE IF NOT EXISTS is a no-op
+# on a table that already exists (e.g. the real 1400-song local DB), so new
+# columns need an explicit, idempotent ALTER TABLE migration -- this covers
+# both a brand-new DB (created fresh, then migrated) and an existing one
+# (already has the base columns, gets the new ones added) with one code path.
+_MIGRATIONS: dict[str, list[tuple[str, str]]] = {
+    "songs": [
+        ("tempo_bpm", "REAL"),
+        ("energy", "REAL"),
+        ("brightness", "REAL"),
+        ("harmonic_complexity", "REAL"),
+        ("rhythmic_density", "REAL"),
+    ],
+}
+
+
+def _run_migrations(conn: sqlite3.Connection) -> None:
+    for table, columns in _MIGRATIONS.items():
+        existing = {row["name"] for row in conn.execute(f"PRAGMA table_info({table})")}
+        for column_name, column_type in columns:
+            if column_name not in existing:
+                conn.execute(f"ALTER TABLE {table} ADD COLUMN {column_name} {column_type}")
+    conn.commit()
+
 
 def get_connection(db_path: str | Path) -> sqlite3.Connection:
     # check_same_thread=False: callers that cache this connection long-lived (e.g.
@@ -64,4 +88,5 @@ def init_db(db_path: str | Path) -> sqlite3.Connection:
     conn = get_connection(db_path)
     conn.executescript(SCHEMA)
     conn.commit()
+    _run_migrations(conn)
     return conn

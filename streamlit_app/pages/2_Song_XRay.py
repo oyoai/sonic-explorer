@@ -52,10 +52,10 @@ if matrix is not None or (timeline is not None and timeline.sound_fingerprint is
     col1, col2 = st.columns(2)
     if matrix is not None:
         with col1:
-            st.plotly_chart(fingerprint_thumbnail(structure_fingerprint(matrix), "Structure"), width="stretch")
+            st.plotly_chart(fingerprint_thumbnail(structure_fingerprint(matrix), "Structure"), width="stretch", key="fp_structure")
     if timeline is not None and timeline.sound_fingerprint is not None:
         with col2:
-            st.plotly_chart(fingerprint_thumbnail(timeline.sound_fingerprint, "Sound"), width="stretch")
+            st.plotly_chart(fingerprint_thumbnail(timeline.sound_fingerprint, "Sound"), width="stretch", key="fp_sound")
 
 st.markdown("#### Structure timeline")
 st.caption(

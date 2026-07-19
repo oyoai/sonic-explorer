@@ -58,6 +58,7 @@ def main():
     n_audio_copied = 0
     n_structure_copied = 0
     n_segments_copied = 0
+    n_dna_copied = 0
 
     for old_song in sampled:
         new_song = Song(
@@ -69,6 +70,16 @@ def main():
             duration_sec=old_song.duration_sec,
         )
         new_song_id = dst_song_repo.add_song(new_song)
+        if old_song.tempo_bpm is not None:
+            dst_song_repo.update_song_dna(
+                new_song_id,
+                tempo_bpm=old_song.tempo_bpm,
+                energy=old_song.energy,
+                brightness=old_song.brightness,
+                harmonic_complexity=old_song.harmonic_complexity,
+                rhythmic_density=old_song.rhythmic_density,
+            )
+            n_dna_copied += 1
 
         old_segments = src_song_repo.get_segments(old_song.id)
         new_segment_ids = dst_song_repo.add_segments(new_song_id, old_segments)
@@ -97,6 +108,7 @@ def main():
     print(f"Segments with sound vectors copied: {n_segments_copied}")
     print(f"Audio files copied: {n_audio_copied}")
     print(f"Structure artifacts copied: {n_structure_copied}")
+    print(f"Song DNA copied: {n_dna_copied}")
     print(f"Deploy data written to {DEPLOY_DATA_DIR}")
 
 

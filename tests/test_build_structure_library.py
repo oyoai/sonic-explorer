@@ -61,6 +61,42 @@ def test_run_batch_structure_creates_matrix_and_timeline_per_song(song_repo, cur
     assert timeline["starts"][0] == pytest.approx(0.0, abs=1e-3)
     assert timeline["sound_fp"].shape == (32, 32)
 
+    song_a_reloaded = song_repo.get_song_by_fma_track_id(1)
+    assert song_a_reloaded.tempo_bpm is not None
+    assert song_a_reloaded.energy is not None
+
+
+def test_run_batch_structure_computes_dna_for_songs_missing_only_that(song_repo, curated_audio, tmp_path, monkeypatch):
+    """Resumability edge case: a song whose matrix/timeline already exist (from
+    an older run, before song DNA existed) but has no DNA yet must still get
+    reprocessed, not skipped -- the compute-once check requires all three."""
+    audio_dir, manifest = curated_audio
+    structure_dir = tmp_path / "structure"
+
+    run_batch_structure(manifest, audio_dir, song_repo, structure_dir)
+    song_a = song_repo.get_song_by_fma_track_id(1)
+    assert song_a.tempo_bpm is not None
+
+    # simulate "DNA not computed yet" by clearing just that column, leaving the
+    # matrix/timeline files on disk untouched
+    song_repo.conn.execute("UPDATE songs SET tempo_bpm = NULL WHERE id = ?", (song_a.id,))
+    song_repo.conn.commit()
+
+    import librosa
+
+    original_load = librosa.load
+    calls = []
+
+    def tracking_load(*args, **kwargs):
+        calls.append(args)
+        return original_load(*args, **kwargs)
+
+    monkeypatch.setattr(librosa, "load", tracking_load)
+    run_batch_structure(manifest, audio_dir, song_repo, structure_dir)
+
+    assert len(calls) == 1  # only song_a got reprocessed, not song_b (which already had DNA)
+    assert song_repo.get_song_by_fma_track_id(1).tempo_bpm is not None
+
 
 def test_run_batch_structure_skips_tracks_not_in_db(song_repo, curated_audio, tmp_path):
     audio_dir, manifest = curated_audio

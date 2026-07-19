@@ -28,11 +28,20 @@ class SongRepository:
         self.conn.execute("UPDATE songs SET filepath = ? WHERE id = ?", (filepath, song_id))
         self.conn.commit()
 
-    def get_song(self, song_id: int) -> Song | None:
-        row = self.conn.execute("SELECT * FROM songs WHERE id = ?", (song_id,)).fetchone()
-        if row is None:
-            return None
-        song = Song(
+    def update_song_dna(
+        self, song_id: int, tempo_bpm: float, energy: float, brightness: float,
+        harmonic_complexity: float, rhythmic_density: float,
+    ) -> None:
+        self.conn.execute(
+            "UPDATE songs SET tempo_bpm = ?, energy = ?, brightness = ?, "
+            "harmonic_complexity = ?, rhythmic_density = ? WHERE id = ?",
+            (tempo_bpm, energy, brightness, harmonic_complexity, rhythmic_density, song_id),
+        )
+        self.conn.commit()
+
+    @staticmethod
+    def _song_from_row(row) -> Song:
+        return Song(
             id=row["id"],
             fma_track_id=row["fma_track_id"],
             filepath=row["filepath"],
@@ -40,7 +49,18 @@ class SongRepository:
             artist=row["artist"],
             genre_top=row["genre_top"],
             duration_sec=row["duration_sec"],
+            tempo_bpm=row["tempo_bpm"],
+            energy=row["energy"],
+            brightness=row["brightness"],
+            harmonic_complexity=row["harmonic_complexity"],
+            rhythmic_density=row["rhythmic_density"],
         )
+
+    def get_song(self, song_id: int) -> Song | None:
+        row = self.conn.execute("SELECT * FROM songs WHERE id = ?", (song_id,)).fetchone()
+        if row is None:
+            return None
+        song = self._song_from_row(row)
         song.segments = self.get_segments(song_id)
         return song
 
@@ -55,18 +75,7 @@ class SongRepository:
             rows = self.conn.execute("SELECT * FROM songs").fetchall()
         else:
             rows = self.conn.execute("SELECT * FROM songs WHERE genre_top = ?", (genre,)).fetchall()
-        return [
-            Song(
-                id=row["id"],
-                fma_track_id=row["fma_track_id"],
-                filepath=row["filepath"],
-                title=row["title"],
-                artist=row["artist"],
-                genre_top=row["genre_top"],
-                duration_sec=row["duration_sec"],
-            )
-            for row in rows
-        ]
+        return [self._song_from_row(row) for row in rows]
 
     def add_segments(self, song_id: int, segments: list[Segment]) -> list[int]:
         """Idempotent on (song_id, start_sec, end_sec) -- safe to re-run."""

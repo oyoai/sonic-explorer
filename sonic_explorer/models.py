@@ -22,3 +22,10 @@ class Song:
     duration_sec: float
     id: int | None = None
     segments: list[Segment] = field(default_factory=list)
+    # song DNA (facets/song_dna.py) -- None until the structure batch pipeline
+    # computes it; raw (unnormalized) values, see analysis/song_dna.py
+    tempo_bpm: float | None = None
+    energy: float | None = None
+    brightness: float | None = None
+    harmonic_complexity: float | None = None
+    rhythmic_density: float | None = None

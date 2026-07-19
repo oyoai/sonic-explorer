@@ -64,6 +64,55 @@ def test_update_filepath(song_repo):
     assert song_repo.get_song(song_id).filepath == "/data/audio/7.mp3"
 
 
+def test_new_song_has_no_song_dna_by_default(song_repo):
+    song_id = song_repo.add_song(make_song(track_id=7))
+    song = song_repo.get_song(song_id)
+    assert song.tempo_bpm is None
+    assert song.energy is None
+
+
+def test_update_song_dna_round_trips(song_repo):
+    song_id = song_repo.add_song(make_song(track_id=7))
+    song_repo.update_song_dna(
+        song_id, tempo_bpm=120.0, energy=0.3, brightness=2000.0,
+        harmonic_complexity=0.6, rhythmic_density=2.5,
+    )
+    song = song_repo.get_song(song_id)
+    assert song.tempo_bpm == 120.0
+    assert song.energy == 0.3
+    assert song.brightness == 2000.0
+    assert song.harmonic_complexity == 0.6
+    assert song.rhythmic_density == 2.5
+
+
+def test_migration_adds_song_dna_columns_to_pre_existing_db(tmp_path):
+    """Simulates a DB created before song DNA existed (just the base schema, no
+    migration run) -- init_db() on it must add the new columns without losing
+    existing data, not just work on brand-new DBs."""
+    import sqlite3
+
+    from sonic_explorer.repository.db import SCHEMA, init_db
+
+    db_path = tmp_path / "old.db"
+    raw_conn = sqlite3.connect(str(db_path))
+    raw_conn.executescript(SCHEMA)  # base schema only, no migration
+    raw_conn.execute(
+        "INSERT INTO songs (fma_track_id, filepath, title, artist, genre_top, duration_sec) "
+        "VALUES (1, '/x.mp3', 'Old Song', 'Artist', 'Rock', 30.0)"
+    )
+    raw_conn.commit()
+    raw_conn.close()
+
+    conn = init_db(db_path)  # should migrate in place
+    repo = SongRepository(conn)
+    song = repo.get_song_by_fma_track_id(1)
+
+    assert song.title == "Old Song"  # pre-existing data preserved
+    assert song.tempo_bpm is None  # new column present, just empty
+    repo.update_song_dna(song.id, 100.0, 0.1, 1500.0, 0.5, 1.0)
+    assert repo.get_song(song.id).tempo_bpm == 100.0
+
+
 def test_list_songs_filters_by_genre(song_repo):
     song_repo.add_song(make_song(track_id=1))
     jazz = Song(
