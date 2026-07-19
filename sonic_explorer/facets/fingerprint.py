@@ -1,19 +1,24 @@
 """Song fingerprints: small per-song thumbnail arrays used as an album-art
 fallback and as visual identity throughout the app (spec 2.6). Structure and
-sound fingerprints are Core; harmony/composite are Strong (once the harmony
-facet exists) -- only structure + sound are built here.
+sound fingerprints are Core; harmony/composite are Strong, now that the
+harmony facet exists.
 
 structure_fingerprint() is a pure downsample of the already-computed self-
 similarity matrix -- no audio/librosa dependency, safe to compute on the fly
-anywhere, including the deployed app. sound_fingerprint() needs the raw
-waveform (mel-spectrogram), so it's precomputed in the batch pipeline where
-librosa is already in use (see pipeline/build_structure_library.py) and
-persisted -- the deployed app only ever reads it back, consistent with the
-rest of the architecture (deployed app never runs audio processing itself).
+anywhere, including the deployed app. sound_fingerprint()/harmony_fingerprint()
+need the raw waveform (mel-spectrogram / chroma-gram), so both are precomputed
+in the batch pipeline where librosa is already in use (see
+pipeline/build_structure_library.py) and persisted -- the deployed app only
+ever reads them back, consistent with the rest of the architecture (deployed
+app never runs audio processing itself).
 
-Both return a size x size float32 array normalized to [0, 1], ready for a
-perceptually-uniform colormap (viridis/magma/plasma) at display time -- see
-streamlit_app/components/plotting.py.
+structure_fingerprint()/sound_fingerprint() return a size x size float32 array
+normalized to [0, 1], ready for a perceptually-uniform colormap
+(viridis/magma/plasma) at display time -- see streamlit_app/components/plotting.py.
+harmony_fingerprint() returns a (12, size) strip instead of a square -- a
+chroma-gram only ever has 12 meaningful rows (pitch classes), so squaring it
+would blur a real distinction into an arbitrary one. composite_fingerprint()
+reconciles the shapes for the RGB overlay.
 """
 
 import numpy as np
@@ -60,3 +65,35 @@ def sound_fingerprint(audio: np.ndarray, sr: int, size: int = FINGERPRINT_SIZE) 
     mel = librosa.feature.melspectrogram(y=audio, sr=sr, n_mels=size)
     mel_db = librosa.power_to_db(mel, ref=np.max)
     return _normalize(_block_average_2d(mel_db, size, size))
+
+
+HARMONY_FINGERPRINT_ROWS = 12  # one row per pitch class -- chroma has no more real resolution than this
+
+
+def harmony_fingerprint(audio: np.ndarray, sr: int, size: int = FINGERPRINT_SIZE) -> np.ndarray:
+    """Chroma-gram strip: 12 pitch-class rows x `size` downsampled time steps.
+    Reuses the same whole-song audio load as sound_fingerprint/structure
+    computation (see pipeline/build_structure_library.py) -- no extra I/O."""
+    import librosa
+
+    chroma = librosa.feature.chroma_cqt(y=audio, sr=sr)
+    if chroma.shape[1] == 0:
+        return np.zeros((HARMONY_FINGERPRINT_ROWS, size), dtype=np.float32)
+    return _normalize(_block_average_2d(chroma, HARMONY_FINGERPRINT_ROWS, size))
+
+
+def composite_fingerprint(structure_fp: np.ndarray, sound_fp: np.ndarray, harmony_fp: np.ndarray) -> np.ndarray:
+    """RGB-channel overlay of the three facet fingerprints (spec 2.6): structure
+    -> red, harmony -> green, sound -> blue, each already normalized to [0, 1]
+    grayscale intensity. Where all three agree the composite reads bright/
+    white; where they diverge, distinct color casts appear -- two songs similar
+    in structure but not harmony would show similarly-patterned but
+    differently-colored composites.
+
+    harmony_fp's native (12, size) strip is stretched to the square (size,
+    size) grid the other two already share, purely so the three channels align
+    pixel-for-pixel here -- the standalone harmony fingerprint shown elsewhere
+    stays the honest 12-row strip."""
+    size = structure_fp.shape[0]
+    harmony_square = _block_average_2d(harmony_fp, size, size)
+    return np.stack([structure_fp, harmony_square, sound_fp], axis=-1).astype(np.float32)

@@ -10,8 +10,8 @@ import streamlit as st
 
 from sonic_explorer.analysis.taste_map import compute_taste_map, mean_pool_song_vectors
 from sonic_explorer.config import audio_path_for
-from sonic_explorer.facets.fingerprint import structure_fingerprint
-from components.plotting import fingerprint_thumbnail
+from sonic_explorer.facets.fingerprint import composite_fingerprint, structure_fingerprint
+from components.plotting import composite_fingerprint_thumbnail, fingerprint_thumbnail
 from resources import get_repositories, show_data_source_banner
 
 st.set_page_config(page_title="Song X-Ray", page_icon="\U0001F50D")
@@ -46,16 +46,31 @@ try:
 except FileNotFoundError:
     matrix = None
 
-if matrix is not None or (timeline is not None and timeline.sound_fingerprint is not None):
+structure_fp = structure_fingerprint(matrix) if matrix is not None else None
+sound_fp = timeline.sound_fingerprint if timeline is not None else None
+harmony_fp = timeline.harmony_fingerprint if timeline is not None else None
+
+if structure_fp is not None or sound_fp is not None or harmony_fp is not None:
     st.markdown("#### Fingerprint")
-    st.caption("A visual identity for the song, derived from its structure and sound -- also usable as an album-art fallback.")
-    col1, col2 = st.columns(2)
-    if matrix is not None:
-        with col1:
-            st.plotly_chart(fingerprint_thumbnail(structure_fingerprint(matrix), "Structure"), width="stretch", key="fp_structure")
-    if timeline is not None and timeline.sound_fingerprint is not None:
-        with col2:
-            st.plotly_chart(fingerprint_thumbnail(timeline.sound_fingerprint, "Sound"), width="stretch", key="fp_sound")
+    st.caption(
+        "A visual identity for the song, derived from its structure, sound, and harmony -- also usable "
+        "as an album-art fallback. The composite overlays all three as color channels: where they agree "
+        "the image reads bright, where they diverge, distinct color casts appear."
+    )
+    cols = st.columns(4)
+    if structure_fp is not None:
+        with cols[0]:
+            st.plotly_chart(fingerprint_thumbnail(structure_fp, "Structure"), width="stretch", key="fp_structure")
+    if sound_fp is not None:
+        with cols[1]:
+            st.plotly_chart(fingerprint_thumbnail(sound_fp, "Sound"), width="stretch", key="fp_sound")
+    if harmony_fp is not None:
+        with cols[2]:
+            st.plotly_chart(fingerprint_thumbnail(harmony_fp, "Harmony"), width="stretch", key="fp_harmony")
+    if structure_fp is not None and sound_fp is not None and harmony_fp is not None:
+        with cols[3]:
+            composite = composite_fingerprint(structure_fp, sound_fp, harmony_fp)
+            st.plotly_chart(composite_fingerprint_thumbnail(composite), width="stretch", key="fp_composite")
 
 st.markdown("#### Structure timeline")
 

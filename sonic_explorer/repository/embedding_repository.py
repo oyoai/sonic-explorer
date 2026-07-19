@@ -132,6 +132,7 @@ class EmbeddingRepository:
             segment_ends=data["ends"],
             segment_labels=data["labels"],
             sound_fingerprint=data["sound_fp"] if "sound_fp" in data else None,
+            harmony_fingerprint=data["harmony_fp"] if "harmony_fp" in data else None,
             novelty_curve=data["novelty"] if "novelty" in data else None,
             novelty_times=data["novelty_times"] if "novelty_times" in data else None,
             has_clear_structure=bool(data["has_clear_structure"]) if "has_clear_structure" in data else True,

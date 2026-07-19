@@ -60,6 +60,7 @@ def test_run_batch_structure_creates_matrix_and_timeline_per_song(song_repo, cur
     assert len(timeline["starts"]) == len(timeline["ends"]) == len(timeline["labels"])
     assert timeline["starts"][0] == pytest.approx(0.0, abs=1e-3)
     assert timeline["sound_fp"].shape == (32, 32)
+    assert timeline["harmony_fp"].shape == (12, 32)
 
     song_a_reloaded = song_repo.get_song_by_fma_track_id(1)
     assert song_a_reloaded.tempo_bpm is not None
@@ -123,6 +124,29 @@ def test_run_batch_structure_reprocesses_timeline_missing_novelty_keys(song_repo
     reloaded = np.load(tl_path)
     assert "novelty" in reloaded
     assert "has_clear_structure" in reloaded
+
+
+def test_run_batch_structure_reprocesses_timeline_missing_harmony_fingerprint(song_repo, curated_audio, tmp_path):
+    """Same resumability class of bug again: a timeline.npz written before the
+    harmony fingerprint existed has matrix+timeline+DNA+novelty all present,
+    but is missing harmony_fp -- must still get reprocessed, not skipped."""
+    audio_dir, manifest = curated_audio
+    structure_dir = tmp_path / "structure"
+
+    run_batch_structure(manifest, audio_dir, song_repo, structure_dir)
+    song_a = song_repo.get_song_by_fma_track_id(1)
+    tl_path = timeline_path(structure_dir, song_a.id)
+
+    old_data = dict(np.load(tl_path))
+    old_data.pop("harmony_fp", None)
+    np.savez(tl_path, **old_data)
+    assert not _timeline_is_complete(tl_path)
+
+    run_batch_structure(manifest, audio_dir, song_repo, structure_dir)
+
+    assert _timeline_is_complete(tl_path)
+    reloaded = np.load(tl_path)
+    assert "harmony_fp" in reloaded
 
 
 def test_run_batch_structure_skips_tracks_not_in_db(song_repo, curated_audio, tmp_path):

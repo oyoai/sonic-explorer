@@ -51,15 +51,16 @@ MIN_SEGMENT_SEC = 3.0
 @dataclass
 class StructureTimeline:
     """What EmbeddingRepository.get_structure_timeline() reads back from disk --
-    the timeline segments plus the sound fingerprint, which piggybacks on the
-    same .npz file since both are computed from the same audio load in the batch
-    pipeline (see pipeline/build_structure_library.py). The matrix itself is a
-    separate file, read via get_structure_matrix()."""
+    the timeline segments plus the sound/harmony fingerprints, which piggyback
+    on the same .npz file since all are computed from the same audio load in
+    the batch pipeline (see pipeline/build_structure_library.py). The matrix
+    itself is a separate file, read via get_structure_matrix()."""
 
     segment_starts: np.ndarray
     segment_ends: np.ndarray
     segment_labels: np.ndarray
     sound_fingerprint: np.ndarray | None = None
+    harmony_fingerprint: np.ndarray | None = None
     novelty_curve: np.ndarray | None = None
     novelty_times: np.ndarray | None = None
     has_clear_structure: bool = True

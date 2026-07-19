@@ -250,6 +250,37 @@ def test_get_structure_timeline_missing_fingerprint_key_is_none(conn, tmp_path):
     assert timeline.sound_fingerprint is None
 
 
+def test_get_structure_timeline_round_trips_harmony_fingerprint(conn, tmp_path):
+    repo = EmbeddingRepository(conn, artifacts_dir=tmp_path)
+    (tmp_path / "structure").mkdir()
+    harmony_fp = np.random.default_rng(0).random((12, 32)).astype(np.float32)
+    np.savez(
+        tmp_path / "structure" / "5_timeline.npz",
+        starts=np.array([0.0], dtype=np.float32),
+        ends=np.array([10.0], dtype=np.float32),
+        labels=np.array([0], dtype=np.int32),
+        harmony_fp=harmony_fp,
+    )
+
+    timeline = repo.get_structure_timeline(5)
+    assert np.array_equal(timeline.harmony_fingerprint, harmony_fp)
+
+
+def test_get_structure_timeline_missing_harmony_fingerprint_key_is_none(conn, tmp_path):
+    """Backward compat: timeline files written before harmony fingerprints existed."""
+    repo = EmbeddingRepository(conn, artifacts_dir=tmp_path)
+    (tmp_path / "structure").mkdir()
+    np.savez(
+        tmp_path / "structure" / "5_timeline.npz",
+        starts=np.array([0.0], dtype=np.float32),
+        ends=np.array([10.0], dtype=np.float32),
+        labels=np.array([0], dtype=np.int32),
+    )
+
+    timeline = repo.get_structure_timeline(5)
+    assert timeline.harmony_fingerprint is None
+
+
 def test_get_structure_timeline_round_trips_novelty_fields(conn, tmp_path):
     repo = EmbeddingRepository(conn, artifacts_dir=tmp_path)
     (tmp_path / "structure").mkdir()

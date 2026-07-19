@@ -1,7 +1,14 @@
 import numpy as np
 
 from sonic_explorer.config import CLAP_SR
-from sonic_explorer.facets.fingerprint import FINGERPRINT_SIZE, sound_fingerprint, structure_fingerprint
+from sonic_explorer.facets.fingerprint import (
+    FINGERPRINT_SIZE,
+    HARMONY_FINGERPRINT_ROWS,
+    composite_fingerprint,
+    harmony_fingerprint,
+    sound_fingerprint,
+    structure_fingerprint,
+)
 
 
 def make_sine(duration_sec=10.0, freq=440.0, sr=CLAP_SR):
@@ -63,3 +70,58 @@ def test_sound_fingerprint_custom_size():
     audio = make_sine(duration_sec=5.0)
     fp = sound_fingerprint(audio, CLAP_SR, size=16)
     assert fp.shape == (16, 16)
+
+
+def test_harmony_fingerprint_shape_and_range():
+    audio = make_sine()
+    fp = harmony_fingerprint(audio, CLAP_SR)
+
+    assert fp.shape == (HARMONY_FINGERPRINT_ROWS, FINGERPRINT_SIZE)
+    assert fp.min() >= 0.0
+    assert fp.max() <= 1.0 + 1e-6
+    assert np.all(np.isfinite(fp))
+
+
+def test_harmony_fingerprint_custom_size():
+    audio = make_sine(duration_sec=5.0)
+    fp = harmony_fingerprint(audio, CLAP_SR, size=16)
+    assert fp.shape == (HARMONY_FINGERPRINT_ROWS, 16)
+
+
+def test_harmony_fingerprint_handles_silence():
+    """A near-silent clip must not crash chroma_cqt or divide-by-zero in
+    normalization -- constant/zero chroma should fall back to all-zero, same
+    as structure_fingerprint's constant-input behavior."""
+    audio = np.zeros(int(2.0 * CLAP_SR), dtype=np.float32)
+    fp = harmony_fingerprint(audio, CLAP_SR)
+    assert fp.shape == (HARMONY_FINGERPRINT_ROWS, FINGERPRINT_SIZE)
+    assert np.all(np.isfinite(fp))
+
+
+def test_composite_fingerprint_shape_and_range():
+    rng = np.random.default_rng(0)
+    structure_fp = rng.random((FINGERPRINT_SIZE, FINGERPRINT_SIZE)).astype(np.float32)
+    sound_fp = rng.random((FINGERPRINT_SIZE, FINGERPRINT_SIZE)).astype(np.float32)
+    harmony_fp = rng.random((HARMONY_FINGERPRINT_ROWS, FINGERPRINT_SIZE)).astype(np.float32)
+
+    composite = composite_fingerprint(structure_fp, sound_fp, harmony_fp)
+
+    assert composite.shape == (FINGERPRINT_SIZE, FINGERPRINT_SIZE, 3)
+    assert composite.min() >= 0.0
+    assert composite.max() <= 1.0 + 1e-6
+
+
+def test_composite_fingerprint_channel_order_matches_spec():
+    """structure -> red, harmony -> green, sound -> blue (spec 2.6) -- pin the
+    channel order down explicitly since silently swapping it later would be a
+    correctness bug no shape/range test would catch."""
+    size = FINGERPRINT_SIZE
+    structure_fp = np.full((size, size), 1.0, dtype=np.float32)
+    sound_fp = np.full((size, size), 0.0, dtype=np.float32)
+    harmony_fp = np.full((HARMONY_FINGERPRINT_ROWS, size), 0.5, dtype=np.float32)
+
+    composite = composite_fingerprint(structure_fp, sound_fp, harmony_fp)
+
+    assert np.allclose(composite[..., 0], 1.0)  # red = structure
+    assert np.allclose(composite[..., 1], 0.5)  # green = harmony
+    assert np.allclose(composite[..., 2], 0.0)  # blue = sound

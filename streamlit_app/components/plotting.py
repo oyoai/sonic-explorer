@@ -23,6 +23,20 @@ def fingerprint_thumbnail(fingerprint, title: str) -> go.Figure:
     return fig
 
 
+def composite_fingerprint_thumbnail(composite, title: str = "Composite") -> go.Figure:
+    """The three-facet RGB overlay (structure=red, harmony=green, sound=blue) --
+    no color_continuous_scale needed, the array is already RGB in [0, 1]."""
+    fig = px.imshow(composite, origin="lower")
+    fig.update_layout(
+        title=dict(text=title, font=dict(size=13)),
+        height=180,
+        margin=dict(l=0, r=0, t=30, b=0),
+        xaxis=dict(visible=False),
+        yaxis=dict(visible=False),
+    )
+    return fig
+
+
 def song_dna_radar_overlay(
     axis_labels: list[str],
     values_a: list[float],

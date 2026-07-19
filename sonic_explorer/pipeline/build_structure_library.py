@@ -1,16 +1,20 @@
 """Library-scale structure computation (self-similarity matrix + segmented
-timeline + novelty curve/structural confidence + sound fingerprint + song DNA).
-CPU-only (no CLAP/GPU needed) -- can run locally exactly like
+timeline + novelty curve/structural confidence + sound/harmony fingerprints +
+song DNA). CPU-only (no CLAP/GPU needed) -- can run locally exactly like
 scripts/acquire_fma.py, or in Colab reusing whatever curated audio is already
 there. Compute-once via checking whether each song's artifacts already exist
 (no embedding_status row for this -- these are song-level artifacts, not
 per-segment facet vectors; see facets/structure.py).
 
-The sound fingerprint (facets/fingerprint.py) and song DNA (facets/song_dna.py)
-are computed here, not lazily in the Streamlit app, specifically so the
-deployed app never needs librosa itself -- all three derived artifacts reuse
-the one audio load already happening for structure computation, and the
-results are just small arrays/scalars read back at display time."""
+The sound/harmony fingerprints (facets/fingerprint.py) and song DNA
+(facets/song_dna.py) are computed here, not lazily in the Streamlit app,
+specifically so the deployed app never needs librosa itself -- all these
+derived artifacts reuse the one audio load already happening for structure
+computation, and the results are just small arrays/scalars read back at
+display time. (The harmony fingerprint piggybacks on this whole-song audio
+load rather than the harmony facet's own per-segment embedding pipeline, same
+precedent as the sound fingerprint riding along here instead of the sound
+facet's embedding pipeline.)"""
 
 from pathlib import Path
 from typing import Callable
@@ -19,7 +23,7 @@ import numpy as np
 import pandas as pd
 
 from sonic_explorer.config import STRUCTURE_SR
-from sonic_explorer.facets.fingerprint import sound_fingerprint
+from sonic_explorer.facets.fingerprint import harmony_fingerprint, sound_fingerprint
 from sonic_explorer.facets.song_dna import compute_raw_song_dna
 from sonic_explorer.facets.structure import analyze_structure
 from sonic_explorer.repository.song_repository import SongRepository
@@ -31,12 +35,12 @@ def timeline_path(structure_dir: Path, song_id: int) -> Path:
 
 def _timeline_is_complete(tl_path: Path) -> bool:
     """Cheaply checks whether an existing timeline .npz already has the novelty
-    keys -- older files (from before novelty detection existed) need
-    reprocessing even though the file itself is present."""
+    and harmony-fingerprint keys -- older files (from before those existed)
+    need reprocessing even though the file itself is present."""
     if not tl_path.exists():
         return False
     with np.load(tl_path) as data:
-        return "has_clear_structure" in data
+        return "has_clear_structure" in data and "harmony_fp" in data
 
 
 def run_batch_structure(
@@ -80,6 +84,7 @@ def run_batch_structure(
             audio, loaded_sr = librosa.load(filepath, sr=sr, mono=True)
             analysis = analyze_structure(audio, loaded_sr)
             fingerprint = sound_fingerprint(audio, loaded_sr)
+            harmony_fp = harmony_fingerprint(audio, loaded_sr)
             dna = compute_raw_song_dna(audio, loaded_sr)
             np.save(matrix_path, analysis.matrix)
             np.savez(
@@ -88,6 +93,7 @@ def run_batch_structure(
                 ends=analysis.segment_ends,
                 labels=analysis.segment_labels,
                 sound_fp=fingerprint,
+                harmony_fp=harmony_fp,
                 novelty=analysis.novelty_curve,
                 novelty_times=analysis.novelty_times,
                 has_clear_structure=analysis.has_clear_structure,
