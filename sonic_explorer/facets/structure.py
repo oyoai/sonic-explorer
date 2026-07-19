@@ -1,8 +1,17 @@
 """Structure: a song's self-similarity matrix (verse/chorus shape) and a compact
 segmented timeline (which stretches of the song sound alike) -- promoted from the
 beat-synced chroma recurrence matrix (audio_deep_dive.ipynb cell 21) and the
-clustering-into-a-template idea (cell 16, DBSCAN there; K-Means here for
-predictable behavior across 1400 songs without per-song eps tuning).
+clustering-into-a-template idea (cell 16 -- DBSCAN there; here, agglomerative
+clustering with a temporal-adjacency constraint, for a reason found while
+building this: plain per-frame K-Means (tried first) flips labels constantly even
+within one perceptual section -- confirmed on real songs, 18-46 label changes per
+~30s clip. A minimum-duration merge pass tried to paper over that and instead
+collapsed 61% of the library down to a single undifferentiated segment, since
+merges just kept propagating one label across the whole song. Constraining
+clustering to only ever merge temporally-adjacent frames fixes this at the root:
+each of the k clusters is *guaranteed* to be one contiguous interval by
+construction (no adjacency, no merge), so the result is always exactly k
+clean segments -- confirmed on the same real songs.
 
 Powers Song X-Ray: the timeline is the primary, non-technical view (a color bar
 where matching colors = similar-sounding sections); the matrix is the secondary
@@ -24,10 +33,9 @@ MIN_FRAMES_FOR_RECURRENCE = 3
 
 DEFAULT_TIMELINE_CLUSTERS = 6
 
-# Per-beat K-Means labels flip frequently even within one perceptual "section" --
-# raw output averages well under a second per run (confirmed on real songs: e.g.
-# 22 segments across 27s, most under 1.5s). Unreadable as a colored block view for
-# a non-technical viewer, who needs phrase-scale chunks, not per-beat confetti.
+# Safety net, not the primary mechanism (that's the connectivity constraint above)
+# -- a cluster can still legitimately be very short (e.g. a one-beat transition),
+# so this cleans up the rare edge case rather than doing the heavy lifting.
 MIN_SEGMENT_SEC = 3.0
 
 
@@ -94,7 +102,8 @@ def analyze_structure(audio: np.ndarray, sr: int, n_clusters: int = DEFAULT_TIME
     both the self-similarity matrix and a clustered timeline from it, so the two
     views are always describing the exact same underlying frames/boundaries."""
     import librosa
-    from sklearn.cluster import KMeans
+    from scipy.sparse import diags
+    from sklearn.cluster import AgglomerativeClustering
 
     duration_sec = len(audio) / sr
     chroma = librosa.feature.chroma_cqt(y=audio, sr=sr)
@@ -124,7 +133,13 @@ def analyze_structure(audio: np.ndarray, sr: int, n_clusters: int = DEFAULT_TIME
     )
 
     k = max(1, min(n_clusters, n_frames))
-    labels = KMeans(n_clusters=k, random_state=42, n_init=10).fit_predict(chroma_sync.T) if k > 1 else np.zeros(n_frames, dtype=int)
+    if k > 1:
+        # tri-diagonal adjacency: frame i only connects to i-1 and i+1, which is
+        # what forces every resulting cluster to be one contiguous time interval
+        connectivity = diags([1, 1], offsets=[-1, 1], shape=(n_frames, n_frames), dtype=np.int8)
+        labels = AgglomerativeClustering(n_clusters=k, connectivity=connectivity, linkage="ward").fit_predict(chroma_sync.T)
+    else:
+        labels = np.zeros(n_frames, dtype=int)
 
     seg_starts, seg_ends, seg_labels = [], [], []
     run_start = 0
