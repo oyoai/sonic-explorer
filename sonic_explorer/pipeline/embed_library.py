@@ -1,7 +1,12 @@
 """The actual promoted batch job: library-scale version of the single-song embed
 loop in notebooks/audio_deep_dive.ipynb (cells 29-30). Compute-once via
 EmbeddingRepository.status() -- safe to re-run after a Colab disconnect, and skips
-even the audio load (not just the embedding) for songs already fully processed.
+even the audio load (not just the embedding) for songs already fully processed
+across every requested facet.
+
+Handles any number of facets from one shared audio load per song -- adding a new
+facet later (e.g. harmony alongside sound) means passing it in the `facets` list,
+not standing up a second pipeline or reloading audio a second time.
 
 Checkpointing is handled internally (not left to the caller's on_checkpoint
 callback) specifically so embedding_status is only ever marked 'done' for vectors
@@ -14,7 +19,7 @@ from typing import Callable
 import pandas as pd
 
 from sonic_explorer.config import CLAP_SR
-from sonic_explorer.facets.sound import SoundFacet
+from sonic_explorer.facets.base import Facet
 from sonic_explorer.models import Song
 from sonic_explorer.pipeline.segment import segment_song
 from sonic_explorer.repository.embedding_repository import EmbeddingRepository
@@ -26,8 +31,7 @@ def run_batch_embedding(
     audio_dir: Path,
     song_repo: SongRepository,
     embedding_repo: EmbeddingRepository,
-    sound_facet: SoundFacet,
-    facet_name: str = "sound",
+    facets: list[Facet],
     checkpoint_every: int = 50,
     on_checkpoint: Callable[[int, int], None] | None = None,
 ) -> None:
@@ -35,22 +39,26 @@ def run_batch_embedding(
     import librosa
 
     total = len(manifest_df)
-    pending_confirmation: list[tuple[int, int | None]] = []  # (segment_id, dim), added to FAISS but not yet marked done
+    pending_confirmation: dict[str, list[tuple[int, int | None]]] = {f.name: [] for f in facets}
 
     def checkpoint():
-        if not pending_confirmation:
-            return
-        embedding_repo.save_index(facet_name)
-        for seg_id, dim in pending_confirmation:
-            embedding_repo.mark_done(seg_id, facet_name, vector_store_id=seg_id, dim=dim)
-        pending_confirmation.clear()
+        for facet in facets:
+            pending = pending_confirmation[facet.name]
+            if not pending:
+                continue
+            embedding_repo.save_index(facet.name)
+            for seg_id, dim in pending:
+                embedding_repo.mark_done(seg_id, facet.name, vector_store_id=seg_id, dim=dim)
+            pending.clear()
 
     for i, row in enumerate(manifest_df.itertuples()):
         existing = song_repo.get_song_by_fma_track_id(int(row.track_id))
         if existing and existing.segments and all(
-            embedding_repo.status(seg.id, facet_name) == "done" for seg in existing.segments
+            embedding_repo.status(seg.id, facet.name) == "done"
+            for seg in existing.segments
+            for facet in facets
         ):
-            continue  # fully embedded already -- skip the audio load entirely
+            continue  # every facet already embedded for every segment -- skip the audio load entirely
 
         filepath = str(audio_dir / row.relative_path)
         audio, sr = librosa.load(filepath, sr=CLAP_SR, mono=True)
@@ -69,17 +77,18 @@ def run_batch_embedding(
         segments = segment_song(song_id, duration_sec)
         seg_ids = song_repo.add_segments(song_id, segments)
 
-        pending = [
-            (seg_id, seg)
-            for seg_id, seg in zip(seg_ids, segments)
-            if embedding_repo.status(seg_id, facet_name) != "done"
-        ]
-        if pending:
-            windows = [audio[int(seg.start_sec * sr):int(seg.end_sec * sr)] for _, seg in pending]
-            vectors = sound_facet.embed_batch(windows, sr)
-            for (seg_id, _), vector in zip(pending, vectors):
-                embedding_repo.add_to_index(facet_name, seg_id, vector)
-                pending_confirmation.append((seg_id, vector.shape[-1]))
+        for facet in facets:
+            pending = [
+                (seg_id, seg)
+                for seg_id, seg in zip(seg_ids, segments)
+                if embedding_repo.status(seg_id, facet.name) != "done"
+            ]
+            if pending:
+                windows = [audio[int(seg.start_sec * sr):int(seg.end_sec * sr)] for _, seg in pending]
+                vectors = facet.embed_batch(windows, sr)
+                for (seg_id, _), vector in zip(pending, vectors):
+                    embedding_repo.add_to_index(facet.name, seg_id, vector)
+                    pending_confirmation[facet.name].append((seg_id, vector.shape[-1]))
 
         if (i + 1) % checkpoint_every == 0:
             checkpoint()

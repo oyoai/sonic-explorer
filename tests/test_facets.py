@@ -2,6 +2,7 @@ import numpy as np
 import pytest
 
 from sonic_explorer.facets.base import Facet
+from sonic_explorer.facets.harmony import HarmonyFacet
 from sonic_explorer.facets.registry import FacetRegistry, default_registry
 from sonic_explorer.facets.sound import SoundFacet
 
@@ -63,3 +64,11 @@ def test_default_registry_has_sound_facet_without_loading_clap():
     facet = registry.get("sound")
     assert isinstance(facet, SoundFacet)
     assert facet.dim == 512
+
+
+def test_default_registry_has_harmony_facet():
+    registry = default_registry()
+    assert "harmony" in registry.names()
+    facet = registry.get("harmony")
+    assert isinstance(facet, HarmonyFacet)
+    assert facet.dim == 24

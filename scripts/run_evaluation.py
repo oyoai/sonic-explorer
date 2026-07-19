@@ -1,5 +1,7 @@
 """Produces the Core-tier evaluation result: genre-cohesion of nearest neighbors
-vs. a random baseline. Prints a summary and saves an HTML bar chart for slides.
+vs. a random baseline, for every embedded facet (sound, harmony). Running both
+side by side is also the spec's "ablation-style finding": do facets actually
+diverge from each other, or is harmony just riding sound's coattails?
 
 Reads whatever is currently synced into data/artifacts/ -- run against the
 synthetic dev dataset (scripts/seed_dev_data.py) or the real synced library,
@@ -16,46 +18,52 @@ from sonic_explorer.repository.song_repository import SongRepository
 
 K = 10
 SAMPLE_SIZE = 500
+FACETS = ["sound", "harmony"]
 
 
 def main():
     conn = init_db(DB_PATH)
     song_repo = SongRepository(conn)
     embedding_repo = EmbeddingRepository(conn, artifacts_dir=ARTIFACTS_DIR)
-    embedding_repo.load_index("sound")
 
-    result = genre_cohesion_at_k(
-        song_repo, embedding_repo, facet_name="sound", k=K, sample_size=SAMPLE_SIZE
-    )
+    results = []
+    for facet_name in FACETS:
+        embedding_repo.load_index(facet_name)
+        result = genre_cohesion_at_k(
+            song_repo, embedding_repo, facet_name=facet_name, k=K, sample_size=SAMPLE_SIZE
+        )
+        results.append(result)
 
-    print(f"Facet: {result.facet_name}")
-    print(f"k: {result.k}")
-    print(f"Queries evaluated: {result.n_queries}")
-    print(f"Observed genre-cohesion@{result.k}: {result.observed * 100:.1f}%")
-    print(f"Random baseline:               {result.random_baseline * 100:.1f}%")
+        print(f"Facet: {result.facet_name}")
+        print(f"k: {result.k}")
+        print(f"Queries evaluated: {result.n_queries}")
+        print(f"Observed genre-cohesion@{result.k}: {result.observed * 100:.1f}%")
+        print(f"Random baseline:               {result.random_baseline * 100:.1f}%")
+        print()
 
-    if result.n_queries == 0:
-        print("\nNo embedded segments found -- nothing to plot.")
+    plottable = [r for r in results if r.n_queries > 0]
+    if not plottable:
+        print("No embedded segments found for any facet -- nothing to plot.")
         return
 
     fig = go.Figure(
         data=[
-            go.Bar(
-                x=["Sound facet", "Random baseline"],
-                y=[result.observed * 100, result.random_baseline * 100],
-                text=[f"{result.observed * 100:.1f}%", f"{result.random_baseline * 100:.1f}%"],
-                textposition="auto",
-            )
+            go.Bar(name="Observed", x=[r.facet_name for r in plottable], y=[r.observed * 100 for r in plottable],
+                   text=[f"{r.observed * 100:.1f}%" for r in plottable], textposition="auto"),
+            go.Bar(name="Random baseline", x=[r.facet_name for r in plottable],
+                   y=[r.random_baseline * 100 for r in plottable],
+                   text=[f"{r.random_baseline * 100:.1f}%" for r in plottable], textposition="auto"),
         ]
     )
     fig.update_layout(
-        title=f"Genre cohesion @ k={result.k} ({result.n_queries} queries)",
+        title=f"Genre cohesion @ k={K} by facet",
         yaxis_title="% of neighbors sharing genre",
+        barmode="group",
     )
 
     out_path = ARTIFACTS_DIR / "genre_cohesion.html"
     fig.write_html(str(out_path))
-    print(f"\nChart saved to {out_path}")
+    print(f"Chart saved to {out_path}")
 
 
 if __name__ == "__main__":

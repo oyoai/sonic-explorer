@@ -20,6 +20,7 @@ from sonic_explorer.repository.song_repository import SongRepository
 
 SONGS_PER_GENRE = 25  # ~25 x 8 genres = ~200 songs, ~160MB audio -- comfortably small for a git repo
 SEED = 42
+FACETS = ["sound", "harmony"]
 
 SOURCE_DATA_DIR = PROJECT_ROOT / "data"
 DEPLOY_DATA_DIR = PROJECT_ROOT / "deploy_data"
@@ -37,7 +38,8 @@ def main():
     src_conn = init_db(SOURCE_DATA_DIR / "artifacts" / "sonic_explorer.db")
     src_song_repo = SongRepository(src_conn)
     src_embedding_repo = EmbeddingRepository(src_conn, artifacts_dir=SOURCE_DATA_DIR / "artifacts")
-    src_embedding_repo.load_index("sound")
+    for facet_name in FACETS:
+        src_embedding_repo.load_index(facet_name)
 
     dst_conn = init_db(DEPLOY_DATA_DIR / "artifacts" / "sonic_explorer.db")
     dst_song_repo = SongRepository(dst_conn)
@@ -57,7 +59,7 @@ def main():
 
     n_audio_copied = 0
     n_structure_copied = 0
-    n_segments_copied = 0
+    n_segments_copied = {facet_name: 0 for facet_name in FACETS}
     n_dna_copied = 0
 
     for old_song in sampled:
@@ -85,10 +87,11 @@ def main():
         new_segment_ids = dst_song_repo.add_segments(new_song_id, old_segments)
 
         for old_seg, new_seg_id in zip(old_segments, new_segment_ids):
-            if src_embedding_repo.status(old_seg.id, "sound") == "done":
-                vector = src_embedding_repo.get_vector("sound", old_seg.id)
-                dst_embedding_repo.add_vector("sound", new_seg_id, vector)
-                n_segments_copied += 1
+            for facet_name in FACETS:
+                if src_embedding_repo.status(old_seg.id, facet_name) == "done":
+                    vector = src_embedding_repo.get_vector(facet_name, old_seg.id)
+                    dst_embedding_repo.add_vector(facet_name, new_seg_id, vector)
+                    n_segments_copied[facet_name] += 1
 
         src_audio = SOURCE_DATA_DIR / "audio" / f"{old_song.fma_track_id}.mp3"
         if src_audio.exists():
@@ -102,10 +105,12 @@ def main():
             shutil.copy(src_timeline, DEPLOY_DATA_DIR / "artifacts" / "structure" / f"{new_song_id}_timeline.npz")
             n_structure_copied += 1
 
-    dst_embedding_repo.save_index("sound")
+    for facet_name in FACETS:
+        dst_embedding_repo.save_index(facet_name)
 
     print(f"Songs: {len(sampled)}")
-    print(f"Segments with sound vectors copied: {n_segments_copied}")
+    for facet_name in FACETS:
+        print(f"Segments with {facet_name} vectors copied: {n_segments_copied[facet_name]}")
     print(f"Audio files copied: {n_audio_copied}")
     print(f"Structure artifacts copied: {n_structure_copied}")
     print(f"Song DNA copied: {n_dna_copied}")

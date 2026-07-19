@@ -51,13 +51,20 @@ query_segment = segments[moment_choice]
 st.markdown(f"**Listening at {query_segment.start_sec:.1f}s – {query_segment.end_sec:.1f}s:**")
 st.audio(str(audio_path_for(song)), start_time=query_segment.start_sec)
 
-st.markdown("### Match by: Sound")
+FACET_LABELS = {"sound": "Sound", "harmony": "Harmony"}
+facet_name = st.radio(
+    "Match by",
+    options=["sound", "harmony"],
+    format_func=lambda f: FACET_LABELS[f],
+    horizontal=True,
+)
+st.markdown(f"### Match by: {FACET_LABELS[facet_name]}")
 
-if embedding_repo.status(query_segment.id, "sound") != "done":
-    st.warning("This moment hasn't been embedded yet.")
+if embedding_repo.status(query_segment.id, facet_name) != "done":
+    st.warning(f"This moment hasn't been embedded for the {FACET_LABELS[facet_name]} facet yet.")
     st.stop()
 
-matches = retrieval_service.query_by_segment(query_segment.id, facet_name="sound", k=6)
+matches = retrieval_service.query_by_segment(query_segment.id, facet_name=facet_name, k=6)
 
 if not matches:
     st.info("No matches found elsewhere in the library yet.")
@@ -67,7 +74,8 @@ else:
 
     for match in matches:
         pct = max(0.0, match.score) * 100
-        st.markdown(f"**{pct:.0f}% sonic match** — {match.song.title} by {match.song.artist} ({match.song.genre_top})")
+        match_word = FACET_LABELS[facet_name].lower()
+        st.markdown(f"**{pct:.0f}% {match_word} match** — {match.song.title} by {match.song.artist} ({match.song.genre_top})")
         st.caption(f"at {match.segment.start_sec:.1f}s – {match.segment.end_sec:.1f}s")
         st.audio(str(audio_path_for(match.song)), start_time=match.segment.start_sec)
 

@@ -4,6 +4,7 @@ core package. Every page calls get_repositories() instead of constructing its ow
 import streamlit as st
 
 from sonic_explorer.config import ARTIFACTS_DIR, DB_PATH, DEV_DATA_MARKER
+from sonic_explorer.facets.registry import default_registry
 from sonic_explorer.repository.db import init_db
 from sonic_explorer.repository.embedding_repository import EmbeddingRepository
 from sonic_explorer.repository.song_repository import SongRepository
@@ -15,7 +16,8 @@ def get_repositories():
     conn = init_db(DB_PATH)
     song_repo = SongRepository(conn)
     embedding_repo = EmbeddingRepository(conn, artifacts_dir=ARTIFACTS_DIR)
-    embedding_repo.load_index("sound")
+    for facet_name in default_registry().names():
+        embedding_repo.load_index(facet_name)
     retrieval_service = RetrievalService(song_repo, embedding_repo)
     return song_repo, embedding_repo, retrieval_service
 

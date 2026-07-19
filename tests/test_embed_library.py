@@ -21,6 +21,7 @@ class FakeSoundFacet:
     close to an integer number of periods, so content-derived fake vectors would
     collapse to duplicates and defeat any retrieval-identity assertions."""
 
+    name = "sound"
     dim = 8
 
     def __init__(self):
@@ -36,6 +37,13 @@ class FakeSoundFacet:
             vectors.append(vec)
             self._counter += 1
         return np.stack(vectors)
+
+
+class FakeHarmonyFacet(FakeSoundFacet):
+    """A second fake facet, distinct name, for exercising the multi-facet path."""
+
+    name = "harmony"
+    dim = 6
 
 
 class CrashingFacet(FakeSoundFacet):
@@ -84,7 +92,7 @@ def test_batch_embedding_populates_db_and_index(repos, curated_audio):
     audio_dir, manifest = curated_audio
     facet = FakeSoundFacet()
 
-    run_batch_embedding(manifest, audio_dir, song_repo, embedding_repo, facet, facet_name="sound")
+    run_batch_embedding(manifest, audio_dir, song_repo, embedding_repo, facets=[facet])
 
     songs = song_repo.list_songs()
     assert len(songs) == 2
@@ -107,13 +115,13 @@ def test_batch_embedding_is_idempotent_and_skips_audio_reload_on_resume(repos, c
     audio_dir, manifest = curated_audio
     facet = FakeSoundFacet()
 
-    run_batch_embedding(manifest, audio_dir, song_repo, embedding_repo, facet, facet_name="sound")
+    run_batch_embedding(manifest, audio_dir, song_repo, embedding_repo, facets=[facet])
     first_index_size = embedding_repo.index_size("sound")
     assert facet.call_count > 0
 
     # simulate a resumed run: same manifest, same repos (as if DB/index were reloaded from Drive)
     facet.call_count = 0
-    run_batch_embedding(manifest, audio_dir, song_repo, embedding_repo, facet, facet_name="sound")
+    run_batch_embedding(manifest, audio_dir, song_repo, embedding_repo, facets=[facet])
 
     assert embedding_repo.index_size("sound") == first_index_size
     # every track was already fully embedded -- run_batch_embedding should skip the
@@ -126,7 +134,7 @@ def test_get_vector_and_search_after_batch_embedding(repos, curated_audio):
     audio_dir, manifest = curated_audio
     facet = FakeSoundFacet()
 
-    run_batch_embedding(manifest, audio_dir, song_repo, embedding_repo, facet, facet_name="sound")
+    run_batch_embedding(manifest, audio_dir, song_repo, embedding_repo, facets=[facet])
 
     song_a = song_repo.get_song_by_fma_track_id(1)
     query_seg = song_a.segments[0]
@@ -158,7 +166,7 @@ def test_crash_between_checkpoints_leaves_no_orphaned_done_status(repos, tmp_pat
 
     with pytest.raises(RuntimeError, match="simulated crash"):
         run_batch_embedding(
-            manifest, audio_dir, song_repo, embedding_repo, facet, facet_name="sound", checkpoint_every=2
+            manifest, audio_dir, song_repo, embedding_repo, facets=[facet], checkpoint_every=2
         )
 
     # songs 1 & 2 were checkpointed (save_index + mark_done) before the crash
@@ -183,12 +191,47 @@ def test_crash_between_checkpoints_leaves_no_orphaned_done_status(repos, tmp_pat
                 embedding_repo.get_vector("sound", seg.id)  # must not raise
 
 
+def test_multiple_facets_embedded_from_one_shared_audio_load(repos, curated_audio):
+    song_repo, embedding_repo = repos
+    audio_dir, manifest = curated_audio
+    sound = FakeSoundFacet()
+    harmony = FakeHarmonyFacet()
+
+    run_batch_embedding(manifest, audio_dir, song_repo, embedding_repo, facets=[sound, harmony])
+
+    song_a = song_repo.get_song_by_fma_track_id(1)
+    for seg in song_a.segments:
+        assert embedding_repo.status(seg.id, "sound") == "done"
+        assert embedding_repo.status(seg.id, "harmony") == "done"
+    assert embedding_repo.index_size("sound") == embedding_repo.index_size("harmony")
+
+
+def test_multiple_facets_independent_compute_once_tracking(repos, curated_audio):
+    """If sound is already fully embedded but harmony isn't, a re-run must still
+    reload audio (harmony needs it) while skipping re-embedding sound."""
+    song_repo, embedding_repo = repos
+    audio_dir, manifest = curated_audio
+    sound = FakeSoundFacet()
+
+    run_batch_embedding(manifest, audio_dir, song_repo, embedding_repo, facets=[sound])
+    sound_index_size = embedding_repo.index_size("sound")
+
+    sound.call_count = 0
+    harmony = FakeHarmonyFacet()
+    run_batch_embedding(manifest, audio_dir, song_repo, embedding_repo, facets=[sound, harmony])
+
+    assert sound.call_count == 0  # sound was already done for every segment -- never re-embedded
+    assert harmony.call_count > 0  # harmony had to actually run
+    assert embedding_repo.index_size("sound") == sound_index_size  # unchanged
+    assert embedding_repo.index_size("harmony") == sound_index_size  # same segments, now both facets present
+
+
 def test_save_and_load_index_round_trips_through_artifacts_dir(repos, curated_audio):
     song_repo, embedding_repo = repos
     audio_dir, manifest = curated_audio
     facet = FakeSoundFacet()
 
-    run_batch_embedding(manifest, audio_dir, song_repo, embedding_repo, facet, facet_name="sound")
+    run_batch_embedding(manifest, audio_dir, song_repo, embedding_repo, facets=[facet])
     embedding_repo.save_index("sound")
 
     index_path = embedding_repo.artifacts_dir / "sound.index"
