@@ -5,7 +5,7 @@ import soundfile as sf
 
 from sonic_explorer.config import STRUCTURE_SR
 from sonic_explorer.models import Song
-from sonic_explorer.pipeline.build_structure_library import run_batch_structure
+from sonic_explorer.pipeline.build_structure_library import run_batch_structure, timeline_path
 from sonic_explorer.repository.db import init_db
 from sonic_explorer.repository.song_repository import SongRepository
 
@@ -39,7 +39,7 @@ def curated_audio(tmp_path, song_repo):
     return audio_dir, manifest
 
 
-def test_run_batch_structure_creates_matrix_per_song(song_repo, curated_audio, tmp_path):
+def test_run_batch_structure_creates_matrix_and_timeline_per_song(song_repo, curated_audio, tmp_path):
     audio_dir, manifest = curated_audio
     structure_dir = tmp_path / "structure"
 
@@ -49,10 +49,16 @@ def test_run_batch_structure_creates_matrix_per_song(song_repo, curated_audio, t
     song_b = song_repo.get_song_by_fma_track_id(2)
     assert (structure_dir / f"{song_a.id}.npy").exists()
     assert (structure_dir / f"{song_b.id}.npy").exists()
+    assert timeline_path(structure_dir, song_a.id).exists()
+    assert timeline_path(structure_dir, song_b.id).exists()
 
     matrix = np.load(structure_dir / f"{song_a.id}.npy")
     assert matrix.ndim == 2
     assert matrix.shape[0] == matrix.shape[1]
+
+    timeline = np.load(timeline_path(structure_dir, song_a.id))
+    assert len(timeline["starts"]) == len(timeline["ends"]) == len(timeline["labels"])
+    assert timeline["starts"][0] == pytest.approx(0.0, abs=1e-3)
 
 
 def test_run_batch_structure_skips_tracks_not_in_db(song_repo, curated_audio, tmp_path):
@@ -89,6 +95,7 @@ def test_run_batch_structure_isolates_per_song_failures(song_repo, curated_audio
     assert (structure_dir / f"{song_a.id}.npy").exists()
     assert (structure_dir / f"{song_b.id}.npy").exists()
     assert not (structure_dir / f"{song_c.id}.npy").exists()
+    assert not timeline_path(structure_dir, song_c.id).exists()
 
 
 def test_run_batch_structure_is_idempotent(song_repo, curated_audio, tmp_path, monkeypatch):

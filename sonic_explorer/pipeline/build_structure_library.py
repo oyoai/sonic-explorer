@@ -1,8 +1,9 @@
-"""Library-scale structure-matrix computation. CPU-only (no CLAP/GPU needed) --
-can run locally exactly like scripts/acquire_fma.py, or in Colab reusing whatever
-curated audio is already there. Compute-once via checking whether each song's
-.npy artifact already exists (no embedding_status row for this -- it's a
-song-level artifact, not a per-segment facet vector; see facets/structure.py)."""
+"""Library-scale structure computation (self-similarity matrix + segmented
+timeline). CPU-only (no CLAP/GPU needed) -- can run locally exactly like
+scripts/acquire_fma.py, or in Colab reusing whatever curated audio is already
+there. Compute-once via checking whether each song's artifacts already exist (no
+embedding_status row for this -- these are song-level artifacts, not per-segment
+facet vectors; see facets/structure.py)."""
 
 from pathlib import Path
 from typing import Callable
@@ -11,8 +12,12 @@ import numpy as np
 import pandas as pd
 
 from sonic_explorer.config import STRUCTURE_SR
-from sonic_explorer.facets.structure import compute_self_similarity_matrix
+from sonic_explorer.facets.structure import analyze_structure
 from sonic_explorer.repository.song_repository import SongRepository
+
+
+def timeline_path(structure_dir: Path, song_id: int) -> Path:
+    return structure_dir / f"{song_id}_timeline.npz"
 
 
 def run_batch_structure(
@@ -45,15 +50,22 @@ def run_batch_structure(
         if song is None:
             continue
 
-        out_path = structure_dir / f"{song.id}.npy"
-        if out_path.exists():
+        matrix_path = structure_dir / f"{song.id}.npy"
+        tl_path = timeline_path(structure_dir, song.id)
+        if matrix_path.exists() and tl_path.exists():
             continue
 
         try:
             filepath = str(audio_dir / row.relative_path)
             audio, loaded_sr = librosa.load(filepath, sr=sr, mono=True)
-            matrix = compute_self_similarity_matrix(audio, loaded_sr)
-            np.save(out_path, matrix)
+            analysis = analyze_structure(audio, loaded_sr)
+            np.save(matrix_path, analysis.matrix)
+            np.savez(
+                tl_path,
+                starts=analysis.segment_starts,
+                ends=analysis.segment_ends,
+                labels=analysis.segment_labels,
+            )
         except Exception as exc:  # noqa: BLE001 -- deliberately broad, see docstring
             failed_track_ids.append(int(row.track_id))
             if on_error:

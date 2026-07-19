@@ -119,3 +119,12 @@ class EmbeddingRepository:
         """Song-level self-similarity matrix -- the artifact Song X-Ray reads directly,
         outside the facet-vector retrieval path (see structure facet notes, Day 3)."""
         return np.load(self.artifacts_dir / "structure" / f"{song_id}.npy")
+
+    def get_structure_timeline(self, song_id: int):
+        """Segmented timeline (which stretches of the song sound alike) -- Song
+        X-Ray's primary, non-technical view. Raises FileNotFoundError if not yet
+        computed, same as get_structure_matrix."""
+        from sonic_explorer.facets.structure import StructureTimeline
+
+        data = np.load(self.artifacts_dir / "structure" / f"{song_id}_timeline.npz")
+        return StructureTimeline(segment_starts=data["starts"], segment_ends=data["ends"], segment_labels=data["labels"])
