@@ -19,11 +19,20 @@ where matching colors = similar-sounding sections); the matrix is the secondary
 retrieval (see the spec's Core/Strong split), so none of this routes through the
 Facet/FacetRegistry retrieval path the way SoundFacet does -- these are song-level
 artifacts computed and cached directly.
+
+Not every song has clear verse/chorus repetition -- ambient/through-composed
+tracks genuinely don't, and the agglomerative clustering above will still
+produce *something* regardless (it has no notion of "there's no real structure
+here"). facets/novelty.py's checkerboard-kernel novelty curve is the separate
+signal that decides whether to trust and show those segments, or show the
+honest continuous curve instead -- see has_clear_structure below.
 """
 
 from dataclasses import dataclass
 
 import numpy as np
+
+from sonic_explorer.facets.novelty import compute_novelty_curve, compute_structural_confidence, find_structural_peaks
 
 # librosa.segment.recurrence_matrix's default width needs (n_frames - 1) // 2 >= 1,
 # i.e. at least 3 frames -- a real failure mode on real FMA data: some tracks (near-
@@ -51,6 +60,10 @@ class StructureTimeline:
     segment_ends: np.ndarray
     segment_labels: np.ndarray
     sound_fingerprint: np.ndarray | None = None
+    novelty_curve: np.ndarray | None = None
+    novelty_times: np.ndarray | None = None
+    has_clear_structure: bool = True
+    structural_confidence: float | None = None
 
 
 @dataclass
@@ -59,6 +72,10 @@ class StructureAnalysis:
     segment_starts: np.ndarray  # start_sec per contiguous timeline segment
     segment_ends: np.ndarray  # end_sec per contiguous timeline segment
     segment_labels: np.ndarray  # cluster label (int) per contiguous timeline segment
+    novelty_curve: np.ndarray  # one value per chroma_sync frame, see facets/novelty.py
+    novelty_times: np.ndarray  # start_sec per novelty_curve entry
+    has_clear_structure: bool  # False when no novelty peak clears the confidence threshold
+    structural_confidence: float  # continuous flatness measure -- see facets/novelty.py
 
 
 def _merge_short_segments(starts: list, ends: list, labels: list, min_duration: float) -> tuple[list, list, list]:
@@ -160,11 +177,30 @@ def analyze_structure(audio: np.ndarray, sr: int, n_clusters: int = DEFAULT_TIME
     seg_starts, seg_ends, seg_labels = _merge_short_segments(seg_starts, seg_ends, seg_labels, MIN_SEGMENT_SEC)
     seg_starts, seg_ends, seg_labels = _collapse_adjacent_same_label(seg_starts, seg_ends, seg_labels)
 
+    # Structural confidence: does this song actually repeat in clear sections,
+    # or evolve gradually (ambient/through-composed)? The agglomerative
+    # segments above always produce *something* (clustering doesn't know how
+    # to say "there's no real structure here") -- the novelty curve is what
+    # decides whether the UI should trust and show them, or show the honest
+    # continuous curve instead. Deliberately kept as a separate signal rather
+    # than rebuilding segmentation around novelty-peak boundaries directly:
+    # the agglomerative approach is already validated (see module docstring),
+    # and confidence-gating it achieves the same "don't force fake sections"
+    # goal with far less risk to a working, tuned mechanism.
+    novelty_curve = compute_novelty_curve(chroma_sync, duration_sec)
+    novelty_times = boundaries[:-1]
+    peaks = find_structural_peaks(novelty_curve)
+    structural_confidence = compute_structural_confidence(novelty_curve)
+
     return StructureAnalysis(
         matrix=matrix,
         segment_starts=np.array(seg_starts, dtype=np.float32),
         segment_ends=np.array(seg_ends, dtype=np.float32),
         segment_labels=np.array(seg_labels, dtype=np.int32),
+        novelty_curve=novelty_curve,
+        novelty_times=novelty_times,
+        has_clear_structure=len(peaks) > 0,
+        structural_confidence=structural_confidence,
     )
 
 

@@ -1,9 +1,10 @@
 """Library-scale structure computation (self-similarity matrix + segmented
-timeline + sound fingerprint + song DNA). CPU-only (no CLAP/GPU needed) -- can
-run locally exactly like scripts/acquire_fma.py, or in Colab reusing whatever
-curated audio is already there. Compute-once via checking whether each song's
-artifacts already exist (no embedding_status row for this -- these are
-song-level artifacts, not per-segment facet vectors; see facets/structure.py).
+timeline + novelty curve/structural confidence + sound fingerprint + song DNA).
+CPU-only (no CLAP/GPU needed) -- can run locally exactly like
+scripts/acquire_fma.py, or in Colab reusing whatever curated audio is already
+there. Compute-once via checking whether each song's artifacts already exist
+(no embedding_status row for this -- these are song-level artifacts, not
+per-segment facet vectors; see facets/structure.py).
 
 The sound fingerprint (facets/fingerprint.py) and song DNA (facets/song_dna.py)
 are computed here, not lazily in the Streamlit app, specifically so the
@@ -26,6 +27,16 @@ from sonic_explorer.repository.song_repository import SongRepository
 
 def timeline_path(structure_dir: Path, song_id: int) -> Path:
     return structure_dir / f"{song_id}_timeline.npz"
+
+
+def _timeline_is_complete(tl_path: Path) -> bool:
+    """Cheaply checks whether an existing timeline .npz already has the novelty
+    keys -- older files (from before novelty detection existed) need
+    reprocessing even though the file itself is present."""
+    if not tl_path.exists():
+        return False
+    with np.load(tl_path) as data:
+        return "has_clear_structure" in data
 
 
 def run_batch_structure(
@@ -61,7 +72,7 @@ def run_batch_structure(
         matrix_path = structure_dir / f"{song.id}.npy"
         tl_path = timeline_path(structure_dir, song.id)
         has_dna = song.tempo_bpm is not None
-        if matrix_path.exists() and tl_path.exists() and has_dna:
+        if matrix_path.exists() and _timeline_is_complete(tl_path) and has_dna:
             continue
 
         try:
@@ -77,6 +88,10 @@ def run_batch_structure(
                 ends=analysis.segment_ends,
                 labels=analysis.segment_labels,
                 sound_fp=fingerprint,
+                novelty=analysis.novelty_curve,
+                novelty_times=analysis.novelty_times,
+                has_clear_structure=analysis.has_clear_structure,
+                structural_confidence=analysis.structural_confidence,
             )
             song_repo.update_song_dna(
                 song.id,

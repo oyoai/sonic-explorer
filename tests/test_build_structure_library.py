@@ -5,7 +5,7 @@ import soundfile as sf
 
 from sonic_explorer.config import STRUCTURE_SR
 from sonic_explorer.models import Song
-from sonic_explorer.pipeline.build_structure_library import run_batch_structure, timeline_path
+from sonic_explorer.pipeline.build_structure_library import _timeline_is_complete, run_batch_structure, timeline_path
 from sonic_explorer.repository.db import init_db
 from sonic_explorer.repository.song_repository import SongRepository
 
@@ -96,6 +96,33 @@ def test_run_batch_structure_computes_dna_for_songs_missing_only_that(song_repo,
 
     assert len(calls) == 1  # only song_a got reprocessed, not song_b (which already had DNA)
     assert song_repo.get_song_by_fma_track_id(1).tempo_bpm is not None
+
+
+def test_run_batch_structure_reprocesses_timeline_missing_novelty_keys(song_repo, curated_audio, tmp_path):
+    """Same resumability class of bug as the DNA case: a timeline.npz written
+    before novelty detection existed has matrix+timeline+DNA all present, but
+    is missing the novelty keys -- must still get reprocessed, not skipped."""
+    audio_dir, manifest = curated_audio
+    structure_dir = tmp_path / "structure"
+
+    run_batch_structure(manifest, audio_dir, song_repo, structure_dir)
+    song_a = song_repo.get_song_by_fma_track_id(1)
+    tl_path = timeline_path(structure_dir, song_a.id)
+
+    # simulate an old-style timeline.npz (no novelty keys) by rewriting it
+    # without them, leaving the DB (including DNA) untouched
+    old_data = dict(np.load(tl_path))
+    for key in ("novelty", "novelty_times", "has_clear_structure", "structural_confidence"):
+        old_data.pop(key, None)
+    np.savez(tl_path, **old_data)
+    assert not _timeline_is_complete(tl_path)
+
+    run_batch_structure(manifest, audio_dir, song_repo, structure_dir)
+
+    assert _timeline_is_complete(tl_path)
+    reloaded = np.load(tl_path)
+    assert "novelty" in reloaded
+    assert "has_clear_structure" in reloaded
 
 
 def test_run_batch_structure_skips_tracks_not_in_db(song_repo, curated_audio, tmp_path):

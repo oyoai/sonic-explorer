@@ -248,3 +248,45 @@ def test_get_structure_timeline_missing_fingerprint_key_is_none(conn, tmp_path):
 
     timeline = repo.get_structure_timeline(5)
     assert timeline.sound_fingerprint is None
+
+
+def test_get_structure_timeline_round_trips_novelty_fields(conn, tmp_path):
+    repo = EmbeddingRepository(conn, artifacts_dir=tmp_path)
+    (tmp_path / "structure").mkdir()
+    novelty = np.array([0.0, 0.2, 0.9, 0.1], dtype=np.float32)
+    novelty_times = np.array([0.0, 2.5, 5.0, 7.5], dtype=np.float32)
+    np.savez(
+        tmp_path / "structure" / "5_timeline.npz",
+        starts=np.array([0.0], dtype=np.float32),
+        ends=np.array([10.0], dtype=np.float32),
+        labels=np.array([0], dtype=np.int32),
+        novelty=novelty,
+        novelty_times=novelty_times,
+        has_clear_structure=True,
+        structural_confidence=0.42,
+    )
+
+    timeline = repo.get_structure_timeline(5)
+    assert np.array_equal(timeline.novelty_curve, novelty)
+    assert np.array_equal(timeline.novelty_times, novelty_times)
+    assert timeline.has_clear_structure is True
+    assert timeline.structural_confidence == pytest.approx(0.42)
+
+
+def test_get_structure_timeline_missing_novelty_keys_defaults_to_clear_structure(conn, tmp_path):
+    """Backward compat: pre-novelty timeline files default has_clear_structure to
+    True -- preserves the old behavior (always show segments) rather than
+    silently hiding every already-synced song's timeline."""
+    repo = EmbeddingRepository(conn, artifacts_dir=tmp_path)
+    (tmp_path / "structure").mkdir()
+    np.savez(
+        tmp_path / "structure" / "5_timeline.npz",
+        starts=np.array([0.0], dtype=np.float32),
+        ends=np.array([10.0], dtype=np.float32),
+        labels=np.array([0], dtype=np.int32),
+    )
+
+    timeline = repo.get_structure_timeline(5)
+    assert timeline.novelty_curve is None
+    assert timeline.has_clear_structure is True
+    assert timeline.structural_confidence is None

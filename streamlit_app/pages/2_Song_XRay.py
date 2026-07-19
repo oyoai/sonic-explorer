@@ -58,14 +58,38 @@ if matrix is not None or (timeline is not None and timeline.sound_fingerprint is
             st.plotly_chart(fingerprint_thumbnail(timeline.sound_fingerprint, "Sound"), width="stretch", key="fp_sound")
 
 st.markdown("#### Structure timeline")
-st.caption(
-    "Each colored block is a stretch of the song. Same color = similar-sounding sections "
-    "(e.g. a verse repeating later) -- discovered automatically from the audio, not labeled by us. "
-    "Click a block to loop just that section."
-)
 
 selected_segment_idx = None
-if timeline is not None:
+if timeline is None:
+    st.warning("No structure timeline computed for this song yet.")
+elif not timeline.has_clear_structure:
+    # Not every song has clean verse/chorus repetition -- forcing a segmented
+    # timeline onto an ambient/through-composed track would show either one
+    # meaningless block or noisy fake boundaries. The novelty curve says so
+    # honestly instead of hiding the limitation.
+    st.caption(
+        "This song evolves gradually rather than repeating in clear sections -- shown below as a "
+        "continuous curve instead of colored blocks. Peaks are moments that sound most different "
+        "from what came just before; none were sharp enough to count as a clear section change."
+    )
+    if timeline.novelty_curve is not None:
+        curve_fig = go.Figure(go.Scatter(
+            x=timeline.novelty_times, y=timeline.novelty_curve, mode="lines", fill="tozeroy",
+            line=dict(color="rgb(99,110,250)"),
+        ))
+        curve_fig.update_layout(
+            height=180,
+            xaxis_title="Time (s)",
+            yaxis=dict(title="novelty", showticklabels=False, range=[0, 1]),
+            margin=dict(l=10, r=10, t=10, b=40),
+        )
+        st.plotly_chart(curve_fig, width="stretch", key="novelty_curve_chart")
+else:
+    st.caption(
+        "Each colored block is a stretch of the song. Same color = similar-sounding sections "
+        "(e.g. a verse repeating later) -- discovered automatically from the audio, not labeled by us. "
+        "Click a block to loop just that section."
+    )
     palette = px.colors.qualitative.Set2
     unique_labels = sorted(set(timeline.segment_labels.tolist()))
     color_map = {lab: palette[i % len(palette)] for i, lab in enumerate(unique_labels)}
@@ -104,8 +128,6 @@ if timeline is not None:
         st.audio(str(audio_path_for(song)), start_time=seg_start, end_time=seg_end, loop=True)
     else:
         st.caption("Click a colored block above to loop just that section.")
-else:
-    st.warning("No structure timeline computed for this song yet.")
 
 st.markdown("#### Position in the Taste Map")
 

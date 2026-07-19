@@ -96,6 +96,32 @@ def test_analyze_structure_timeline_separates_distinct_halves():
     assert any(abs(start - half_duration) < 1.5 for start in result.segment_starts[1:])
 
 
+def test_analyze_structure_reports_low_confidence_for_pure_tone():
+    """A single sustained tone has no genuine section boundaries -- structural
+    confidence gating should say so, even though the agglomerative clustering
+    above still produces segments regardless (it has no way to know there's no
+    real structure)."""
+    audio = make_sine(duration_sec=20.0, freq=440.0)
+    result = analyze_structure(audio, CLAP_SR)
+
+    assert result.has_clear_structure is False
+    assert result.novelty_curve.shape == result.novelty_times.shape
+
+
+def test_analyze_structure_reports_clear_structure_for_distinct_halves():
+    sr = CLAP_SR
+    half_duration = 15.0
+    t = np.linspace(0, half_duration, int(half_duration * sr), endpoint=False)
+    first_half = (0.2 * np.sin(2 * np.pi * 261.63 * t)).astype(np.float32)
+    second_half = (0.2 * np.sin(2 * np.pi * 369.99 * t)).astype(np.float32)
+    audio = np.concatenate([first_half, second_half])
+
+    result = analyze_structure(audio, sr)
+
+    assert result.has_clear_structure is True
+    assert result.structural_confidence > 0.0
+
+
 def test_analyze_structure_timeline_segments_meet_minimum_duration():
     """Raw per-beat K-Means labels flip too often to read as clean colored blocks
     (confirmed on real songs: e.g. 22 segments across 27s, most under 1.5s) --
