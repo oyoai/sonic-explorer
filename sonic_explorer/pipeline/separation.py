@@ -8,14 +8,12 @@ CLAP (the sound facet): runs on Colab
 pipelines like structure/harmony. torch/demucs are lazily imported so this
 module stays importable in a plain local install with no [colab] extra.
 
-CAVEAT: unlike every other pipeline module in this package, this one has NOT
-been empirically run against the real demucs library -- this machine has no
-GPU and demucs/torch aren't installed locally, so it was written from
-documented API knowledge (demucs.api.Separator, added in demucs 4.0
-specifically for this kind of programmatic use) rather than validated
-end-to-end. First run on Colab should sanity-check stem audio (right length,
-audibly separated, no silence/NaNs) before trusting a full-library batch run,
-exactly the same discipline used for every other new facet in this project.
+Written from documented API knowledge (demucs.api.Separator, added in demucs
+4.0 specifically for this kind of programmatic use) rather than tested
+locally -- this dev machine has no GPU and demucs/torch aren't installed here.
+Smoke-tested on real Colab GPU against real FMA audio (an experimental/
+instrumental track correctly produced a near-empty vocal stem, audibly
+separated drums/bass/other) before any full-library batch run.
 """
 
 import numpy as np
