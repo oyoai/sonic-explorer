@@ -13,6 +13,7 @@ import shutil
 import numpy as np
 
 from sonic_explorer.config import PROJECT_ROOT
+from sonic_explorer.facets.registry import default_registry
 from sonic_explorer.models import Song
 from sonic_explorer.repository.db import init_db
 from sonic_explorer.repository.embedding_repository import EmbeddingRepository
@@ -20,7 +21,7 @@ from sonic_explorer.repository.song_repository import SongRepository
 
 SONGS_PER_GENRE = 25  # ~25 x 8 genres = ~200 songs, ~160MB audio -- comfortably small for a git repo
 SEED = 42
-FACETS = ["sound", "harmony"]
+FACETS = default_registry().names()  # sound, harmony, vocal, drums, bass, instrumental
 
 SOURCE_DATA_DIR = PROJECT_ROOT / "data"
 DEPLOY_DATA_DIR = PROJECT_ROOT / "deploy_data"

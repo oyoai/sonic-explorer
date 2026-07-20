@@ -1,7 +1,8 @@
 """Produces the Core-tier evaluation result: genre-cohesion of nearest neighbors
-vs. a random baseline, for every embedded facet (sound, harmony). Running both
-side by side is also the spec's "ablation-style finding": do facets actually
-diverge from each other, or is harmony just riding sound's coattails?
+vs. a random baseline, for every registered facet (sound, harmony, and the
+four stem facets). Running them side by side is also the spec's
+"ablation-style finding": do facets actually diverge from each other, or is
+each new one just riding sound's coattails?
 
 Reads whatever is currently synced into data/artifacts/ -- run against the
 synthetic dev dataset (scripts/seed_dev_data.py) or the real synced library,
@@ -12,13 +13,14 @@ import plotly.graph_objects as go
 
 from sonic_explorer.config import ARTIFACTS_DIR, DB_PATH
 from sonic_explorer.evaluation.genre_cohesion import genre_cohesion_at_k
+from sonic_explorer.facets.registry import default_registry
 from sonic_explorer.repository.db import init_db
 from sonic_explorer.repository.embedding_repository import EmbeddingRepository
 from sonic_explorer.repository.song_repository import SongRepository
 
 K = 10
 SAMPLE_SIZE = 500
-FACETS = ["sound", "harmony"]
+FACETS = default_registry().names()
 
 
 def main():
