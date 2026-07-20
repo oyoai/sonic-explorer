@@ -8,6 +8,7 @@ import streamlit as st
 from sonic_explorer.config import ARTIFACTS_DIR, DB_PATH, DEV_DATA_MARKER
 from sonic_explorer.facets.registry import default_registry
 from sonic_explorer.llm.explain import ExplanationClient
+from sonic_explorer.llm.rerank import RerankClient
 from sonic_explorer.repository.db import init_db
 from sonic_explorer.repository.embedding_repository import EmbeddingRepository
 from sonic_explorer.repository.song_repository import SongRepository
@@ -25,13 +26,12 @@ def get_repositories():
     return song_repo, embedding_repo, retrieval_service
 
 
-@st.cache_resource
-def get_explanation_client() -> ExplanationClient | None:
-    """None (not an exception) when no key is configured -- the explanation
-    layer is a value-add, not load-bearing, so pages must degrade gracefully
-    rather than crash when ANTHROPIC_API_KEY isn't set. Checks
-    st.secrets first (the platform secrets manager once deployed -- spec
-    section 11), falling back to an env var for local dev convenience."""
+def _get_anthropic_api_key() -> str | None:
+    """None when no key is configured -- every LLM feature is a value-add, not
+    load-bearing, so pages must degrade gracefully rather than crash when
+    ANTHROPIC_API_KEY isn't set. Checks st.secrets first (the platform
+    secrets manager once deployed -- spec section 11), falling back to an env
+    var for local dev convenience."""
     api_key = None
     try:
         api_key = st.secrets.get("ANTHROPIC_API_KEY")
@@ -39,12 +39,29 @@ def get_explanation_client() -> ExplanationClient | None:
         api_key = None
     if not api_key:
         api_key = os.environ.get("ANTHROPIC_API_KEY")
+    return api_key or None
+
+
+@st.cache_resource
+def get_explanation_client() -> ExplanationClient | None:
+    api_key = _get_anthropic_api_key()
     if not api_key:
         return None
 
     import anthropic
 
     return ExplanationClient(anthropic.Anthropic(api_key=api_key))
+
+
+@st.cache_resource
+def get_rerank_client() -> RerankClient | None:
+    api_key = _get_anthropic_api_key()
+    if not api_key:
+        return None
+
+    import anthropic
+
+    return RerankClient(anthropic.Anthropic(api_key=api_key))
 
 
 def is_dev_data() -> bool:
