@@ -15,6 +15,15 @@ already-constructed repos/services as arguments and return JSON-serializable
 dicts, so they're callable identically from a real agent loop or a test."""
 
 from sonic_explorer.analysis.song_dna import AXES, AXIS_LABELS, nearest_songs_by_dna
+from sonic_explorer.facets.registry import default_registry
+from sonic_explorer.llm.explain import FACET_DESCRIPTIONS
+
+# Pulled from the real registry rather than hardcoded, so a newly-registered
+# facet (e.g. the stem-separated ones) becomes usable by the agent
+# automatically -- same reasoning as Explore's facet multiselect and Moment
+# Matcher's facet radio, both driven by this same registry.
+_FACET_NAMES = default_registry().names()
+_FACET_LIST_TEXT = "; ".join(f"'{name}' ({FACET_DESCRIPTIONS[name]})" for name in _FACET_NAMES)
 
 AGENT_TOOLS = [
     {
@@ -35,15 +44,12 @@ AGENT_TOOLS = [
     },
     {
         "name": "search_similar_songs",
-        "description": (
-            "Find songs sonically similar to a named song on one specific facet: 'sound' "
-            "(overall timbre/production/instrumentation) or 'harmony' (key/chords/tonal color)."
-        ),
+        "description": f"Find songs sonically similar to a named song on one specific facet: {_FACET_LIST_TEXT}.",
         "input_schema": {
             "type": "object",
             "properties": {
                 "song_title": {"type": "string"},
-                "facet": {"type": "string", "enum": ["sound", "harmony"]},
+                "facet": {"type": "string", "enum": _FACET_NAMES},
                 "k": {"type": "integer", "description": "How many matches to return (default 5)."},
             },
             "required": ["song_title", "facet"],
@@ -109,8 +115,8 @@ def tool_get_song_profile(song_repo, dna_normalizer, song_title: str) -> dict:
 
 
 def tool_search_similar_songs(song_repo, embedding_repo, retrieval_service, song_title: str, facet: str, k: int = 5) -> dict:
-    if facet not in ("sound", "harmony"):
-        return {"error": f"Unknown facet {facet!r} -- must be 'sound' or 'harmony'."}
+    if facet not in _FACET_NAMES:
+        return {"error": f"Unknown facet {facet!r} -- must be one of {_FACET_NAMES}."}
     song = find_song_by_title(song_repo, song_title)
     if song is None:
         return {"error": f"No unambiguous song found matching {song_title!r}."}

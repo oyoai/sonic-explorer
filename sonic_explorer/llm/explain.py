@@ -21,6 +21,10 @@ MAX_FIELD_LEN = 200
 FACET_DESCRIPTIONS = {
     "sound": "overall sound, timbre, instrumentation, and production character",
     "harmony": "harmony -- key, chords, and tonal color",
+    "vocal": "vocal delivery and voice timbre, isolated from the rest of the mix",
+    "drums": "drum and percussion pattern and timbre, isolated from the rest of the mix",
+    "bass": "bassline tone and pattern, isolated from the rest of the mix",
+    "instrumental": "backing instrumentation with vocals removed",
 }
 
 DEFAULT_MODEL = "claude-haiku-4-5-20251001"

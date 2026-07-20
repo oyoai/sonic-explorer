@@ -8,6 +8,7 @@ import streamlit as st
 
 from sonic_explorer.analysis.song_dna import AXES, AXIS_LABELS, nearest_songs_by_dna
 from sonic_explorer.config import audio_path_for
+from sonic_explorer.facets.registry import default_registry
 from components.plotting import song_dna_radar_overlay
 from resources import (
     build_dna_normalizer,
@@ -18,6 +19,7 @@ from resources import (
     show_data_source_banner,
 )
 
+FACET_REGISTRY = default_registry()
 MAX_LLM_CALLS_PER_SESSION = 60  # simple abuse/cost guardrail for the public deployment (spec section 11)
 MAX_DNA_DISTANCE = math.sqrt(len(AXES))  # every axis lives in [0,1], so this is the diagonal of the unit hypercube
 RERANK_POOL_SIZE = 15  # stage-1 cosine-similarity over-fetch, reranked down to FINAL_K by the LLM
@@ -118,7 +120,7 @@ mode = st.radio(
     options=["existing_song", "hand_drawn_profile"],
     format_func=lambda m: "Existing song moment" if m == "existing_song" else "Hand-drawn profile",
     horizontal=True,
-    help="'Existing song moment' matches on a specific ~5s clip using sound/harmony embeddings. "
+    help="'Existing song moment' matches on a specific ~5s clip using the selected facet's embeddings. "
          "'Hand-drawn profile' instead lets you sculpt a target (tempo, energy, brightness, etc.) "
          "and finds whole songs closest to that shape.",
 )
@@ -140,17 +142,16 @@ if mode == "existing_song":
     st.markdown(f"**Listening at {query_segment.start_sec:.1f}s – {query_segment.end_sec:.1f}s:**")
     st.audio(str(audio_path_for(song)), start_time=query_segment.start_sec)
 
-    FACET_LABELS = {"sound": "Sound", "harmony": "Harmony"}
     facet_name = st.radio(
         "Match by",
-        options=["sound", "harmony"],
-        format_func=lambda f: FACET_LABELS[f],
+        options=FACET_REGISTRY.names(),
+        format_func=lambda f: f.capitalize(),
         horizontal=True,
     )
-    st.markdown(f"### Match by: {FACET_LABELS[facet_name]}")
+    st.markdown(f"### Match by: {facet_name.capitalize()}")
 
     if embedding_repo.status(query_segment.id, facet_name) != "done":
-        st.warning(f"This moment hasn't been embedded for the {FACET_LABELS[facet_name]} facet yet.")
+        st.warning(f"This moment hasn't been embedded for the {facet_name.capitalize()} facet yet.")
         st.stop()
 
     matches, was_reranked = get_matches(rerank_client, song, query_segment, facet_name)
@@ -168,8 +169,7 @@ if mode == "existing_song":
 
         for match in matches:
             pct = max(0.0, match.score) * 100
-            match_word = FACET_LABELS[facet_name].lower()
-            st.markdown(f"**{pct:.0f}% {match_word} match** — {match.song.title} by {match.song.artist} ({match.song.genre_top})")
+            st.markdown(f"**{pct:.0f}% {facet_name} match** — {match.song.title} by {match.song.artist} ({match.song.genre_top})")
             st.caption(f"at {match.segment.start_sec:.1f}s – {match.segment.end_sec:.1f}s")
             st.audio(str(audio_path_for(match.song)), start_time=match.segment.start_sec)
 
