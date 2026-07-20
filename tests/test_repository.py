@@ -225,6 +225,30 @@ def test_embedding_status_defaults_to_pending(embedding_repo, song_repo):
     assert embedding_repo.status(seg_id, "sound") == "pending"
 
 
+def test_mark_skipped_sets_status_without_a_vector(embedding_repo, song_repo):
+    song_id = song_repo.add_song(make_song())
+    [seg_id] = song_repo.add_segments(
+        song_id, [Segment(song_id=song_id, start_sec=0.0, end_sec=5.0, segment_index=0)]
+    )
+
+    embedding_repo.mark_skipped(seg_id, "vocal")
+
+    assert embedding_repo.status(seg_id, "vocal") == "skipped"
+    assert embedding_repo.index_size("vocal") == 0  # no vector was ever added
+
+
+def test_mark_skipped_is_idempotent(embedding_repo, song_repo):
+    song_id = song_repo.add_song(make_song())
+    [seg_id] = song_repo.add_segments(
+        song_id, [Segment(song_id=song_id, start_sec=0.0, end_sec=5.0, segment_index=0)]
+    )
+
+    embedding_repo.mark_skipped(seg_id, "vocal")
+    embedding_repo.mark_skipped(seg_id, "vocal")  # must not raise (UNIQUE(segment_id, facet_name))
+
+    assert embedding_repo.status(seg_id, "vocal") == "skipped"
+
+
 def test_add_vector_marks_done_and_is_searchable(embedding_repo, song_repo):
     song_id = song_repo.add_song(make_song())
     [seg_id] = song_repo.add_segments(

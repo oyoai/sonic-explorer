@@ -9,7 +9,7 @@ import soundfile as sf
 
 from sonic_explorer.config import CLAP_SR
 from sonic_explorer.models import Song
-from sonic_explorer.pipeline.embed_stems import run_batch_stem_embedding
+from sonic_explorer.pipeline.embed_stems import _has_meaningful_energy, run_batch_stem_embedding
 from sonic_explorer.pipeline.segment import segment_song
 from sonic_explorer.repository.db import init_db
 from sonic_explorer.repository.embedding_repository import EmbeddingRepository
@@ -39,6 +39,18 @@ def fake_separate_stems(audio, sr):
     exercise segmentation/embedding without real separation."""
     return {
         "vocal": audio * 0.9,
+        "drums": audio * 0.8,
+        "bass": audio * 0.7,
+        "instrumental": audio * 0.6,
+    }
+
+
+def fake_separate_stems_silent_vocal(audio, sr):
+    """Same as fake_separate_stems, but the 'vocal' stem is near-silent --
+    simulates Demucs correctly reporting no meaningful vocal content on an
+    instrumental track."""
+    return {
+        "vocal": np.zeros_like(audio) + 1e-6,
         "drums": audio * 0.8,
         "bass": audio * 0.7,
         "instrumental": audio * 0.6,
@@ -235,3 +247,82 @@ def test_run_batch_stem_embedding_checkpoints_and_leaves_no_orphaned_done_status
     song3 = song_repo.get_song_by_fma_track_id(3)
     for seg in song3.segments:
         assert embedding_repo.status(seg.id, "vocal") != "done"
+
+
+def test_has_meaningful_energy_distinguishes_silence_from_signal():
+    sr = CLAP_SR
+    t = np.linspace(0, 1.0, sr, endpoint=False)
+    signal = (0.5 * np.sin(2 * np.pi * 440.0 * t)).astype(np.float32)
+    silence = np.zeros_like(signal) + 1e-6
+
+    assert _has_meaningful_energy(signal, signal) is True  # same energy as the "mix" -- clearly meaningful
+    assert _has_meaningful_energy(silence, signal) is False  # near-zero next to a real mix -- not meaningful
+
+
+def test_has_meaningful_energy_handles_empty_windows():
+    empty = np.array([], dtype=np.float32)
+    assert _has_meaningful_energy(empty, empty) is False
+
+
+def test_run_batch_stem_embedding_marks_silent_stem_as_skipped_not_embedded(repos, curated_audio_with_songs):
+    song_repo, embedding_repo = repos
+    audio_dir, manifest = curated_audio_with_songs
+    vocal_facet = FakeStemFacet("vocal")
+
+    run_batch_stem_embedding(
+        manifest, audio_dir, song_repo, embedding_repo, {"vocal": vocal_facet},
+        separate_fn=fake_separate_stems_silent_vocal,
+    )
+
+    assert vocal_facet.call_count == 0  # never embedded -- every segment's vocal stem was near-silent
+    assert embedding_repo.index_size("vocal") == 0
+    song_a = song_repo.get_song_by_fma_track_id(1)
+    for seg in song_a.segments:
+        assert embedding_repo.status(seg.id, "vocal") == "skipped"
+
+
+def test_run_batch_stem_embedding_skipped_counts_as_finished_for_resumability(repos, curated_audio_with_songs):
+    """A song whose vocal stem is entirely silent must not trigger a fresh
+    Demucs separation on every future run -- 'skipped' has to satisfy the
+    same per-song completion check 'done' does."""
+    song_repo, embedding_repo = repos
+    audio_dir, manifest = curated_audio_with_songs
+
+    run_batch_stem_embedding(
+        manifest, audio_dir, song_repo, embedding_repo, {"vocal": FakeStemFacet("vocal")},
+        separate_fn=fake_separate_stems_silent_vocal,
+    )
+
+    call_count = {"n": 0}
+
+    def counting_separate(audio, sr):
+        call_count["n"] += 1
+        return fake_separate_stems_silent_vocal(audio, sr)
+
+    run_batch_stem_embedding(
+        manifest, audio_dir, song_repo, embedding_repo, {"vocal": FakeStemFacet("vocal")},
+        separate_fn=counting_separate,
+    )
+    assert call_count["n"] == 0  # both songs already fully resolved (skipped) -- no re-separation
+
+
+def test_run_batch_stem_embedding_only_embeds_facets_with_real_energy_within_same_song(repos, curated_audio_with_songs):
+    """Within one song, a facet with real energy (drums) must still be
+    embedded normally even though a sibling facet (vocal) is silent and
+    skipped -- the energy gate is per-facet, not per-song."""
+    song_repo, embedding_repo = repos
+    audio_dir, manifest = curated_audio_with_songs
+    vocal_facet = FakeStemFacet("vocal")
+    drums_facet = FakeStemFacet("drums")
+
+    run_batch_stem_embedding(
+        manifest, audio_dir, song_repo, embedding_repo,
+        {"vocal": vocal_facet, "drums": drums_facet}, separate_fn=fake_separate_stems_silent_vocal,
+    )
+
+    assert vocal_facet.call_count == 0
+    assert drums_facet.call_count > 0
+    song_a = song_repo.get_song_by_fma_track_id(1)
+    for seg in song_a.segments:
+        assert embedding_repo.status(seg.id, "vocal") == "skipped"
+        assert embedding_repo.status(seg.id, "drums") == "done"

@@ -81,6 +81,25 @@ class EmbeddingRepository:
         )
         self.conn.commit()
 
+    def mark_skipped(self, segment_id: int, facet_name: str) -> None:
+        """Deliberately-not-computed, distinct from both 'pending' (not yet
+        attempted -- keep retrying) and 'done' (has a real vector). Used by
+        the stem-facet pipeline for a stem with no meaningful energy (e.g. an
+        instrumental track's vocal stem) -- there's no vector to index, but
+        without a distinct status the resumability check would re-attempt
+        (and, for stem facets, re-run the whole Demucs separation) forever.
+        Every other status()=='done' check elsewhere in the app already
+        treats 'skipped' the same as "not available," which is correct: a
+        song with no meaningful vocal content should honestly report the
+        vocal facet as unavailable, not show a vector computed from noise."""
+        self.conn.execute(
+            "INSERT INTO embedding_status (segment_id, facet_name, status, computed_at) "
+            "VALUES (?, ?, 'skipped', ?) "
+            "ON CONFLICT(segment_id, facet_name) DO UPDATE SET status='skipped', computed_at=excluded.computed_at",
+            (segment_id, facet_name, time.strftime("%Y-%m-%dT%H:%M:%S")),
+        )
+        self.conn.commit()
+
     def search(self, facet_name: str, query_vector: np.ndarray, k: int = 10) -> list[tuple[int, float]]:
         if facet_name not in self._indexes or self._indexes[facet_name].ntotal == 0:
             return []

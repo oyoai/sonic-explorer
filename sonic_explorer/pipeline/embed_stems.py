@@ -14,11 +14,25 @@ separate_fn is injectable specifically so this module's segmentation/
 embedding/checkpoint/error-isolation logic is fully testable with a fake
 separator -- no real Demucs/GPU/torch needed for the test suite, the same
 duck-typing pattern already used for FakeSoundFacet in test_embed_library.py.
+
+Energy gate: a stem with essentially nothing in it (an instrumental track's
+vocal stem, a rare a cappella track's drum stem) isn't skipped at
+separation time -- Demucs always produces all four stems in one pass, so
+there's no separation-time cost to save -- but IS skipped at embedding time,
+via mark_skipped() rather than left 'pending'. Indexing a CLAP embedding of
+near-silence would be worse than just wasted compute: near-silent segments
+from *different* songs would all embed close together, making unrelated
+instrumental tracks look "similar" on the vocal facet purely because they're
+both quiet. mark_skipped() (distinct status) also keeps resumability honest
+-- 'pending' would make the per-song skip-check re-run the whole Demucs
+separation on every future invocation forever, for a result that was never
+going to change.
 """
 
 from pathlib import Path
 from typing import Callable
 
+import numpy as np
 import pandas as pd
 
 from sonic_explorer.config import CLAP_SR
@@ -26,6 +40,20 @@ from sonic_explorer.facets.base import Facet
 from sonic_explorer.pipeline.separation import separate_stems
 from sonic_explorer.repository.embedding_repository import EmbeddingRepository
 from sonic_explorer.repository.song_repository import SongRepository
+
+# A stem window whose RMS is below this fraction of the full mix's RMS is
+# treated as carrying no meaningful content for that facet. A heuristic, not
+# a tuned constant -- reasonable enough to filter obvious silence/noise
+# without being so strict it discards quiet-but-real vocals/instrumentation.
+MIN_STEM_ENERGY_RATIO = 0.05
+
+_FINISHED_STATUSES = ("done", "skipped")
+
+
+def _has_meaningful_energy(stem_window: np.ndarray, mix_window: np.ndarray, ratio: float = MIN_STEM_ENERGY_RATIO) -> bool:
+    stem_rms = float(np.sqrt(np.mean(np.square(stem_window)))) if len(stem_window) else 0.0
+    mix_rms = float(np.sqrt(np.mean(np.square(mix_window)))) if len(mix_window) else 0.0
+    return stem_rms >= ratio * (mix_rms + 1e-9)
 
 
 def run_batch_stem_embedding(
@@ -70,11 +98,11 @@ def run_batch_stem_embedding(
             continue
 
         if all(
-            embedding_repo.status(seg.id, facet_name) == "done"
+            embedding_repo.status(seg.id, facet_name) in _FINISHED_STATUSES
             for seg in song.segments
             for facet_name in stem_facets
         ):
-            continue  # every requested stem facet already embedded for every segment
+            continue  # every requested stem facet already resolved (embedded or skipped) for every segment
 
         try:
             filepath = str(audio_dir / row.relative_path)
@@ -83,16 +111,28 @@ def run_batch_stem_embedding(
 
             for facet_name, facet in stem_facets.items():
                 stem_audio = stems[facet_name]
-                pending = [
-                    (seg.id, seg)
-                    for seg in song.segments
-                    if embedding_repo.status(seg.id, facet_name) != "done"
+                pending_segments = [
+                    seg for seg in song.segments
+                    if embedding_repo.status(seg.id, facet_name) not in _FINISHED_STATUSES
                 ]
-                if not pending:
+                if not pending_segments:
                     continue
-                windows = [stem_audio[int(seg.start_sec * sr):int(seg.end_sec * sr)] for _, seg in pending]
+
+                to_embed = []
+                for seg in pending_segments:
+                    start, end = int(seg.start_sec * sr), int(seg.end_sec * sr)
+                    stem_window = stem_audio[start:end]
+                    mix_window = audio[start:end]
+                    if _has_meaningful_energy(stem_window, mix_window):
+                        to_embed.append((seg.id, stem_window))
+                    else:
+                        embedding_repo.mark_skipped(seg.id, facet_name)
+
+                if not to_embed:
+                    continue
+                windows = [w for _, w in to_embed]
                 vectors = facet.embed_batch(windows, sr)
-                for (seg_id, _), vector in zip(pending, vectors):
+                for (seg_id, _), vector in zip(to_embed, vectors):
                     embedding_repo.add_to_index(facet_name, seg_id, vector)
                     pending_confirmation[facet_name].append((seg_id, vector.shape[-1]))
         except Exception as exc:  # noqa: BLE001 -- deliberately broad, see docstring
