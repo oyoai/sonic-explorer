@@ -5,8 +5,10 @@ import os
 
 import streamlit as st
 
+from sonic_explorer.analysis.song_dna import AXES, fit_normalizer
 from sonic_explorer.config import ARTIFACTS_DIR, DB_PATH, DEV_DATA_MARKER
 from sonic_explorer.facets.registry import default_registry
+from sonic_explorer.llm.agent import MusicAgent
 from sonic_explorer.llm.explain import ExplanationClient
 from sonic_explorer.llm.rerank import RerankClient
 from sonic_explorer.repository.db import init_db
@@ -24,6 +26,27 @@ def get_repositories():
         embedding_repo.load_index(facet_name)
     retrieval_service = RetrievalService(song_repo, embedding_repo)
     return song_repo, embedding_repo, retrieval_service
+
+
+@st.cache_data
+def build_dna_normalizer(_song_repo, cache_key):
+    raw_stats = [{axis: getattr(s, axis) for axis in AXES} for s in _song_repo.list_songs()]
+    return fit_normalizer(raw_stats)
+
+
+@st.cache_data
+def build_normalized_dna_by_song(_song_repo, _normalizer, cache_key):
+    """Every song's DNA, pre-normalized into the same [0,1]^5 space a
+    hand-drawn target (or an agent-picked mood profile) lives in -- shared by
+    Moment Matcher's radar-chart-as-query and the agent's search_by_mood_profile
+    tool, both just doing nearest-neighbor search over this same precomputed
+    dict (spec 2.3)."""
+    out = {}
+    for s in _song_repo.list_songs():
+        raw = {axis: getattr(s, axis) for axis in AXES}
+        if all(v is not None for v in raw.values()):
+            out[s.id] = _normalizer.normalize(raw)
+    return out
 
 
 def _get_anthropic_api_key() -> str | None:
@@ -62,6 +85,26 @@ def get_rerank_client() -> RerankClient | None:
     import anthropic
 
     return RerankClient(anthropic.Anthropic(api_key=api_key))
+
+
+@st.cache_resource
+def get_agent() -> MusicAgent | None:
+    """Stateless orchestrator (see llm/agent.py) -- safe to share across
+    sessions via cache_resource, since conversation history lives in each
+    page's own st.session_state, not inside the agent."""
+    api_key = _get_anthropic_api_key()
+    if not api_key:
+        return None
+
+    import anthropic
+
+    song_repo, embedding_repo, retrieval_service = get_repositories()
+    dna_normalizer = build_dna_normalizer(song_repo, len(song_repo.list_songs()))
+    normalized_dna_by_song = build_normalized_dna_by_song(song_repo, dna_normalizer, len(song_repo.list_songs()))
+    return MusicAgent(
+        anthropic.Anthropic(api_key=api_key),
+        song_repo, embedding_repo, retrieval_service, dna_normalizer, normalized_dna_by_song,
+    )
 
 
 def is_dev_data() -> bool:

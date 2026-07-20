@@ -6,10 +6,17 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 import streamlit as st
 
-from sonic_explorer.analysis.song_dna import AXES, AXIS_LABELS, fit_normalizer, nearest_songs_by_dna
+from sonic_explorer.analysis.song_dna import AXES, AXIS_LABELS, nearest_songs_by_dna
 from sonic_explorer.config import audio_path_for
 from components.plotting import song_dna_radar_overlay
-from resources import get_explanation_client, get_rerank_client, get_repositories, show_data_source_banner
+from resources import (
+    build_dna_normalizer,
+    build_normalized_dna_by_song,
+    get_explanation_client,
+    get_rerank_client,
+    get_repositories,
+    show_data_source_banner,
+)
 
 MAX_LLM_CALLS_PER_SESSION = 60  # simple abuse/cost guardrail for the public deployment (spec section 11)
 MAX_DNA_DISTANCE = math.sqrt(len(AXES))  # every axis lives in [0,1], so this is the diagonal of the unit hypercube
@@ -33,28 +40,6 @@ if not songs:
 
 if "llm_calls" not in st.session_state:
     st.session_state.llm_calls = 0
-
-
-@st.cache_data
-def build_dna_normalizer(_song_repo, cache_key):
-    raw_stats = [
-        {axis: getattr(s, axis) for axis in AXES}
-        for s in _song_repo.list_songs()
-    ]
-    return fit_normalizer(raw_stats)
-
-
-@st.cache_data
-def build_normalized_dna_by_song(_song_repo, _normalizer, cache_key):
-    """Every song's DNA, pre-normalized into the same [0,1]^5 space a
-    hand-drawn target lives in -- nearest_songs_by_dna() just does distance
-    + ranking over this, no new infrastructure (spec 2.3)."""
-    out = {}
-    for s in _song_repo.list_songs():
-        raw = {axis: getattr(s, axis) for axis in AXES}
-        if all(v is not None for v in raw.values()):
-            out[s.id] = _normalizer.normalize(raw)
-    return out
 
 
 @st.cache_data(show_spinner=False)
