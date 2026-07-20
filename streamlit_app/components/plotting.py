@@ -43,7 +43,10 @@ def network_graph_figure(nodes_df, edges, selected_song_id=None) -> go.Figure:
     is a list of analysis.network_graph.GraphEdge. Edges render as one line
     trace (None-separated segments -- the standard Plotly technique for
     drawing many disconnected line segments in a single trace) underneath the
-    node scatter so hovering/clicking still targets nodes cleanly."""
+    node scatter. Deliberately no hover tooltips -- click is the only way to
+    see song info (Plotly tooltips can't render the fingerprint/thumbnail
+    imagery well, so this avoids fighting the tool for a payoff click already
+    provides via the player section below)."""
     pos = {row.song_id: (row.x, row.y) for row in nodes_df.itertuples()}
     edge_x, edge_y = [], []
     for edge in edges:
@@ -70,8 +73,7 @@ def network_graph_figure(nodes_df, edges, selected_song_id=None) -> go.Figure:
             ),
         ),
         customdata=nodes_df[["song_id"]],
-        hovertext=[f"{t} — {a} ({g})" for t, a, g in zip(nodes_df["title"], nodes_df["artist"], nodes_df["genre"])],
-        hoverinfo="text",
+        hoverinfo="skip",
         showlegend=False,
     ))
     fig.update_layout(
