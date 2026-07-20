@@ -1,6 +1,6 @@
 import pytest
 
-from sonic_explorer.analysis.song_dna import AXES, fit_normalizer
+from sonic_explorer.analysis.song_dna import AXES, fit_normalizer, nearest_songs_by_dna
 
 
 def make_raw(tempo_bpm, energy, brightness, harmonic_complexity, rhythmic_density):
@@ -74,3 +74,38 @@ def test_fit_normalizer_ignores_songs_with_missing_stats():
     normalizer = fit_normalizer(stats)
     assert normalizer.mins["tempo_bpm"] == 100.0
     assert normalizer.maxs["tempo_bpm"] == 140.0
+
+
+def make_norm(**overrides):
+    base = {axis: 0.5 for axis in AXES}
+    base.update(overrides)
+    return base
+
+
+def test_nearest_songs_by_dna_orders_by_distance():
+    normalized_by_song = {
+        1: make_norm(**{axis: 0.0 for axis in AXES}),   # far from target
+        2: make_norm(),                                  # exactly the target
+        3: make_norm(tempo_bpm=0.6),                      # close to the target
+    }
+    target = make_norm()
+
+    matches = nearest_songs_by_dna(target, normalized_by_song, k=3)
+
+    assert [m.song_id for m in matches] == [2, 3, 1]
+    assert matches[0].distance == pytest.approx(0.0, abs=1e-9)
+    assert matches[1].distance < matches[2].distance
+
+
+def test_nearest_songs_by_dna_respects_k():
+    normalized_by_song = {i: make_norm(tempo_bpm=i / 10) for i in range(10)}
+    target = make_norm(tempo_bpm=0.0)
+
+    matches = nearest_songs_by_dna(target, normalized_by_song, k=3)
+
+    assert len(matches) == 3
+    assert [m.song_id for m in matches] == [0, 1, 2]
+
+
+def test_nearest_songs_by_dna_handles_empty_corpus():
+    assert nearest_songs_by_dna(make_norm(), {}, k=6) == []

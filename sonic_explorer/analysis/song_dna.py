@@ -2,9 +2,16 @@
 maps each song's raw scalars onto a comparable [0,1] scale for the radar chart,
 since e.g. "brightness" in raw Hz is meaningless without knowing the library's
 actual range. Plain Python, no Streamlit import (core/interface separation,
-spec 8.3), mirroring analysis/taste_map.py's pattern."""
+spec 8.3), mirroring analysis/taste_map.py's pattern.
+
+nearest_songs_by_dna() powers "radar chart as query" (spec 2.3): a user-drawn
+target profile lives in this exact same normalized [0,1] axis space every
+song already gets mapped into for the static overlay, so finding nearby songs
+is just nearest-neighbor search over that space -- no new infrastructure."""
 
 from dataclasses import dataclass
+
+import numpy as np
 
 AXES = ["tempo_bpm", "energy", "brightness", "harmonic_complexity", "rhythmic_density"]
 AXIS_LABELS = {
@@ -47,3 +54,25 @@ def fit_normalizer(all_raw_stats: list[dict[str, float | None]]) -> DNANormalize
         mins[axis] = min(values) if values else 0.0
         maxs[axis] = max(values) if values else 0.0
     return DNANormalizer(mins=mins, maxs=maxs)
+
+
+@dataclass
+class DNAMatch:
+    song_id: int
+    distance: float  # euclidean distance in normalized [0,1]^5 axis space -- lower is closer
+
+
+def nearest_songs_by_dna(
+    target: dict[str, float], normalized_by_song: dict[int, dict[str, float]], k: int = 6
+) -> list[DNAMatch]:
+    """target and every value in normalized_by_song must already be normalized
+    (DNANormalizer.normalize() output) -- this does no normalization itself,
+    just distance + ranking, so it stays usable for both a real song's DNA and
+    a user-hand-drawn target with no notion of "raw" units."""
+    target_vec = np.array([target[axis] for axis in AXES])
+    scored = [
+        DNAMatch(song_id=song_id, distance=float(np.linalg.norm(np.array([norm[axis] for axis in AXES]) - target_vec)))
+        for song_id, norm in normalized_by_song.items()
+    ]
+    scored.sort(key=lambda m: m.distance)
+    return scored[:k]
