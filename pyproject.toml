@@ -17,10 +17,12 @@ dependencies = [
 [project.optional-dependencies]
 colab = [
     "torch",
+    "torchaudio",
     "transformers",
     "accelerate",
     "librosa",
     "soundfile",
+    "demucs",
 ]
 dev = [
     "pytest",

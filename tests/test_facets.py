@@ -5,6 +5,7 @@ from sonic_explorer.facets.base import Facet
 from sonic_explorer.facets.harmony import HarmonyFacet
 from sonic_explorer.facets.registry import FacetRegistry, default_registry
 from sonic_explorer.facets.sound import SoundFacet
+from sonic_explorer.facets.stems import BassFacet, DrumsFacet, InstrumentalFacet, VocalFacet
 
 
 class FakeFacet(Facet):
@@ -72,3 +73,13 @@ def test_default_registry_has_harmony_facet():
     facet = registry.get("harmony")
     assert isinstance(facet, HarmonyFacet)
     assert facet.dim == 24
+
+
+def test_default_registry_has_stem_facets_without_loading_clap():
+    registry = default_registry()
+    expected = {"vocal": VocalFacet, "drums": DrumsFacet, "bass": BassFacet, "instrumental": InstrumentalFacet}
+    for name, cls in expected.items():
+        assert name in registry.names()
+        facet = registry.get(name)
+        assert isinstance(facet, cls)
+        assert facet.dim == 512  # inherits SoundFacet's CLAP dim -- same embedding logic, isolated audio

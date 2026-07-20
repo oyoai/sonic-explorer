@@ -1,7 +1,7 @@
 import numpy as np
 import pytest
 
-from sonic_explorer.analysis.network_graph import build_similarity_graph
+from sonic_explorer.analysis.network_graph import build_blended_similarity_graph, build_similarity_graph
 
 
 def test_build_similarity_graph_handles_empty_input():
@@ -95,3 +95,75 @@ def test_build_similarity_graph_all_nodes_present_even_if_isolated_edges_dont_du
     for edge in result.edges:
         assert edge.song_id_a in node_ids
         assert edge.song_id_b in node_ids
+
+
+def test_build_blended_similarity_graph_handles_empty_input():
+    result = build_blended_similarity_graph({})
+    assert result.nodes == []
+    assert result.edges == []
+
+
+def test_build_blended_similarity_graph_handles_no_common_songs():
+    result = build_blended_similarity_graph({
+        "sound": {1: np.array([1.0, 0.0]), 2: np.array([0.0, 1.0])},
+        "harmony": {3: np.array([1.0, 0.0]), 4: np.array([0.0, 1.0])},
+    })
+    assert result.nodes == []
+    assert result.edges == []
+
+
+def test_build_blended_similarity_graph_only_includes_songs_present_in_every_facet():
+    result = build_blended_similarity_graph({
+        "sound": {1: np.array([1.0, 0.0]), 2: np.array([0.0, 1.0]), 3: np.array([1.0, 1.0])},
+        "harmony": {1: np.array([0.5, 0.5]), 2: np.array([0.2, 0.8])},  # song 3 missing here
+    })
+    node_ids = {n.song_id for n in result.nodes}
+    assert node_ids == {1, 2}
+
+
+def test_build_blended_similarity_graph_single_facet_matches_build_similarity_graph():
+    """Blending with exactly one facet should be equivalent to not blending
+    at all -- a sanity check that averaging a single similarity matrix is a
+    no-op, not an accidental transformation."""
+    rng = np.random.default_rng(5)
+    vectors = {i: rng.normal(size=6) for i in range(8)}
+
+    single = build_similarity_graph(vectors, k_neighbors=3, random_state=1)
+    blended = build_blended_similarity_graph({"sound": vectors}, k_neighbors=3, random_state=1)
+
+    single_edges = {frozenset((e.song_id_a, e.song_id_b)) for e in single.edges}
+    blended_edges = {frozenset((e.song_id_a, e.song_id_b)) for e in blended.edges}
+    assert single_edges == blended_edges
+
+
+def test_build_blended_similarity_graph_separates_clusters_using_combined_signal():
+    rng = np.random.default_rng(6)
+    cluster_a_sound = {i: rng.normal(loc=[10, 10], scale=0.1) for i in range(6)}
+    cluster_b_sound = {i + 100: rng.normal(loc=[-10, -10], scale=0.1) for i in range(6)}
+    cluster_a_harmony = {i: rng.normal(loc=[5, 5], scale=0.1) for i in range(6)}
+    cluster_b_harmony = {i + 100: rng.normal(loc=[-5, -5], scale=0.1) for i in range(6)}
+
+    result = build_blended_similarity_graph(
+        {
+            "sound": {**cluster_a_sound, **cluster_b_sound},
+            "harmony": {**cluster_a_harmony, **cluster_b_harmony},
+        },
+        k_neighbors=2, n_clusters=2,
+    )
+
+    assert len(result.nodes) == 12
+    labels_a = {n.cluster for n in result.nodes if n.song_id < 100}
+    labels_b = {n.cluster for n in result.nodes if n.song_id >= 100}
+    assert len(labels_a) == 1
+    assert len(labels_b) == 1
+    assert labels_a != labels_b
+
+
+def test_build_blended_similarity_graph_handles_single_common_song():
+    result = build_blended_similarity_graph({
+        "sound": {1: np.array([1.0, 0.0]), 2: np.array([0.0, 1.0])},
+        "harmony": {1: np.array([0.5, 0.5])},  # only song 1 in common
+    })
+    assert len(result.nodes) == 1
+    assert result.nodes[0].song_id == 1
+    assert result.edges == []

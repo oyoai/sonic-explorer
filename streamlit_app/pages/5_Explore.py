@@ -6,14 +6,15 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 import pandas as pd
 import streamlit as st
 
-from sonic_explorer.analysis.network_graph import build_similarity_graph
+from sonic_explorer.analysis.network_graph import build_blended_similarity_graph, build_similarity_graph
 from sonic_explorer.analysis.taste_map import mean_pool_song_vectors
 from sonic_explorer.config import audio_path_for
 from sonic_explorer.facets.fingerprint import composite_fingerprint, structure_fingerprint
+from sonic_explorer.facets.registry import default_registry
 from components.plotting import composite_fingerprint_thumbnail, fingerprint_thumbnail, network_graph_figure
 from resources import get_repositories, show_data_source_banner
 
-FACETS_TO_CHECK = ["sound", "harmony"]
+FACET_REGISTRY = default_registry()
 
 st.set_page_config(page_title="Explore", page_icon="\U0001F310", layout="wide")
 st.title("Explore")
@@ -35,16 +36,27 @@ if "explore_selected_song_id" not in st.session_state:
 
 
 @st.cache_data
-def build_explore_graph(_song_repo, _embedding_repo, cache_key, scope):
+def build_explore_graph(_song_repo, _embedding_repo, facets: tuple[str, ...], index_sizes: tuple[int, ...], scope: str):
     """One graph-building path for both Explore (global) and My Library --
     the only difference is which songs' vectors go in (spec: "a filter on the
-    same underlying view, not a separate implementation")."""
+    same underlying view, not a separate implementation") -- and for a single
+    facet vs. several blended, the only difference is which network_graph
+    function builds the result (index_sizes exists purely so the cache
+    invalidates when any selected facet's index actually grows)."""
     target_songs = _song_repo.list_songs(saved_only=(scope == "saved"))
     target_ids = {s.id for s in target_songs}
-    all_vectors = mean_pool_song_vectors(_song_repo, _embedding_repo)
-    song_vectors = {sid: vec for sid, vec in all_vectors.items() if sid in target_ids}
 
-    result = build_similarity_graph(song_vectors)
+    if len(facets) == 1:
+        all_vectors = mean_pool_song_vectors(_song_repo, _embedding_repo, facet_name=facets[0])
+        song_vectors = {sid: vec for sid, vec in all_vectors.items() if sid in target_ids}
+        result = build_similarity_graph(song_vectors)
+    else:
+        vectors_by_facet = {}
+        for facet_name in facets:
+            all_vectors = mean_pool_song_vectors(_song_repo, _embedding_repo, facet_name=facet_name)
+            vectors_by_facet[facet_name] = {sid: vec for sid, vec in all_vectors.items() if sid in target_ids}
+        result = build_blended_similarity_graph(vectors_by_facet)
+
     songs_by_id = {s.id: s for s in target_songs}
     nodes_df = pd.DataFrame([
         {
@@ -61,7 +73,7 @@ def build_explore_graph(_song_repo, _embedding_repo, cache_key, scope):
 def facet_available(song) -> dict[str, bool]:
     return {
         facet_name: any(embedding_repo.status(seg.id, facet_name) == "done" for seg in song.segments)
-        for facet_name in FACETS_TO_CHECK
+        for facet_name in FACET_REGISTRY.names()
     }
 
 
@@ -74,10 +86,22 @@ if scope == "saved" and not any(s.is_saved for s in all_songs):
     st.info("You haven't saved any songs yet -- open a song's card below and use \"Save to My Library.\"")
     st.stop()
 
-nodes_df, edges = build_explore_graph(song_repo, embedding_repo, embedding_repo.index_size("sound"), scope)
+selected_facets = st.multiselect(
+    "Facet(s)", options=FACET_REGISTRY.names(), default=["sound"],
+    format_func=lambda f: f.capitalize(),
+    help="Pick one facet to graph by, or select several to blend them -- blending averages each facet's own "
+         "similarity scores (they live in different embedding spaces, so there's no single vector to average).",
+)
+if not selected_facets:
+    st.info("Pick at least one facet.")
+    st.stop()
+
+index_sizes = tuple(embedding_repo.index_size(f) for f in selected_facets)
+nodes_df, edges = build_explore_graph(song_repo, embedding_repo, tuple(selected_facets), index_sizes, scope)
 
 if nodes_df.empty:
-    st.info("Nothing embedded for this view yet.")
+    facet_list = ", ".join(f.capitalize() for f in selected_facets)
+    st.info(f"No songs embedded for {facet_list} yet in this view.")
     st.stop()
 
 graph_col, panel_col = st.columns([2.2, 1])
