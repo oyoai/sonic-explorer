@@ -22,16 +22,19 @@ col2.metric("Embedded segments (sound)", embedding_repo.index_size("sound"))
 
 st.divider()
 
-col1, col2, col3, col4 = st.columns(4)
+col1, col2, col3, col4, col5 = st.columns(5)
 with col1:
+    st.page_link("pages/5_Explore.py", label="**Explore**", icon="\U0001F310")
+    st.caption("Every song as a node in a network graph. Click one to open its identity card.")
+with col2:
     st.page_link("pages/1_Taste_Map.py", label="**Taste Map**", icon="\U0001F5FA️")
     st.caption("A 2D map of the library clustered by sound. Click a point to hear it.")
-with col2:
+with col3:
     st.page_link("pages/2_Song_XRay.py", label="**Song X-Ray**", icon="\U0001F50D")
     st.caption("See a song's structural anatomy -- verse/chorus shape as a self-similarity matrix.")
-with col3:
+with col4:
     st.page_link("pages/3_Moment_Matcher.py", label="**Moment Matcher**", icon="\U0001F3AF")
     st.caption("Pick a moment in a song, get ranked sonically-similar moments elsewhere.")
-with col4:
+with col5:
     st.page_link("pages/4_Ask_The_DJ.py", label="**Ask the DJ**", icon="\U0001F399️")
     st.caption("Describe what you want in plain language -- a conversational front-end over the above.")

@@ -58,6 +58,7 @@ _MIGRATIONS: dict[str, list[tuple[str, str]]] = {
         ("brightness", "REAL"),
         ("harmonic_complexity", "REAL"),
         ("rhythmic_density", "REAL"),
+        ("is_saved", "INTEGER DEFAULT 0"),
     ],
 }
 

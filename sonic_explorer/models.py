@@ -29,3 +29,6 @@ class Song:
     brightness: float | None = None
     harmonic_complexity: float | None = None
     rhythmic_density: float | None = None
+    # bookmarked into "my library" (spec 2.1) -- no separate user/auth model,
+    # a single implicit library is enough for this project's scope
+    is_saved: bool = False

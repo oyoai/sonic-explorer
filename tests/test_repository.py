@@ -127,6 +127,73 @@ def test_list_songs_filters_by_genre(song_repo):
     assert len(song_repo.list_songs()) == 2
 
 
+def test_new_song_is_not_saved_by_default(song_repo):
+    song_id = song_repo.add_song(make_song(track_id=7))
+    assert song_repo.get_song(song_id).is_saved is False
+
+
+def test_save_and_unsave_song(song_repo):
+    song_id = song_repo.add_song(make_song(track_id=7))
+
+    song_repo.save_song(song_id)
+    assert song_repo.get_song(song_id).is_saved is True
+
+    song_repo.unsave_song(song_id)
+    assert song_repo.get_song(song_id).is_saved is False
+
+
+def test_list_songs_saved_only_filter(song_repo):
+    saved_id = song_repo.add_song(make_song(track_id=1, title="Saved Song"))
+    song_repo.add_song(make_song(track_id=2, title="Unsaved Song"))
+    song_repo.save_song(saved_id)
+
+    saved = song_repo.list_songs(saved_only=True)
+    assert len(saved) == 1
+    assert saved[0].id == saved_id
+    assert len(song_repo.list_songs()) == 2
+
+
+def test_list_songs_saved_only_combines_with_genre_filter(song_repo):
+    rock_saved = song_repo.add_song(make_song(track_id=1, title="Rock Saved"))
+    song_repo.add_song(Song(filepath="/x.mp3", fma_track_id=2, title="Jazz Saved", artist="A",
+                             genre_top="Jazz", duration_sec=100.0))
+    song_repo.save_song(rock_saved)
+    jazz_id = song_repo.get_song_by_fma_track_id(2).id
+    song_repo.save_song(jazz_id)
+
+    rock_saved_songs = song_repo.list_songs(genre="Rock", saved_only=True)
+    assert len(rock_saved_songs) == 1
+    assert rock_saved_songs[0].title == "Rock Saved"
+
+
+def test_migration_adds_is_saved_column_to_pre_existing_db(tmp_path):
+    """Same class of regression as the song-DNA migration test: a DB created
+    before is_saved existed must gain the column (defaulting to unsaved)
+    without losing existing data."""
+    import sqlite3
+
+    from sonic_explorer.repository.db import SCHEMA, init_db
+
+    db_path = tmp_path / "old.db"
+    raw_conn = sqlite3.connect(str(db_path))
+    raw_conn.executescript(SCHEMA)
+    raw_conn.execute(
+        "INSERT INTO songs (fma_track_id, filepath, title, artist, genre_top, duration_sec) "
+        "VALUES (1, '/x.mp3', 'Old Song', 'Artist', 'Rock', 30.0)"
+    )
+    raw_conn.commit()
+    raw_conn.close()
+
+    conn = init_db(db_path)
+    repo = SongRepository(conn)
+    song = repo.get_song_by_fma_track_id(1)
+
+    assert song.title == "Old Song"
+    assert song.is_saved is False
+    repo.save_song(song.id)
+    assert repo.get_song(song.id).is_saved is True
+
+
 def test_add_segments_and_get_segments(song_repo):
     song_id = song_repo.add_song(make_song())
     segments = [

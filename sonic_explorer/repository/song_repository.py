@@ -54,7 +54,16 @@ class SongRepository:
             brightness=row["brightness"],
             harmonic_complexity=row["harmonic_complexity"],
             rhythmic_density=row["rhythmic_density"],
+            is_saved=bool(row["is_saved"]),
         )
+
+    def save_song(self, song_id: int) -> None:
+        self.conn.execute("UPDATE songs SET is_saved = 1 WHERE id = ?", (song_id,))
+        self.conn.commit()
+
+    def unsave_song(self, song_id: int) -> None:
+        self.conn.execute("UPDATE songs SET is_saved = 0 WHERE id = ?", (song_id,))
+        self.conn.commit()
 
     def get_song(self, song_id: int) -> Song | None:
         row = self.conn.execute("SELECT * FROM songs WHERE id = ?", (song_id,)).fetchone()
@@ -70,11 +79,17 @@ class SongRepository:
             return None
         return self.get_song(row["id"])
 
-    def list_songs(self, genre: str | None = None) -> list[Song]:
-        if genre is None:
-            rows = self.conn.execute("SELECT * FROM songs").fetchall()
-        else:
-            rows = self.conn.execute("SELECT * FROM songs WHERE genre_top = ?", (genre,)).fetchall()
+    def list_songs(self, genre: str | None = None, saved_only: bool = False) -> list[Song]:
+        clauses, params = [], []
+        if genre is not None:
+            clauses.append("genre_top = ?")
+            params.append(genre)
+        if saved_only:
+            clauses.append("is_saved = 1")
+        query = "SELECT * FROM songs"
+        if clauses:
+            query += " WHERE " + " AND ".join(clauses)
+        rows = self.conn.execute(query, params).fetchall()
         return [self._song_from_row(row) for row in rows]
 
     def add_segments(self, song_id: int, segments: list[Segment]) -> list[int]:

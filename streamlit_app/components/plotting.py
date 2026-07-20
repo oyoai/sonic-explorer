@@ -37,6 +37,53 @@ def composite_fingerprint_thumbnail(composite, title: str = "Composite") -> go.F
     return fig
 
 
+def network_graph_figure(nodes_df, edges, selected_song_id=None) -> go.Figure:
+    """Song-as-node similarity graph (spec 2.1's network/relationship view) --
+    nodes_df needs columns song_id, x, y, cluster, title, artist, genre; edges
+    is a list of analysis.network_graph.GraphEdge. Edges render as one line
+    trace (None-separated segments -- the standard Plotly technique for
+    drawing many disconnected line segments in a single trace) underneath the
+    node scatter so hovering/clicking still targets nodes cleanly."""
+    pos = {row.song_id: (row.x, row.y) for row in nodes_df.itertuples()}
+    edge_x, edge_y = [], []
+    for edge in edges:
+        if edge.song_id_a not in pos or edge.song_id_b not in pos:
+            continue
+        x0, y0 = pos[edge.song_id_a]
+        x1, y1 = pos[edge.song_id_b]
+        edge_x += [x0, x1, None]
+        edge_y += [y0, y1, None]
+
+    fig = go.Figure()
+    fig.add_trace(go.Scatter(
+        x=edge_x, y=edge_y, mode="lines",
+        line=dict(width=0.6, color="rgba(150,150,150,0.35)"),
+        hoverinfo="skip", showlegend=False,
+    ))
+    fig.add_trace(go.Scatter(
+        x=nodes_df["x"], y=nodes_df["y"], mode="markers",
+        marker=dict(
+            size=9, color=nodes_df["cluster"], colorscale="Viridis",
+            line=dict(
+                width=[2.5 if sid == selected_song_id else 0 for sid in nodes_df["song_id"]],
+                color="#FFFFFF",
+            ),
+        ),
+        customdata=nodes_df[["song_id"]],
+        hovertext=[f"{t} — {a} ({g})" for t, a, g in zip(nodes_df["title"], nodes_df["artist"], nodes_df["genre"])],
+        hoverinfo="text",
+        showlegend=False,
+    ))
+    fig.update_layout(
+        height=560,
+        margin=dict(l=10, r=10, t=10, b=10),
+        xaxis=dict(visible=False),
+        yaxis=dict(visible=False),
+        plot_bgcolor="rgba(0,0,0,0)",
+    )
+    return fig
+
+
 def song_dna_radar_overlay(
     axis_labels: list[str],
     values_a: list[float],
