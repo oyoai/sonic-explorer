@@ -9,6 +9,21 @@ import plotly.graph_objects as go
 FINGERPRINT_COLORSCALE = "Magma"
 
 
+def extract_selected_song_id(point):
+    """None if this selection-event point doesn't carry a usable song_id --
+    e.g. a click that landed on network_graph_figure's non-interactive-by-
+    intent edges trace (mode="lines", no customdata) rather than a node
+    marker, close enough to a line for Plotly to register the click there
+    instead. Real-bug regression guard: AppTest's simulated selection events
+    don't reproduce this the way an actual browser click does, so this stays
+    defensive (try/except, not a bare index) regardless of the point's exact
+    shape rather than assuming customdata is always present and non-empty."""
+    try:
+        return point["customdata"][0]
+    except (KeyError, IndexError, TypeError):
+        return None
+
+
 def fingerprint_thumbnail(fingerprint, title: str) -> go.Figure:
     """A small, axis-free heatmap for a fingerprint array (values in [0, 1])."""
     fig = px.imshow(fingerprint, color_continuous_scale=FINGERPRINT_COLORSCALE, origin="lower")
@@ -72,7 +87,7 @@ def network_graph_figure(nodes_df, edges, selected_song_id=None) -> go.Figure:
                 color="#FFFFFF",
             ),
         ),
-        customdata=nodes_df[["song_id"]],
+        customdata=[[sid] for sid in nodes_df["song_id"]],
         hoverinfo="skip",
         showlegend=False,
     ))

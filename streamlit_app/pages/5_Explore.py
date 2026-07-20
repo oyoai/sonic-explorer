@@ -12,7 +12,12 @@ from sonic_explorer.analysis.taste_map import mean_pool_song_vectors
 from sonic_explorer.config import audio_path_for
 from sonic_explorer.facets.fingerprint import composite_fingerprint, structure_fingerprint
 from sonic_explorer.facets.registry import default_registry
-from components.plotting import composite_fingerprint_thumbnail, fingerprint_thumbnail, network_graph_figure
+from components.plotting import (
+    composite_fingerprint_thumbnail,
+    extract_selected_song_id,
+    fingerprint_thumbnail,
+    network_graph_figure,
+)
 from resources import get_repositories, show_data_source_banner
 
 FACET_REGISTRY = default_registry()
@@ -145,7 +150,9 @@ event = st.plotly_chart(
     fig, width="stretch", on_select="rerun", key="explore_graph_chart", config={"scrollZoom": True}
 )
 if event and event.selection and event.selection.points:
-    st.session_state.explore_selected_song_id = event.selection.points[0]["customdata"][0]
+    clicked_song_id = extract_selected_song_id(event.selection.points[0])
+    if clicked_song_id is not None:
+        st.session_state.explore_selected_song_id = clicked_song_id
 
 st.divider()
 
