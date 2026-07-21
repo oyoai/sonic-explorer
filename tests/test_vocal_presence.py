@@ -1,6 +1,7 @@
 import numpy as np
+import pytest
 
-from sonic_explorer.pipeline.vocal_presence import MIN_VOCAL_CONFIDENCE, has_vocal_content
+from sonic_explorer.pipeline.vocal_presence import MIN_VOCAL_CONFIDENCE, best_vocal_label_score, has_vocal_content
 
 
 def fake_tagger(predictions):
@@ -53,7 +54,31 @@ def test_has_vocal_content_empty_predictions_is_false():
     assert has_vocal_content(np.zeros(1000), 16000, tagger_fn=fake_tagger([])) is False
 
 
-def test_min_vocal_confidence_is_low_by_design():
-    # Documents the deliberate choice (see module docstring): a false "no
-    # vocals" verdict deletes real content, so the threshold stays permissive.
-    assert MIN_VOCAL_CONFIDENCE <= 0.02
+def test_min_vocal_confidence_matches_validated_per_segment_threshold():
+    # Pins the 9-song per-segment validation result (real-vocal segments >=
+    # 0.020, confirmed non-vocal segments <= 0.016) -- this threshold is
+    # specific to per-segment scoring, not the abandoned whole-clip design.
+    assert MIN_VOCAL_CONFIDENCE == pytest.approx(0.018)
+
+
+def test_best_vocal_label_score_returns_highest_matching_label():
+    predictions = [
+        {"label": "Music", "score": 0.5},
+        {"label": "Speech", "score": 0.02},
+        {"label": "Singing", "score": 0.05},
+    ]
+    score, label = best_vocal_label_score(predictions)
+    assert score == pytest.approx(0.05)
+    assert label == "Singing"
+
+
+def test_best_vocal_label_score_returns_zero_when_no_vocal_labels():
+    score, label = best_vocal_label_score([{"label": "Cello", "score": 0.9}])
+    assert score == 0.0
+    assert label is None
+
+
+def test_best_vocal_label_score_excludes_singing_bowl():
+    score, label = best_vocal_label_score([{"label": "Singing bowl", "score": 0.9}])
+    assert score == 0.0
+    assert label is None
