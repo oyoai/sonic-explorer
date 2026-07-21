@@ -34,6 +34,17 @@ def test_methodology_page_has_all_seven_sections():
         assert expected in header_texts
 
 
+def test_methodology_page_has_distribution_subsections():
+    """Data-distribution content added in response to explicit feedback:
+    raw-metadata EDA (duration, artists) and per-facet retrieval score
+    distributions, not just the curated illustrative examples."""
+    at = _run_methodology()
+    subheader_texts = [s.value for s in at.subheader]
+    assert any("Track duration" in s for s in subheader_texts)
+    assert any("Artists" in s for s in subheader_texts)
+    assert any("5a. Score distributions" in s for s in subheader_texts)
+
+
 def test_methodology_page_fingerprint_picker_switches_song():
     """The fingerprint picker (added so users can browse multiple structure
     examples, not just one hardcoded case) must actually re-render for a

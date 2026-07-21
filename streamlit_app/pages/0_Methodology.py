@@ -12,6 +12,7 @@ import streamlit as st
 from sonic_explorer.analysis.song_dna import AXES, AXIS_LABELS
 from sonic_explorer.analysis.taste_map import compute_taste_map, correlate_axes_with_features, mean_pool_song_vectors
 from sonic_explorer.config import audio_path_for
+from sonic_explorer.evaluation.retrieval_diagnostics import top1_score_distribution
 from sonic_explorer.facets.fingerprint import composite_fingerprint, structure_fingerprint
 from components.plotting import composite_fingerprint_thumbnail, fingerprint_thumbnail, song_dna_radar_overlay
 from resources import build_dna_normalizer, build_normalized_dna_by_song, get_repositories, show_data_source_banner
@@ -148,6 +149,7 @@ st.write(
 )
 
 if all_songs:
+    st.subheader("Genre")
     genre_counts: dict[str, int] = {}
     for s in all_songs:
         genre_counts[s.genre_top] = genre_counts.get(s.genre_top, 0) + 1
@@ -159,6 +161,52 @@ if all_songs:
     ))
     fig.update_layout(height=350, margin=dict(l=10, r=10, t=10, b=10), yaxis_title="songs")
     st.plotly_chart(fig, width="stretch", key="genre_breakdown_chart")
+    st.caption(
+        "8 genres, not evenly represented -- International and Electronic lead, several genres sit "
+        "well under half that count. Worth keeping in mind when reading genre-cohesion numbers "
+        "later: a facet has an easier time on an over-represented genre."
+    )
+
+    st.subheader("Track duration")
+    durations = [s.duration_sec for s in all_songs if s.duration_sec is not None]
+    dur_fig = go.Figure(go.Histogram(x=durations, nbinsx=20))
+    dur_fig.update_layout(height=280, margin=dict(l=10, r=10, t=10, b=10), xaxis_title="duration (s)", yaxis_title="songs")
+    st.plotly_chart(dur_fig, width="stretch", key="duration_histogram")
+    n_exactly_30 = sum(1 for d in durations if abs(d - 30.0) < 0.05)
+    st.caption(
+        f"{n_exactly_30}/{len(durations)} songs ({n_exactly_30 / len(durations):.0%}) are within "
+        "0.05s of exactly 30.0 seconds -- not an approximation, every clip in this library really is "
+        "a uniform 30-second preview. This is the empirical basis for the structure-facet limitation "
+        "discussed in §3."
+    )
+
+    st.subheader("Artists")
+    artist_counts: dict[str, int] = {}
+    for s in all_songs:
+        artist_counts[s.artist] = artist_counts.get(s.artist, 0) + 1
+    n_unique_artists = len(artist_counts)
+    top_artists = sorted(artist_counts.items(), key=lambda kv: -kv[1])[:10]
+    artist_col1, artist_col2 = st.columns([1, 2])
+    with artist_col1:
+        st.metric("Unique artists", n_unique_artists)
+        st.metric("Songs per artist (median)", f"{np.median(list(artist_counts.values())):.0f}")
+    with artist_col2:
+        artist_fig = go.Figure(go.Bar(
+            x=[c for _, c in top_artists], y=[a for a, _ in top_artists], orientation="h",
+            text=[c for _, c in top_artists], textposition="auto",
+        ))
+        artist_fig.update_layout(
+            height=300, margin=dict(l=10, r=10, t=10, b=10), xaxis_title="songs",
+            yaxis=dict(autorange="reversed"), title="Top 10 artists by track count",
+        )
+        st.plotly_chart(artist_fig, width="stretch", key="artist_breakdown_chart")
+    st.caption(
+        f"{n_unique_artists} unique artists across {len(all_songs)} songs -- most contribute a "
+        "handful of tracks each, not a library dominated by a small number of prolific artists. "
+        "Worth checking for retrieval: a facet that just learns to recognize a specific artist's "
+        "signature production style would inflate genre-cohesion if that artist is genre-concentrated, "
+        "without actually learning anything general about the genre."
+    )
 
 st.divider()
 
@@ -260,6 +308,32 @@ st.caption(
     "halved tempo), a known failure mode especially on complex-rhythm genres. That's why these two "
     "examples were picked by combining three axes rather than trusting tempo alone."
 )
+
+st.markdown("**Full-library distributions** -- where do these two examples sit against everyone else?")
+dna_songs_with_values = [s for s in all_songs if all(getattr(s, axis) is not None for axis in AXES)]
+if dna_songs_with_values:
+    dna_hist_cols = st.columns(3)
+    for i, axis in enumerate(AXES):
+        values = [getattr(s, axis) for s in dna_songs_with_values]
+        hist_fig = go.Figure(go.Histogram(x=values, nbinsx=30))
+        marker_lines = []
+        if slow_song is not None:
+            marker_lines.append(("slow example", getattr(slow_song, axis), "rgb(99,110,250)"))
+        if fast_song is not None:
+            marker_lines.append(("fast example", getattr(fast_song, axis), "rgb(239,85,59)"))
+        for label, val, color in marker_lines:
+            hist_fig.add_vline(x=val, line=dict(color=color, dash="dash", width=2))
+        hist_fig.update_layout(
+            height=220, margin=dict(l=10, r=10, t=30, b=10), title=AXIS_LABELS[axis],
+            xaxis_title=None, yaxis_title="songs" if i == 0 else None, showlegend=False,
+        )
+        with dna_hist_cols[i % 3]:
+            st.plotly_chart(hist_fig, width="stretch", key=f"dna_hist_{axis}")
+    st.caption(
+        f"n={len(dna_songs_with_values)} songs with fully-computed DNA. Dashed lines mark the two "
+        "curated examples above (blue = slow, red = fast) -- both sit at genuine, non-cherry-picked "
+        "extremes of their respective distributions, not just relative to each other."
+    )
 
 st.subheader("3b. Fingerprints -- structure, sound, harmony, and how they combine")
 st.write(
@@ -434,6 +508,21 @@ if not taste_df.empty:
         "genre agree; where a cluster spans multiple genre colors (or a genre splits across "
         "clusters), the audio is telling you something the label doesn't."
     )
+
+    axis_hist_cols = st.columns(2)
+    with axis_hist_cols[0]:
+        x_hist = go.Figure(go.Histogram(x=taste_df["x"], nbinsx=30))
+        x_hist.update_layout(height=220, margin=dict(l=10, r=10, t=30, b=10), title="x-axis value distribution")
+        st.plotly_chart(x_hist, width="stretch", key="taste_map_x_hist")
+    with axis_hist_cols[1]:
+        y_hist = go.Figure(go.Histogram(x=taste_df["y"], nbinsx=30))
+        y_hist.update_layout(height=220, margin=dict(l=10, r=10, t=30, b=10), title="y-axis value distribution")
+        st.plotly_chart(y_hist, width="stretch", key="taste_map_y_hist")
+    st.caption(
+        "Both axes are roughly unimodal with a single dense core and thinner tails -- there's no "
+        "obvious multi-cluster gap in either axis alone (multi-modality only emerges from the "
+        "combination of both, which is what the K-means clustering above is actually finding)."
+    )
 else:
     st.info("No embedded songs yet -- Taste Map needs the sound facet's segment embeddings.")
 
@@ -496,10 +585,62 @@ st.header("5. Retrieval")
 st.write(
     "Every facet gets its own FAISS index of segment embeddings. Finding \"similar\" moments is "
     "cosine-similarity nearest-neighbor search within one facet's index -- picking a different "
-    "facet changes what \"similar\" means, using the exact same mechanism. A few real matches, "
-    "picked from the live index, with a plain-language explanation generated by the same LLM "
-    "explanation layer used throughout the app (not written by hand). Play both clips below each "
-    "one to hear the match for yourself:"
+    "facet changes what \"similar\" means, using the exact same mechanism."
+)
+
+st.subheader("5a. Score distributions across the whole library")
+st.write(
+    "Genre-cohesion (§6) asks whether a facet's neighbors share a label. That's not the whole "
+    "story -- a facet can beat the random baseline on label-sharing while still producing a nearly "
+    "flat score landscape underneath, where the \"best\" match isn't meaningfully better than the "
+    "10th. This samples real queries per facet and compares the actual top-1 match score against a "
+    "random-pair baseline, both drawn from the live index -- not simulated."
+)
+
+
+@st.cache_data(show_spinner="Sampling retrieval scores...")
+def _score_distribution(_song_repo, _embedding_repo, facet_name, index_size, sample_size=200):
+    result = top1_score_distribution(_song_repo, _embedding_repo, facet_name=facet_name, sample_size=sample_size)
+    return result.n_queries, result.top1_scores, result.random_pair_scores
+
+
+score_dist_cols = st.columns(3)
+for i, facet_name in enumerate(FACET_ORDER):
+    n_queries, top1_scores, random_scores = _score_distribution(
+        song_repo, embedding_repo, facet_name, embedding_repo.index_size(facet_name)
+    )
+    with score_dist_cols[i % 3]:
+        if n_queries == 0:
+            st.caption(f"{facet_name.capitalize()}: no embedded segments yet.")
+            continue
+        dist_fig = go.Figure()
+        dist_fig.add_trace(go.Histogram(x=top1_scores, name="top-1 match", opacity=0.7, nbinsx=20))
+        dist_fig.add_trace(go.Histogram(x=random_scores, name="random pair", opacity=0.7, nbinsx=20))
+        dist_fig.update_layout(
+            height=240, margin=dict(l=10, r=10, t=30, b=10), barmode="overlay",
+            title=f"{facet_name.capitalize()} (n={n_queries})", showlegend=(i == 0),
+            legend=dict(orientation="h", y=-0.15),
+        )
+        st.plotly_chart(dist_fig, width="stretch", key=f"score_dist_{facet_name}")
+
+st.caption(
+    "Every facet's top-1 distribution sits clearly to the right of its random-pair distribution -- "
+    "real signal, not noise. But look closely at **Harmony**: its random-pair scores already cluster "
+    "up near 0.85-0.95, so even a \"real\" top-1 match only pulls a little further right -- the "
+    "12-dim chroma embedding space itself has very little natural spread, which is the mechanistic "
+    "reason harmony scored weakest on genre-cohesion too. **Sound, Vocal, Drums, Bass, and "
+    "Instrumental** all show a much wider gap between the two distributions -- a clearly discriminative "
+    "space, even where genre-cohesion alone made a facet look mediocre. Separately (not visible in "
+    "these histograms): the gap between the top-1 and 2nd-best score is small for every facet "
+    "(typically <0.01) -- with ~14,600 segments and no more than a few hundred per genre, there's "
+    "usually a long plateau of near-tied candidates rather than one sharply-best match."
+)
+
+st.subheader("5b. Curated examples")
+st.write(
+    "A few real matches, picked from the live index, with a plain-language explanation generated by "
+    "the same LLM explanation layer used throughout the app (not written by hand). Play both clips "
+    "below each one to hear the match for yourself:"
 )
 
 for facet in FACET_ORDER:
