@@ -9,6 +9,7 @@ import numpy as np
 
 from sonic_explorer.repository.embedding_repository import EmbeddingRepository
 from sonic_explorer.repository.song_repository import SongRepository
+from sonic_explorer.retrieval.song_level_index import build_song_level_index, query_song_level
 
 
 @dataclass
@@ -81,6 +82,63 @@ def genre_cohesion_at_k(
         facet_name=facet_name,
         k=k,
         n_queries=len(query_seg_ids),
+        observed=float(np.mean(observed_scores)) if observed_scores else 0.0,
+        random_baseline=float(np.mean(random_scores)) if random_scores else 0.0,
+    )
+
+
+def song_level_genre_cohesion_at_k(
+    song_repo: SongRepository,
+    embedding_repo: EmbeddingRepository,
+    facet_name: str = "sound",
+    k: int = 10,
+    sample_size: int | None = None,
+    seed: int = 42,
+) -> GenreCohesionResult:
+    """Same metric as genre_cohesion_at_k, but querying a song-level index
+    (retrieval/song_level_index.py's mean-pooled-per-song vectors) instead of
+    individual segments -- the direct comparison retrieval/song_level_index.py's
+    aggregation hypothesis needs on the same metric already used to evaluate
+    every other facet."""
+    from sonic_explorer.analysis.taste_map import mean_pool_song_vectors
+
+    rng = np.random.default_rng(seed)
+    songs = song_repo.list_songs()
+    genre_by_song = {s.id: s.genre_top for s in songs}
+
+    index = build_song_level_index(song_repo, embedding_repo, facet_name)
+    song_vectors = mean_pool_song_vectors(song_repo, embedding_repo, facet_name=facet_name)
+    all_song_ids = list(song_vectors.keys())
+    if index is None or not all_song_ids:
+        return GenreCohesionResult(facet_name=facet_name, k=k, n_queries=0, observed=0.0, random_baseline=0.0)
+
+    if sample_size is not None and sample_size < len(all_song_ids):
+        query_song_ids = list(rng.choice(all_song_ids, size=sample_size, replace=False))
+    else:
+        query_song_ids = all_song_ids
+
+    observed_scores = []
+    random_scores = []
+
+    for song_id in query_song_ids:
+        song_id = int(song_id)
+        query_genre = genre_by_song[song_id]
+
+        results = query_song_level(index, song_vectors[song_id], k=k, exclude_song_id=song_id)
+        if results:
+            hits = sum(1 for cand_id, _ in results if genre_by_song[cand_id] == query_genre)
+            observed_scores.append(hits / len(results))
+
+        other_ids = [sid for sid in all_song_ids if sid != song_id]
+        if other_ids:
+            chosen = rng.choice(other_ids, size=min(k, len(other_ids)), replace=False)
+            hits = sum(1 for c in chosen if genre_by_song[int(c)] == query_genre)
+            random_scores.append(hits / len(chosen))
+
+    return GenreCohesionResult(
+        facet_name=facet_name,
+        k=k,
+        n_queries=len(query_song_ids),
         observed=float(np.mean(observed_scores)) if observed_scores else 0.0,
         random_baseline=float(np.mean(random_scores)) if random_scores else 0.0,
     )

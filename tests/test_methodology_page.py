@@ -23,13 +23,14 @@ def test_methodology_page_runs_without_exceptions():
     assert not at.exception
 
 
-def test_methodology_page_has_all_seven_sections():
+def test_methodology_page_has_all_eight_sections():
     at = _run_methodology()
     header_texts = [h.value for h in at.header]
     for expected in [
         "1. Data", "2. Facets", "3. Song DNA & fingerprints",
         "4. Taste Map -- the whole library at once",
-        "5. Retrieval", "6. Evaluation", "7. Next: see it in the app",
+        "5. Retrieval", "6. Evaluation", "7. Model improvement case studies",
+        "8. Next: see it in the app",
     ]:
         assert expected in header_texts
 
@@ -43,6 +44,17 @@ def test_methodology_page_has_distribution_subsections():
     assert any("Track duration" in s for s in subheader_texts)
     assert any("Artists" in s for s in subheader_texts)
     assert any("5a. Score distributions" in s for s in subheader_texts)
+
+
+def test_methodology_page_has_case_study_subsections():
+    """Each case study must follow the hypothesis -> test -> honest result
+    pattern explicitly requested, not a simplified success summary."""
+    at = _run_methodology()
+    subheader_texts = [s.value for s in at.subheader]
+    assert any("7a. Vocal-facet cross-check" in s for s in subheader_texts)
+    assert any("7b. Sound recognition" in s for s in subheader_texts)
+    assert any("7c. Harmony whitening" in s for s in subheader_texts)
+    assert any("7d. Song-level aggregation" in s for s in subheader_texts)
 
 
 def test_methodology_page_fingerprint_picker_switches_song():

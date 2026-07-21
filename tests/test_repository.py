@@ -287,6 +287,29 @@ def test_search_on_empty_index_returns_empty_list(embedding_repo):
     assert results == []
 
 
+def test_remove_from_index_removes_only_the_target_vector(embedding_repo, song_repo):
+    song_id = song_repo.add_song(make_song())
+    seg_ids = song_repo.add_segments(
+        song_id,
+        [
+            Segment(song_id=song_id, start_sec=0.0, end_sec=5.0, segment_index=0),
+            Segment(song_id=song_id, start_sec=5.0, end_sec=10.0, segment_index=1),
+        ],
+    )
+    embedding_repo.add_vector("vocal", seg_ids[0], np.array([1.0, 0.0], dtype=np.float32))
+    embedding_repo.add_vector("vocal", seg_ids[1], np.array([0.0, 1.0], dtype=np.float32))
+
+    embedding_repo.remove_from_index("vocal", seg_ids[0])
+
+    assert embedding_repo.index_size("vocal") == 1
+    results = embedding_repo.search("vocal", np.array([1.0, 0.0], dtype=np.float32), k=5)
+    assert [r[0] for r in results] == [seg_ids[1]]
+
+
+def test_remove_from_index_on_unloaded_facet_is_a_no_op(embedding_repo):
+    embedding_repo.remove_from_index("vocal", 999)  # must not raise
+
+
 def test_get_structure_matrix_round_trips(conn, tmp_path):
     repo = EmbeddingRepository(conn, artifacts_dir=tmp_path)
     (tmp_path / "structure").mkdir()

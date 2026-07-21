@@ -103,6 +103,76 @@ FINGERPRINT_EXAMPLE_TITLES = [
     "OST 05 Go Go Go",
 ]
 
+# ---------------------------------------------------------------------------
+# Section 7's case-study evidence: real results from one-time experiments
+# (scripts/filter_vocal_facet_by_ast.py's validation runs, scripts/
+# whiten_harmony_index.py, scripts/compare_song_level_retrieval.py) --
+# embedded as literals rather than recomputed live, since a "before" state
+# for an already-applied change (e.g. the harmony index, now permanently
+# whitened) no longer exists to recompute against. Same rationale as
+# GENRE_COHESION_RESULTS/NN_EXAMPLES above: real numbers, captured once, not
+# fabricated for presentation.
+# ---------------------------------------------------------------------------
+
+# 7a: whole-clip AST scoring (the FAILED first design) vs. per-segment max
+# scoring (the working redesign), on the "Speech" label specifically for the
+# whole-clip case and the best-matching vocal-keyword label for per-segment.
+VOCAL_GATE_WHOLE_CLIP_SCORES = [
+    # (title, expected, "Speech" score) -- expected is what SHOULD happen
+    ("3rd Chair", "EXCLUDE (bleed case)", 0.00196),
+    ("something brewing", "KEEP (real vocals)", 0.00100),
+    ("Bridgewater Triangle", "EXCLUDE (no vocals)", 0.00085),
+    ("Sam's Song", "KEEP (real vocals)", 0.00070),
+    ("That Horse Ithica", "EXCLUDE (no vocals)", 0.00062),
+    ("Pavement Hack", "EXCLUDE (no vocals)", 0.00048),
+]
+VOCAL_GATE_PER_SEGMENT_SCORES = [
+    # (title, expected, max per-segment score across the song's real segments)
+    ("Cipralex (c/ Pulso)", "KEEP (real vocals)", 0.154),
+    ("A Friendly Noose", "KEEP (real vocals)", 0.103),
+    ("Terminally in Love With You", "KEEP (real vocals)", 0.100),
+    ("Sam's Song", "KEEP (real vocals)", 0.049),
+    ("something brewing", "KEEP (real vocals)", 0.020),
+    ("3rd Chair", "EXCLUDE (bleed case)", 0.016),
+    ("That Horse Ithica", "EXCLUDE (no vocals)", 0.012),
+    ("Bridgewater Triangle", "EXCLUDE (no vocals)", 0.006),
+    ("Pavement Hack", "EXCLUDE (no vocals)", 0.004),
+]
+VOCAL_GATE_THRESHOLD = 0.018
+
+# 7b: real AST/AudioSet tag output, curated for variety (instrumental with
+# specific-instrument tags, ambient/textural, soundtrack, vocal genres).
+AST_CAPABILITY_EXAMPLES = [
+    {"title": "3rd Chair", "genre": "Instrumental",
+     "tags": [("Cello", 0.251), ("Bowed string instrument", 0.090), ("Violin, fiddle", 0.066), ("Double bass", 0.036)]},
+    {"title": "Bridgewater Triangle", "genre": "Instrumental",
+     "tags": [("Gong", 0.523), ("Ambient music", 0.047), ("Timpani", 0.011), ("Singing bowl", 0.006)]},
+    {"title": "OST 05 Go Go Go", "genre": "Electronic",
+     "tags": [("Video game music", 0.043), ("Soundtrack music", 0.015), ("Funny music", 0.013), ("Theme music", 0.005)]},
+    {"title": "A Friendly Noose", "genre": "Folk",
+     "tags": [("Female singing", 0.083), ("Singing", 0.034), ("Guitar", 0.014), ("Country", 0.014)]},
+    {"title": "Cipralex (c/ Pulso)", "genre": "Hip-Hop",
+     "tags": [("Mantra", 0.085), ("Chant", 0.036), ("Speech", 0.011), ("Electronic music", 0.014)]},
+]
+
+# 7c: harmony whitening before/after (k=10, sample_size=300, seed=42).
+HARMONY_WHITENING_RESULTS = {
+    "before": {"top1_mean": 0.983, "random_mean": 0.847, "margin_mean": 0.0027, "cohesion_pct": 20.7, "baseline_pct": 11.5},
+    "after": {"top1_mean": 0.865, "random_mean": -0.016, "margin_mean": 0.0187, "cohesion_pct": 20.1, "baseline_pct": 11.5},
+}
+
+# 7d: segment-level vs. song-level retrieval, all six facets (k=10,
+# sample_size=300, seed=42) -- harmony's numbers here are measured on the
+# already-whitened index (7c ran first).
+SONG_LEVEL_COMPARISON = [
+    {"facet": "sound", "seg_margin": 0.0080, "song_margin": 0.0185, "seg_cohesion": 55.4, "song_cohesion": 52.5},
+    {"facet": "harmony", "seg_margin": 0.0187, "song_margin": 0.0326, "seg_cohesion": 20.1, "song_cohesion": 21.8},
+    {"facet": "vocal", "seg_margin": 0.0093, "song_margin": 0.0147, "seg_cohesion": 34.4, "song_cohesion": 38.3},
+    {"facet": "drums", "seg_margin": 0.0088, "song_margin": 0.0152, "seg_cohesion": 33.5, "song_cohesion": 36.5},
+    {"facet": "bass", "seg_margin": 0.0087, "song_margin": 0.0114, "seg_cohesion": 25.7, "song_cohesion": 29.8},
+    {"facet": "instrumental", "seg_margin": 0.0105, "song_margin": 0.0194, "seg_cohesion": 38.5, "song_cohesion": 44.1},
+]
+
 st.set_page_config(page_title="Sonic Explorer", page_icon="\U0001F3A7", layout="wide")
 
 song_repo, embedding_repo, retrieval_service = get_repositories()
@@ -705,16 +775,171 @@ st.info(
     "These numbers were captured before a stem-facet reprocessing pass currently underway (fixing "
     "a data-quality issue where a handful of near-silent isolated stems were being indexed as if "
     "meaningful). Expect Vocal/Drums/Bass/Instrumental numbers to shift slightly once that "
-    "finishes -- Sound and Harmony are unaffected.",
+    "finishes -- Sound is unaffected. Harmony's number here is also its pre-whitening baseline; "
+    "see §7c for the whitening experiment's own before/after measurement.",
     icon="\U0001F6A7",
 )
 
 st.divider()
 
 # ---------------------------------------------------------------------------
-# 7. Next: see it in the app
+# 7. Model improvement case studies
 # ---------------------------------------------------------------------------
-st.header("7. Next: see it in the app")
+st.header("7. Model improvement case studies")
+st.write(
+    "§6 established real weaknesses per facet, not just aggregate scores. This section documents "
+    "concrete attempts to fix or explain them -- each follows the same discipline: state a "
+    "hypothesis, test it against the real library, report the honest result, whether or not it "
+    "fully worked. §4b's axis-interpretability check (correlate first, qualitative-listen only "
+    "where correlation doesn't resolve it) already followed this same pattern -- it belongs to this "
+    "same family of case studies, just located earlier in the narrative."
+)
+
+st.subheader("7a. Vocal-facet cross-check: hypothesis, failure, redesign, validation")
+st.write(
+    "§3b noted the vocal facet's honest limitation: Demucs' \"vocal\" stem can carry real energy "
+    "from non-vocal content (confirmed case: \"3rd Chair\", a cello/violin piece, scored 0.58 "
+    "stem-to-mix energy ratio -- well above the energy gate's 0.05 threshold -- despite having no "
+    "real vocals). **Hypothesis:** a pretrained AudioSet tagger (AST) could independently check "
+    "whether a song actually contains singing/speech, catching what the energy gate can't."
+)
+st.markdown("**First attempt (failed): score the whole 30-second clip at once**")
+whole_clip_df = pd.DataFrame(VOCAL_GATE_WHOLE_CLIP_SCORES, columns=["Song", "Expected", "\"Speech\" score"])
+st.dataframe(whole_clip_df, hide_index=True, width="stretch")
+st.caption(
+    "There is no threshold that sorts this correctly -- \"3rd Chair\" (the exact bleed case this "
+    "was supposed to catch) scores *higher* than two real-vocal songs it must not exclude. "
+    "**Diagnosis:** AST's output over a full 30s clip is a continuous distribution across all 527 "
+    "AudioSet classes, not a sparse detector -- dominant instrumental/percussive content in the mix "
+    "swamps genuinely-present-but-quieter vocals into the same tiny-probability noise floor that "
+    "residual background \"vocal\" mass sits at in truly instrumental tracks."
+)
+st.markdown("**Redesign: score each ~5s segment individually, take the max**")
+per_segment_df = pd.DataFrame(VOCAL_GATE_PER_SEGMENT_SCORES, columns=["Song", "Expected", "Max segment score"])
+st.dataframe(per_segment_df, hide_index=True, width="stretch")
+st.caption(
+    f"Clean separation this time: every \"keep\" song scores ≥ 0.020, every \"exclude\" song scores "
+    f"≤ 0.016 -- a threshold around **{VOCAL_GATE_THRESHOLD}** sorts all 9 confirmed cases "
+    "correctly, \"3rd Chair\" included. A shorter window has less competing instrumental content, "
+    "so a real vocal moment doesn't get drowned out the way it did over the full clip."
+)
+st.info(
+    "**Honest status:** the redesigned check is implemented and tested "
+    "(`sonic_explorer/pipeline/vocal_presence.py`, `EmbeddingRepository.remove_from_index()`), and "
+    "validated -- but only against these 9 confirmed cases, not yet run at full-library scale. "
+    "Per-segment scoring costs ~6x the inference of the whole-clip design that didn't work, so a "
+    "full-library run is a real ~9-12 hour unattended CPU job; a scoped run against just the "
+    "genre-labeled Instrumental songs (~175, where the confirmed bleed case actually lives) is "
+    "~90 minutes. Neither has been run yet -- this is a validated, ready fix awaiting that scope "
+    "decision, not yet applied to the live vocal facet.",
+    icon="⏳",
+)
+
+st.subheader("7b. Sound recognition as a general capability")
+st.write(
+    "Separate from the vocal-gate application above: the same pretrained AST/AudioSet model is a "
+    "real, standalone capability -- given any clip, it tags what it hears against 527 general audio "
+    "classes, no training required. Worth judging on its own: are the tags actually descriptive, or "
+    "generic noise?"
+)
+for ex in AST_CAPABILITY_EXAMPLES:
+    tag_text = " · ".join(f"{label} ({score:.0%})" for label, score in ex["tags"])
+    st.markdown(f"**{ex['title']}** ({ex['genre']}) — {tag_text}")
+st.caption(
+    "Genuinely specific, not generic: \"3rd Chair\" resolves to actual instrument names "
+    "(Cello, Bowed string instrument, Violin) with no model fine-tuning on this library at all. "
+    "That specificity is what makes it useful as the vocal-facet cross-check above -- and it's a "
+    "plausible future capability beyond that one use case (e.g. tag-based search in Ask the DJ), "
+    "not yet built."
+)
+
+st.subheader("7c. Harmony whitening: fixing the score geometry vs. fixing the task")
+st.write(
+    "§5a found harmony's random-pair baseline sitting at 0.85-0.95 cosine similarity -- the raw "
+    "24-dim chroma-derived space (12 pitch classes × mean + std) has very little natural spread, so "
+    "real differences barely register once L2-normalized. **Hypothesis:** whitening each dimension "
+    "to zero mean / unit variance across the corpus before re-normalizing should spread the space "
+    "out along directions that actually vary -- a pure post-hoc transform on vectors already "
+    "computed, no re-extraction needed."
+)
+hw = HARMONY_WHITENING_RESULTS
+whiten_cols = st.columns(2)
+with whiten_cols[0]:
+    st.markdown("**Before**")
+    st.metric("Top-1 vs. random gap", f"{hw['before']['top1_mean'] - hw['before']['random_mean']:.3f}")
+    st.metric("Top-1 vs. top-2 margin", f"{hw['before']['margin_mean']:.4f}")
+    st.metric("Genre-cohesion@10", f"{hw['before']['cohesion_pct']:.1f}%")
+with whiten_cols[1]:
+    st.markdown("**After**")
+    st.metric("Top-1 vs. random gap", f"{hw['after']['top1_mean'] - hw['after']['random_mean']:.3f}",
+               delta=f"{(hw['after']['top1_mean'] - hw['after']['random_mean']) - (hw['before']['top1_mean'] - hw['before']['random_mean']):+.3f}")
+    st.metric("Top-1 vs. top-2 margin", f"{hw['after']['margin_mean']:.4f}",
+               delta=f"{hw['after']['margin_mean'] - hw['before']['margin_mean']:+.4f}")
+    st.metric("Genre-cohesion@10", f"{hw['after']['cohesion_pct']:.1f}%",
+               delta=f"{hw['after']['cohesion_pct'] - hw['before']['cohesion_pct']:+.1f}pp")
+st.caption(
+    "A real, honest split result. The score geometry improved dramatically -- random pairs went "
+    "from a misleadingly-high 0.85 average down to essentially 0, and individual rankings got ~7x "
+    "more decisive (margin 0.0027 → 0.0187). But genre-cohesion, the actual task metric, stayed "
+    "flat (20.7% → 20.1%, within sampling noise). **Conclusion:** whitening fixed the symptom "
+    "(a compressed, misleading score range) but not the underlying limitation -- a 24-dim chroma "
+    "mean+std summary is a coarse representation of harmony, and rescaling it can't inject "
+    "discriminative information that was never captured in the first place. Score-geometry health "
+    "and task performance are genuinely different things; fixing one doesn't guarantee the other. "
+    "Kept live regardless -- a sharper single top match is a real usability win in Moment Matcher "
+    "and Ask the DJ, even without a genre-cohesion lift."
+)
+
+st.subheader("7d. Song-level aggregation: pooling segments before ranking")
+st.write(
+    "§5a's other finding: every facet's top-1-vs-top-2 margin is small (typically <0.01) -- with "
+    "~14,600 segments and often only a few hundred per genre, there's usually a long plateau of "
+    "near-tied single-segment candidates. **Hypothesis:** mean-pooling a song's segments into one "
+    "vector before ranking (the same aggregation Taste Map/Explore already use for visualization) "
+    "should smooth that segment-level noise into a sharper song-level signal."
+)
+song_level_df = pd.DataFrame(SONG_LEVEL_COMPARISON)
+margin_fig = go.Figure(data=[
+    go.Bar(name="Segment-level", x=[r["facet"].capitalize() for r in SONG_LEVEL_COMPARISON],
+           y=[r["seg_margin"] for r in SONG_LEVEL_COMPARISON]),
+    go.Bar(name="Song-level", x=[r["facet"].capitalize() for r in SONG_LEVEL_COMPARISON],
+           y=[r["song_margin"] for r in SONG_LEVEL_COMPARISON]),
+])
+margin_fig.update_layout(height=320, margin=dict(l=10, r=10, t=30, b=10), barmode="group",
+                          yaxis_title="top1-vs-top2 margin", title="Ranking margin: segment vs. song level")
+st.plotly_chart(margin_fig, width="stretch", key="song_level_margin_chart")
+
+cohesion_fig = go.Figure(data=[
+    go.Bar(name="Segment-level", x=[r["facet"].capitalize() for r in SONG_LEVEL_COMPARISON],
+           y=[r["seg_cohesion"] for r in SONG_LEVEL_COMPARISON]),
+    go.Bar(name="Song-level", x=[r["facet"].capitalize() for r in SONG_LEVEL_COMPARISON],
+           y=[r["song_cohesion"] for r in SONG_LEVEL_COMPARISON]),
+])
+cohesion_fig.update_layout(height=320, margin=dict(l=10, r=10, t=30, b=10), barmode="group",
+                            yaxis_title="genre-cohesion@10 (%)", title="Task performance: segment vs. song level")
+st.plotly_chart(cohesion_fig, width="stretch", key="song_level_cohesion_chart")
+
+st.caption(
+    "Margin improved for **every** facet (1.3x-2.3x sharper). Genre-cohesion improved for **5 of "
+    "6** facets -- Instrumental +5.6pp, Bass +4.1pp, Vocal +3.9pp, Drums +3.0pp, Harmony +1.7pp. "
+    "Sound is the one exception, slightly worse (55.4% → 52.5%) -- plausibly because Sound's "
+    "per-segment specificity was already strong (the highest baseline of any facet), and averaging "
+    "a song's segments blurs together genuinely different sonic moments (a quiet intro vs. a loud "
+    "chorus) precisely where that segment-level precision was doing real work."
+)
+st.info(
+    "**Status:** implemented and validated (`sonic_explorer/retrieval/song_level_index.py`) as a "
+    "real, working alternative retrieval mode -- not yet wired into Moment Matcher's UI as a "
+    "selectable option. A natural, low-risk follow-up given the validated improvement.",
+    icon="✅",
+)
+
+st.divider()
+
+# ---------------------------------------------------------------------------
+# 8. Next: see it in the app
+# ---------------------------------------------------------------------------
+st.header("8. Next: see it in the app")
 st.write(
     "That's the methodology. The **App Walkthrough** picks up from here -- a guided pass through "
     "the live interactive pages themselves, explaining what you're looking at as you go (what the "

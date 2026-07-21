@@ -81,6 +81,18 @@ class EmbeddingRepository:
         )
         self.conn.commit()
 
+    def remove_from_index(self, facet_name: str, segment_id: int) -> None:
+        """Removes a single already-indexed vector -- e.g. when a post-hoc
+        quality check (pipeline/vocal_presence.py) determines a segment
+        shouldn't have been indexed after all. FAISS's IndexIDMap2 supports
+        true removal (plain IndexIDMap does not) -- exactly why that wrapper
+        was chosen originally. Callers still need to mark_skipped() the
+        segment separately -- this only touches the FAISS side, mirroring
+        add_to_index()'s FAISS-only scope."""
+        if facet_name not in self._indexes:
+            return
+        self._indexes[facet_name].remove_ids(np.array([segment_id], dtype=np.int64))
+
     def mark_skipped(self, segment_id: int, facet_name: str) -> None:
         """Deliberately-not-computed, distinct from both 'pending' (not yet
         attempted -- keep retrying) and 'done' (has a real vector). Used by
