@@ -3,13 +3,17 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
+import pandas as pd
+import plotly.express as px
 import plotly.graph_objects as go
 import streamlit as st
 
+from sonic_explorer.analysis.song_dna import AXES, AXIS_LABELS
+from sonic_explorer.analysis.taste_map import compute_taste_map, mean_pool_song_vectors
 from sonic_explorer.config import audio_path_for
-from sonic_explorer.facets.fingerprint import structure_fingerprint
-from components.plotting import fingerprint_thumbnail
-from resources import get_repositories, show_data_source_banner
+from sonic_explorer.facets.fingerprint import composite_fingerprint, structure_fingerprint
+from components.plotting import composite_fingerprint_thumbnail, fingerprint_thumbnail, song_dna_radar_overlay
+from resources import build_dna_normalizer, build_normalized_dna_by_song, get_repositories, show_data_source_banner
 
 # ---------------------------------------------------------------------------
 # Curated evidence, embedded directly rather than loaded from data/artifacts/
@@ -81,19 +85,39 @@ NN_EXAMPLES = [
 
 FACET_ORDER = ["sound", "harmony", "vocal", "drums", "bass", "instrumental"]
 
-DNA_EXAMPLES = {
-    "slow": {"title": "three lullabies 1", "artist": "Eva-Maria Houben", "genre": "Experimental",
-             "tempo_bpm": 40.4, "energy": 0.0054, "brightness": 945.1, "harmonic_complexity": 0.891, "rhythmic_density": 0.57},
-    "fast": {"title": "A ninja among culturachippers", "artist": "Rolemusic", "genre": "Electronic",
-             "tempo_bpm": 152.0, "energy": 0.5433, "brightness": 1804.2, "harmonic_complexity": 0.994, "rhythmic_density": 7.07},
+DNA_EXAMPLE_TITLES = {
+    "slow": "three lullabies 1",
+    "fast": "A ninja among culturachippers",
 }
 
-STRUCTURE_EXAMPLE_TITLE = "Cipralex (c/ Pulso)"
+# A handful of songs spanning the structural-confidence range, so "scroll
+# through a few examples" has real variety to scroll through rather than one
+# fixed case -- picked from earlier candidate-gathering, not exhaustive.
+FINGERPRINT_EXAMPLE_TITLES = [
+    "Cipralex (c/ Pulso)",
+    "three lullabies 1",
+    "A ninja among culturachippers",
+    "Kodak Ghosts",
+    "OST 05 Go Go Go",
+]
 
 st.set_page_config(page_title="Sonic Explorer", page_icon="\U0001F3A7", layout="wide")
 
 song_repo, embedding_repo, retrieval_service = get_repositories()
 all_songs = song_repo.list_songs()
+songs_by_title = {s.title: s for s in all_songs}
+
+
+def _find_song(title: str):
+    """Exact match first (curated titles were pulled verbatim from the DB);
+    startswith fallback covers any that got truncated/edited in curation."""
+    if title in songs_by_title:
+        return songs_by_title[title]
+    for s in all_songs:
+        if s.title.startswith(title[:20]):
+            return s
+    return None
+
 
 st.title("Sonic Explorer")
 st.write("Explore your music library by how it actually sounds — not tags or genre labels.")
@@ -176,30 +200,161 @@ st.write(
     "facet, both cheap byproducts of the same audio analysis."
 )
 
-st.subheader("Song DNA -- does it actually track fast/energetic vs. slow/calm?")
+st.subheader("3a. Song DNA -- does it actually track fast/energetic vs. slow/calm?")
 st.write("Picked the two songs at opposite ends of a combined tempo+energy+rhythmic-density ranking:")
-dna_cols = st.columns(2)
-for col, key, label in [(dna_cols[0], "slow", "Slowest / calmest"), (dna_cols[1], "fast", "Fastest / most energetic")]:
-    d = DNA_EXAMPLES[key]
-    with col:
-        st.markdown(f"**{label}: \"{d['title']}\"** — {d['artist']} ({d['genre']})")
+
+slow_song = _find_song(DNA_EXAMPLE_TITLES["slow"])
+fast_song = _find_song(DNA_EXAMPLE_TITLES["fast"])
+
+if slow_song is not None and fast_song is not None:
+    dna_cols = st.columns(2)
+    with dna_cols[0]:
+        st.markdown(f"**Slowest / calmest: \"{slow_song.title}\"** — {slow_song.artist} ({slow_song.genre_top})")
+        st.audio(str(audio_path_for(slow_song)))
         st.markdown(f"""
-- Tempo: **{d['tempo_bpm']:.1f} BPM**
-- Energy: **{d['energy']:.4f}**
-- Brightness: **{d['brightness']:.0f} Hz**
-- Harmonic complexity: **{d['harmonic_complexity']:.3f}**
-- Rhythmic density: **{d['rhythmic_density']:.2f}**
+- Tempo: **{slow_song.tempo_bpm:.1f} BPM**
+- Energy: **{slow_song.energy:.4f}**
+- Brightness: **{slow_song.brightness:.0f} Hz**
+- Harmonic complexity: **{slow_song.harmonic_complexity:.3f}**
+- Rhythmic density: **{slow_song.rhythmic_density:.2f}**
 """)
+    with dna_cols[1]:
+        st.markdown(f"**Fastest / most energetic: \"{fast_song.title}\"** — {fast_song.artist} ({fast_song.genre_top})")
+        st.audio(str(audio_path_for(fast_song)))
+        st.markdown(f"""
+- Tempo: **{fast_song.tempo_bpm:.1f} BPM**
+- Energy: **{fast_song.energy:.4f}**
+- Brightness: **{fast_song.brightness:.0f} Hz**
+- Harmonic complexity: **{fast_song.harmonic_complexity:.3f}**
+- Rhythmic density: **{fast_song.rhythmic_density:.2f}**
+""")
+
+    dna_normalizer = build_dna_normalizer(song_repo, len(all_songs))
+    normalized_dna_by_song = build_normalized_dna_by_song(song_repo, dna_normalizer, len(all_songs))
+    if slow_song.id in normalized_dna_by_song and fast_song.id in normalized_dna_by_song:
+        axis_labels = [AXIS_LABELS[a] for a in AXES]
+        slow_norm = normalized_dna_by_song[slow_song.id]
+        fast_norm = normalized_dna_by_song[fast_song.id]
+        st.plotly_chart(
+            song_dna_radar_overlay(
+                axis_labels,
+                [slow_norm[a] for a in AXES], slow_song.title,
+                [fast_norm[a] for a in AXES], fast_song.title,
+            ),
+            width="stretch", key="walkthrough_dna_radar",
+        )
+        st.caption(
+            "Same normalizer the live app uses -- each axis scaled to where this song sits within "
+            "the *library's* actual range, not an absolute scale. The two shapes barely overlap, "
+            "which is exactly what a clean fast/slow contrast should look like."
+        )
+else:
+    st.warning("DNA example songs not found in the current library.")
+
 st.caption(
     "All five axes point the same direction for both songs -- a clean, internally consistent "
     "illustration. Worth flagging honestly: tempo and energy are nearly uncorrelated across the "
     "whole library (r ≈ 0.05) -- the songs with the single fastest tempo values weren't "
-    "high-energy at all, most likely librosa tempo-octave errors (locking onto a doubled/halved "
-    "tempo), a known failure mode especially on complex-rhythm genres. That's why these two "
+    "high-energy at all, most likely librosa tempo-octave detection errors (locking onto a doubled/"
+    "halved tempo), a known failure mode especially on complex-rhythm genres. That's why these two "
     "examples were picked by combining three axes rather than trusting tempo alone."
 )
 
-st.subheader("Structure fingerprint -- does it track something real?")
+st.subheader("3b. Fingerprints -- structure, sound, harmony, and how they combine")
+st.write(
+    "Every song gets a small visual fingerprint per facet, plus a composite that overlays three of "
+    "them as color channels (structure = red, sound = green, harmony = blue) -- where the channels "
+    "agree the image reads bright and neutral, where they diverge it casts a color. Pick a song to "
+    "see all of them together, exactly as the live Song X-Ray page renders them:"
+)
+
+fp_candidates = [t for t in FINGERPRINT_EXAMPLE_TITLES if _find_song(t) is not None]
+fp_choice = st.selectbox("Pick a song", options=fp_candidates, key="walkthrough_fp_picker")
+fp_song = _find_song(fp_choice) if fp_choice else None
+
+if fp_song is not None:
+    st.markdown(f"**{fp_song.title}** — {fp_song.artist} ({fp_song.genre_top})")
+    st.audio(str(audio_path_for(fp_song)))
+
+    try:
+        matrix = embedding_repo.get_structure_matrix(fp_song.id)
+    except FileNotFoundError:
+        matrix = None
+    try:
+        timeline = embedding_repo.get_structure_timeline(fp_song.id)
+    except FileNotFoundError:
+        timeline = None
+
+    structure_fp = structure_fingerprint(matrix) if matrix is not None else None
+    sound_fp = timeline.sound_fingerprint if timeline is not None else None
+    harmony_fp = timeline.harmony_fingerprint if timeline is not None else None
+
+    fp_cols = st.columns(4)
+    if structure_fp is not None:
+        with fp_cols[0]:
+            st.plotly_chart(fingerprint_thumbnail(structure_fp, "Structure"), width="stretch", key="wt_fp_structure")
+    if sound_fp is not None:
+        with fp_cols[1]:
+            st.plotly_chart(fingerprint_thumbnail(sound_fp, "Sound"), width="stretch", key="wt_fp_sound")
+    if harmony_fp is not None:
+        with fp_cols[2]:
+            st.plotly_chart(fingerprint_thumbnail(harmony_fp, "Harmony"), width="stretch", key="wt_fp_harmony")
+    if structure_fp is not None and sound_fp is not None and harmony_fp is not None:
+        with fp_cols[3]:
+            composite = composite_fingerprint(structure_fp, sound_fp, harmony_fp)
+            st.plotly_chart(composite_fingerprint_thumbnail(composite), width="stretch", key="wt_fp_composite")
+
+    if timeline is not None and timeline.has_clear_structure:
+        st.caption(
+            "Each colored block below is a stretch of the song; same color = similar-sounding "
+            "sections, discovered automatically from the audio, no manual labeling."
+        )
+        palette = px.colors.qualitative.Set2
+        unique_labels = sorted(set(timeline.segment_labels.tolist()))
+        color_map = {lab: palette[i % len(palette)] for i, lab in enumerate(unique_labels)}
+        durations = timeline.segment_ends - timeline.segment_starts
+        hover_text = [f"{s:.1f}s – {e:.1f}s" for s, e in zip(timeline.segment_starts, timeline.segment_ends)]
+        timeline_fig = go.Figure(go.Bar(
+            x=durations, y=["Structure"] * len(durations), base=timeline.segment_starts, orientation="h",
+            marker_color=[color_map[lab] for lab in timeline.segment_labels.tolist()],
+            marker_line_width=0, hovertext=hover_text, hoverinfo="text",
+        ))
+        timeline_fig.update_layout(
+            height=120, showlegend=False, xaxis_title="Time (s)",
+            yaxis=dict(showticklabels=False), margin=dict(l=10, r=10, t=10, b=40), bargap=0,
+        )
+        st.plotly_chart(timeline_fig, width="stretch", key="wt_structure_timeline")
+    elif timeline is not None and timeline.novelty_curve is not None:
+        st.caption(
+            "This song evolves gradually rather than repeating in clear sections -- shown as a "
+            "continuous novelty curve instead of colored blocks."
+        )
+        curve_fig = go.Figure(go.Scatter(
+            x=timeline.novelty_times, y=timeline.novelty_curve, mode="lines", fill="tozeroy",
+            line=dict(color="rgb(99,110,250)"),
+        ))
+        curve_fig.update_layout(
+            height=140, xaxis_title="Time (s)",
+            yaxis=dict(title="novelty", showticklabels=False, range=[0, 1]),
+            margin=dict(l=10, r=10, t=10, b=40),
+        )
+        st.plotly_chart(curve_fig, width="stretch", key="wt_novelty_curve")
+
+    with st.expander("Zoom in further: raw self-similarity matrix"):
+        st.caption(
+            "The matrix everything above is derived from -- the main diagonal is deliberately left "
+            "blank; bright parallel stripes off the diagonal are what mark repeated sections."
+        )
+        if matrix is not None:
+            heatmap = px.imshow(
+                matrix, color_continuous_scale="Magma", origin="lower",
+                labels=dict(x="beat", y="beat", color="similarity"),
+            )
+            heatmap.update_layout(height=420)
+            st.plotly_chart(heatmap, width="stretch", key="wt_ssm_matrix")
+        else:
+            st.warning("No structure matrix computed for this song yet.")
+
 st.write(
     "Checked all 1394 songs with detected structural boundaries for any segment whose label "
     "repeats later in the timeline (genuine \"the verse comes back\" recurrence). **Zero** songs "
@@ -209,53 +364,86 @@ st.write(
     "structure facet shows *how a song's texture evolves across its first 30 seconds*, not "
     "full-song verse/chorus form -- that would need complete tracks."
 )
-
-structure_song = next((s for s in all_songs if s.title.startswith(STRUCTURE_EXAMPLE_TITLE)), None)
-if structure_song is not None:
-    try:
-        matrix = embedding_repo.get_structure_matrix(structure_song.id)
-        timeline = embedding_repo.get_structure_timeline(structure_song.id)
-    except FileNotFoundError:
-        matrix, timeline = None, None
-
-    if matrix is not None and timeline is not None:
-        fp_col, info_col = st.columns([1, 2])
-        with fp_col:
-            st.plotly_chart(
-                fingerprint_thumbnail(structure_fingerprint(matrix), "Structure"),
-                width="stretch", key="walkthrough_structure_fp",
-            )
-        with info_col:
-            st.markdown(f"**\"{structure_song.title}\"** — {structure_song.artist} ({structure_song.genre_top})")
-            segs = ", ".join(
-                f"{s:.1f}-{e:.1f}s" for s, e in zip(timeline.segment_starts, timeline.segment_ends)
-            )
-            st.caption(f"5 uniquely-labeled segments: {segs}")
-            st.caption(f"structural_confidence = {timeline.structural_confidence:.3f} (among the highest in the library)")
-            st.audio(str(audio_path_for(structure_song)))
-        st.caption(
-            "The novelty curve's two strongest peaks land right near the very start (~2s) and very "
-            "end (~28s) of the clip -- plausible for a 30-second hip-hop preview (a beat/vocal "
-            "entrance shortly after the intro, and a hard cutoff/fade at the preview's edge). "
-            "**Honest limitation:** confirming this by ear needs a human listener -- no audio "
-            "playback/listening capability here. What the underlying algorithm *has* been validated "
-            "against: synthetic audio with known ground truth (a pure tone produces zero detected "
-            "peaks; two audibly distinct halves produce exactly one peak, accurate to within 0.01s "
-            "of the true midpoint). Use the player above for the last-mile check yourself."
-        )
+st.caption(
+    "**Honest limitation on the algorithm itself:** validated against synthetic audio with known "
+    "ground truth (a pure tone produces zero detected peaks; two audibly distinct halves produce "
+    "exactly one peak, accurate to within 0.01s of the true midpoint) -- but not re-confirmed by "
+    "ear against every real recording shown above. Use the players above for your own last-mile check."
+)
 
 st.divider()
 
 # ---------------------------------------------------------------------------
-# 4. Retrieval
+# 4. Taste Map
 # ---------------------------------------------------------------------------
-st.header("4. Retrieval")
+st.header("4. Taste Map -- the whole library at once")
+st.write(
+    "Mean-pool every song's sound-facet segment embeddings into one vector per song, then project "
+    "the whole library down to 2D (PCA) and cluster it (K-means) -- entirely from audio, no genre "
+    "labels involved in either step. Coloring the same map by the *known* genre labels afterward is "
+    "a direct visual test of whether sonic clusters actually line up with genre, or cut across it."
+)
+
+
+@st.cache_data
+def _walkthrough_taste_map_df(_song_repo, _embedding_repo, cache_key):
+    song_vectors = mean_pool_song_vectors(_song_repo, _embedding_repo)
+    result = compute_taste_map(song_vectors, method="pca")
+    songs_by_id = {s.id: s for s in _song_repo.list_songs()}
+    return pd.DataFrame([
+        {
+            "song_id": p.song_id, "x": p.x, "y": p.y, "cluster": str(p.cluster),
+            "title": songs_by_id[p.song_id].title, "artist": songs_by_id[p.song_id].artist,
+            "genre": songs_by_id[p.song_id].genre_top,
+        }
+        for p in result.points if p.song_id in songs_by_id
+    ])
+
+
+taste_df = _walkthrough_taste_map_df(song_repo, embedding_repo, embedding_repo.index_size("sound"))
+
+if not taste_df.empty:
+    map_cols = st.columns(2)
+    with map_cols[0]:
+        cluster_fig = px.scatter(
+            taste_df, x="x", y="y", color="cluster",
+            hover_data={"title": True, "artist": True, "genre": True, "x": False, "y": False, "cluster": False},
+            title="Colored by discovered cluster (K-means, sound-only)",
+        )
+        cluster_fig.update_traces(marker=dict(size=7))
+        cluster_fig.update_layout(height=440)
+        st.plotly_chart(cluster_fig, width="stretch", key="wt_taste_map_cluster")
+    with map_cols[1]:
+        genre_fig = px.scatter(
+            taste_df, x="x", y="y", color="genre",
+            hover_data={"title": True, "artist": True, "genre": True, "x": False, "y": False, "cluster": False},
+            title="Colored by known genre label",
+        )
+        genre_fig.update_traces(marker=dict(size=7))
+        genre_fig.update_layout(height=440)
+        st.plotly_chart(genre_fig, width="stretch", key="wt_taste_map_genre")
+    st.caption(
+        "The two maps share the same layout (same x/y for every point) -- only the coloring "
+        "differs. Where cluster boundaries roughly track genre boundaries, sonic similarity and "
+        "genre agree; where a cluster spans multiple genre colors (or a genre splits across "
+        "clusters), the audio is telling you something the label doesn't."
+    )
+else:
+    st.info("No embedded songs yet -- Taste Map needs the sound facet's segment embeddings.")
+
+st.divider()
+
+# ---------------------------------------------------------------------------
+# 5. Retrieval
+# ---------------------------------------------------------------------------
+st.header("5. Retrieval")
 st.write(
     "Every facet gets its own FAISS index of segment embeddings. Finding \"similar\" moments is "
     "cosine-similarity nearest-neighbor search within one facet's index -- picking a different "
     "facet changes what \"similar\" means, using the exact same mechanism. A few real matches, "
     "picked from the live index, with a plain-language explanation generated by the same LLM "
-    "explanation layer used throughout the app (not written by hand):"
+    "explanation layer used throughout the app (not written by hand). Play both clips below each "
+    "one to hear the match for yourself:"
 )
 
 for facet in FACET_ORDER:
@@ -264,19 +452,29 @@ for facet in FACET_ORDER:
         continue
     st.subheader(facet.capitalize())
     for ex in examples:
-        st.markdown(
-            f"**{ex['score_pct']:.0f}% match** — "
-            f"\"{ex['query']['title']}\" by {ex['query']['artist']} ({ex['query']['genre']}) "
-            f"↔ \"{ex['match']['title']}\" by {ex['match']['artist']} ({ex['match']['genre']})"
-        )
-        st.caption(f"\U0001F4AC *{ex['explanation']}*")
+        query_song = _find_song(ex["query"]["title"])
+        match_song = _find_song(ex["match"]["title"])
+        with st.expander(
+            f"{ex['score_pct']:.0f}% match — \"{ex['query']['title']}\" ↔ \"{ex['match']['title']}\"",
+            expanded=False,
+        ):
+            listen_cols = st.columns(2)
+            with listen_cols[0]:
+                st.caption(f"Query: \"{ex['query']['title']}\" — {ex['query']['artist']} ({ex['query']['genre']})")
+                if query_song is not None:
+                    st.audio(str(audio_path_for(query_song)))
+            with listen_cols[1]:
+                st.caption(f"Match: \"{ex['match']['title']}\" — {ex['match']['artist']} ({ex['match']['genre']})")
+                if match_song is not None:
+                    st.audio(str(audio_path_for(match_song)))
+            st.caption(f"\U0001F4AC *{ex['explanation']}*")
 
 st.divider()
 
 # ---------------------------------------------------------------------------
-# 5. Evaluation
+# 6. Evaluation
 # ---------------------------------------------------------------------------
-st.header("5. Evaluation")
+st.header("6. Evaluation")
 st.write(
     f"Quantitative check: do a facet's nearest neighbors actually share genre more often than "
     f"chance, at k={GENRE_COHESION_RESULTS['k']} (sampled over {GENRE_COHESION_RESULTS['facets'][0]['n_queries']} "
@@ -317,9 +515,9 @@ st.info(
 st.divider()
 
 # ---------------------------------------------------------------------------
-# 6. Explore the live app
+# 7. Explore the live app
 # ---------------------------------------------------------------------------
-st.header("6. Explore the live app")
+st.header("7. Explore the live app")
 st.write("Everything above is the methodology. Here's where it actually lives, interactively:")
 
 cta_cols = st.columns(5)
