@@ -194,6 +194,37 @@ SONG_LEVEL_COMPARISON = [
     {"facet": "instrumental", "seg_margin": 0.0105, "song_margin": 0.0194, "seg_cohesion": 38.5, "song_cohesion": 44.1},
 ]
 
+# 7e: does fixed-window segmentation explain 7a's vocal-gate errors? Checked
+# against the Structure facet's already-computed novelty detection for the
+# same 10 blind-listened segments -- no new audio processing, a pure
+# correlation check against existing data.
+STRUCTURE_ALIGNMENT_HIT = {
+    "title": "Facing the Sea (Album Version)", "human_transition_sec": 8.0,
+    "novelty_peak_sec": 8.96, "novelty_peak_strength": 0.58, "segment_boundary_sec": 9.0,
+}
+STRUCTURE_ALIGNMENT_STRADDLE_TABLE = [
+    # (title, straddles a structural boundary?, was this segment an error?)
+    ("412", True, "fixed by 15s context"),
+    ("Dismissal", True, "fixed by 15s context"),
+    ("Facing the Sea (Album Version)", True, "explained -- see above"),
+    ("A Message", True, "no error"),
+    ("Requiem for a Small Town", False, "persistent error -- unexplained"),
+    ("something brewing", True, "no error"),
+    ("A1 Symphony", False, "no error"),
+    ("Underwater", True, "no error"),
+    ("Ride My Bike", True, "no error"),
+    ("Thursday & Snow (Reprise)", False, "persistent error -- unexplained"),
+]
+# Quick, cheap follow-up (reused already-computed song DNA + structural
+# confidence, zero new processing): do the two unexplained errors share
+# anything? n=2, suggestive not conclusive.
+UNEXPLAINED_ERROR_DNA_COMPARISON = [
+    {"title": "Thursday & Snow (Reprise)", "structural_confidence": 0.1562, "rhythmic_density": 6.44, "rank_confidence": "lowest of 10", "rank_density": "highest of 10"},
+    {"title": "Requiem for a Small Town", "structural_confidence": 0.1806, "rhythmic_density": 5.20, "rank_confidence": "2nd-lowest of 10", "rank_density": "2nd-highest of 10"},
+]
+REST_OF_SAMPLE_STRUCTURAL_CONFIDENCE_RANGE = (0.1889, 0.2593)
+REST_OF_SAMPLE_RHYTHMIC_DENSITY_RANGE = (2.97, 4.74)
+
 st.set_page_config(page_title="Sonic Explorer", page_icon="\U0001F3A7", layout="wide")
 
 song_repo, embedding_repo, retrieval_service = get_repositories()
@@ -985,6 +1016,55 @@ st.info(
     "real, working alternative retrieval mode -- not yet wired into Moment Matcher's UI as a "
     "selectable option. A natural, low-risk follow-up given the validated improvement.",
     icon="✅",
+)
+
+st.subheader("7e. Does segment misalignment explain the vocal-gate errors? A structural cross-check")
+st.write(
+    "7a's segments are cut at fixed clock intervals (every ~2.5s, 5s windows), regardless of what's "
+    "actually happening musically -- a boundary can fall mid-vocal-line or anywhere arbitrary. "
+    "**Hypothesis:** that misalignment could explain some of 7a's confusing results. Checked directly "
+    "against the Structure facet's already-computed novelty detection for the same 10 blind-listened "
+    "segments -- no new audio processing, a pure correlation check against data that already existed."
+)
+hit = STRUCTURE_ALIGNMENT_HIT
+st.markdown(f"**Confirmed hit: \"{hit['title']}\"**")
+st.write(
+    f"Human note: vocals only in the last 2 seconds of the sampled window (transition around "
+    f"~{hit['human_transition_sec']:.0f}s). The Structure facet's novelty curve shows a real peak at "
+    f"**{hit['novelty_peak_sec']:.2f}s** (strength {hit['novelty_peak_strength']:.2f}), with a "
+    f"segment boundary at {hit['segment_boundary_sec']:.1f}s -- both landing right where the ear "
+    f"placed the transition. Real, specific evidence that structurally-aware segmentation would have "
+    f"caught this exact case."
+)
+st.markdown("**But it doesn't generalize to the other errors**")
+straddle_df = pd.DataFrame(STRUCTURE_ALIGNMENT_STRADDLE_TABLE, columns=["Song", "Straddles a structural boundary?", "Outcome"])
+st.dataframe(straddle_df, hide_index=True, width="stretch")
+st.caption(
+    "Straddling a structural boundary is common (7 of 10 windows) and doesn't reliably predict which "
+    "cases were confusing. Both persistent errors -- \"Requiem for a Small Town\" (the false negative "
+    "that survived even the 15s-context fix) and \"Thursday & Snow\" (the false positive) -- sit "
+    "entirely *within* one structural segment, no boundary nearby to blame."
+)
+st.markdown("**Quick, cheap follow-up: do the two unexplained errors share anything?**")
+dna_df = pd.DataFrame(UNEXPLAINED_ERROR_DNA_COMPARISON)
+st.dataframe(dna_df, hide_index=True, width="stretch")
+st.caption(
+    f"Reusing already-computed song DNA (zero new processing): both unexplained errors rank #1 and "
+    f"#2 lowest on structural confidence (rest of the sample: "
+    f"{REST_OF_SAMPLE_STRUCTURAL_CONFIDENCE_RANGE[0]:.4f}-{REST_OF_SAMPLE_STRUCTURAL_CONFIDENCE_RANGE[1]:.4f}) "
+    f"*and* #1 and #2 highest on rhythmic density (rest of the sample: "
+    f"{REST_OF_SAMPLE_RHYTHMIC_DENSITY_RANGE[0]:.2f}-{REST_OF_SAMPLE_RHYTHMIC_DENSITY_RANGE[1]:.2f}). "
+    "A plausible hypothesis, **not confirmed at n=2**: dense, rhythmically busy tracks with low "
+    "structural contrast throughout give AST's keyword-based scoring less of a textural handle to "
+    "separate voice from background, independent of window size or placement."
+)
+st.info(
+    "**Status:** a confirmed, real mechanism for one class of error, not a general explanation -- "
+    "structurally-aware segmentation would plausibly fix cases like \"Facing the Sea\" without "
+    "touching cases like \"Requiem\" or \"Thursday & Snow.\" Given that scope, not worth a full "
+    "segmentation redesign right now -- documented honestly as a real, bounded finding rather than "
+    "either oversold or dismissed.",
+    icon="🔍",
 )
 
 st.divider()

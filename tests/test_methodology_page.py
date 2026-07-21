@@ -55,6 +55,7 @@ def test_methodology_page_has_case_study_subsections():
     assert any("7b. Sound recognition" in s for s in subheader_texts)
     assert any("7c. Harmony whitening" in s for s in subheader_texts)
     assert any("7d. Song-level aggregation" in s for s in subheader_texts)
+    assert any("7e. Does segment misalignment explain" in s for s in subheader_texts)
 
 
 def test_methodology_page_fingerprint_picker_switches_song():
