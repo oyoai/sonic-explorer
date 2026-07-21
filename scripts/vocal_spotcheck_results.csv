@@ -1,0 +1,10 @@
+title,genre,start,end,user_verdict,model_score,model_label,agree
+412,Hip-Hop,20.0,25.0,vocal,0.0179,Rapping,False
+Dismissal,Pop,5.0,10.0,vocal,0.0171,Singing,False
+Facing the Sea (Album Version),Pop,5.0,10.0,vocal,0.0195,Speech,True
+A Message,Rock,12.5,17.5,instrumental,0.0174,Speech,True
+Requiem for a Small Town,Folk,12.5,17.5,vocal,0.0175,Singing,False
+something brewing,Hip-Hop,5.0,10.0,instrumental,0.0028,Speech,True
+A1 Symphony,Hip-Hop,17.5,22.5,instrumental,0.0017,Speech,True
+Underwater,Electronic,2.5,7.5,instrumental,0.0007,Speech,True
+Ride My Bike,Instrumental,7.5,12.5,instrumental,0.0002,Speech,True

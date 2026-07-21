@@ -140,6 +140,27 @@ VOCAL_GATE_PER_SEGMENT_SCORES = [
 ]
 VOCAL_GATE_THRESHOLD = 0.018
 
+# The per-segment redesign's 9-song validation above was checked against
+# *assumed* labels (genre + curated-example status), not real listening.
+# A prevalence sample (400 random segments, whole library) found 56.2%
+# scoring below threshold -- too high to explain as normal instrumental
+# stretches alone -- which prompted an actual blind human-listening
+# spot-check: 10 segments, judged with no score/label shown, then compared.
+VOCAL_GATE_PREVALENCE_SAMPLE = {"n_segments": 400, "pct_below_threshold": 56.2}
+VOCAL_GATE_HUMAN_SPOTCHECK = [
+    # (title, genre, model_score, model_verdict, human_verdict, correct)
+    ("412", "Hip-Hop", 0.0179, "no vocal", "vocal", False),
+    ("Dismissal", "Pop", 0.0171, "no vocal", "vocal", False),
+    ("Facing the Sea (Album Version)", "Pop", 0.0195, "vocal", "vocal (last 2s only)", True),
+    ("A Message", "Rock", 0.0174, "no vocal", "no vocal", True),
+    ("Requiem for a Small Town", "Folk", 0.0175, "no vocal", "vocal", False),
+    ("something brewing", "Hip-Hop", 0.0028, "no vocal", "no vocal", True),
+    ("A1 Symphony", "Hip-Hop", 0.0017, "no vocal", "no vocal", True),
+    ("Underwater", "Electronic", 0.0007, "no vocal", "no vocal", True),
+    ("Ride My Bike", "Instrumental", 0.0002, "no vocal", "no vocal", True),
+    ("Thursday & Snow (Reprise)", "Hip-Hop", 0.0228, "vocal", "no vocal", False),
+]
+
 # 7b: real AST/AudioSet tag output, curated for variety (instrumental with
 # specific-instrument tags, ambient/textural, soundtrack, vocal genres).
 AST_CAPABILITY_EXAMPLES = [
@@ -823,15 +844,45 @@ st.caption(
     "correctly, \"3rd Chair\" included. A shorter window has less competing instrumental content, "
     "so a real vocal moment doesn't get drowned out the way it did over the full clip."
 )
+st.markdown("**Reality check: does the 9-song validation hold up against real listening?**")
+st.write(
+    "That 9-song validation was checked against *assumed* labels (genre + curated-example status), "
+    "not actual listening. Before trusting it at library scale, a 400-segment random sample across "
+    "the whole library (not restricted to any genre) found "
+    f"**{VOCAL_GATE_PREVALENCE_SAMPLE['pct_below_threshold']:.1f}% of segments scoring below "
+    f"threshold** -- far too high to explain as normal instrumental intros/bridges alone. That "
+    "prompted an actual blind human-listening spot-check: 10 segments, judged with no score or "
+    "label shown, compared afterward."
+)
+spotcheck_df = pd.DataFrame(
+    VOCAL_GATE_HUMAN_SPOTCHECK,
+    columns=["Song", "Genre", "Model score", "Model said", "Human heard", "Agree?"],
+)
+st.dataframe(spotcheck_df, hide_index=True, width="stretch")
+n_correct = sum(1 for row in VOCAL_GATE_HUMAN_SPOTCHECK if row[5])
+st.caption(f"**{n_correct}/{len(VOCAL_GATE_HUMAN_SPOTCHECK)} agreed with human judgment.**")
+st.error(
+    "**This kills the threshold-based approach entirely -- not just this cutoff.** Three false "
+    "negatives (real vocals the model missed) scored 0.017-0.0179; one false positive (confidently "
+    "scored as vocal, no real vocals present) scored 0.0228 -- *higher* than every false negative. "
+    "Fixing the false negatives means lowering the threshold below ~0.017; fixing the false positive "
+    "means raising it above ~0.023. Those requirements contradict each other -- there's no threshold "
+    "that satisfies both. This isn't a calibration problem: the underlying keyword-max score doesn't "
+    "reliably track real vocal presence, at least not with this scoring method.",
+    icon="🛑",
+)
 st.info(
-    "**Honest status:** the redesigned check is implemented and tested "
-    "(`sonic_explorer/pipeline/vocal_presence.py`, `EmbeddingRepository.remove_from_index()`), and "
-    "validated -- but only against these 9 confirmed cases, not yet run at full-library scale. "
-    "Per-segment scoring costs ~6x the inference of the whole-clip design that didn't work, so a "
-    "full-library run is a real ~9-12 hour unattended CPU job; a scoped run against just the "
-    "genre-labeled Instrumental songs (~175, where the confirmed bleed case actually lives) is "
-    "~90 minutes. Neither has been run yet -- this is a validated, ready fix awaiting that scope "
-    "decision, not yet applied to the live vocal facet.",
+    "**Honest final status:** NOT applied to the live vocal facet, and not recommended to be, at "
+    "least not with this technique. The whole-clip → per-segment redesign genuinely fixed the "
+    "*ordering* problem from the first attempt, and the code (`sonic_explorer/pipeline/"
+    "vocal_presence.py`, `EmbeddingRepository.remove_from_index()`) is real, tested infrastructure "
+    "-- but the underlying signal isn't reliable enough to trust as an automatic filter, confirmed "
+    "by actual human listening, not just a broader sample size. The energy gate (already live, "
+    "catching near-silent stems) remains the vocal facet's only automated quality check; both the "
+    "\"instrumental stretch within a vocal song\" and \"Demucs bleed\" problems remain open, honestly "
+    "unresolved limitations. A different technique -- a dedicated singing-voice-detection model, or "
+    "pitch/periodicity analysis directly on the isolated stem rather than a general-purpose 527-class "
+    "tagger on the mix -- might do better, but that's a new, untried investigation, not this one.",
     icon="⏳",
 )
 
@@ -848,9 +899,11 @@ for ex in AST_CAPABILITY_EXAMPLES:
 st.caption(
     "Genuinely specific, not generic: \"3rd Chair\" resolves to actual instrument names "
     "(Cello, Bowed string instrument, Violin) with no model fine-tuning on this library at all. "
-    "That specificity is what makes it useful as the vocal-facet cross-check above -- and it's a "
-    "plausible future capability beyond that one use case (e.g. tag-based search in Ask the DJ), "
-    "not yet built."
+    "That specificity is what makes instrument/texture tagging a plausible future capability (e.g. "
+    "tag-based search in Ask the DJ), not yet built. **Worth being precise about scope, though:** "
+    "7a's human spot-check found the singing/speech keyword-threshold specifically unreliable -- "
+    "that's a narrower claim than \"AST tagging doesn't work.\" The broad instrument/texture tags "
+    "shown above weren't the part that failed."
 )
 
 st.subheader("7c. Harmony whitening: fixing the score geometry vs. fixing the task")
