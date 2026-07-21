@@ -56,13 +56,15 @@ if not all_songs:
 st.divider()
 
 # ---------------------------------------------------------------------------
-# 1. Explore -- the network graph
+# 1. Explore -- two ways to see the whole library
 # ---------------------------------------------------------------------------
-st.header("1. Explore -- the network graph")
+st.header("1. Explore -- two ways to see the whole library")
 st.write(
-    "When you land on **Explore**, you see every song as a dot, connected by lines. Here's the same "
-    "live graph (sound facet, whole library):"
+    "**Explore** is one page with two view modes, toggled at the top -- both show every song as a "
+    "dot, but the position means something different in each, so they're worth reading differently."
 )
+
+st.subheader("1a. Network graph")
 
 
 @st.cache_data
@@ -92,9 +94,9 @@ if not explore_nodes.empty:
 
 st.markdown("""
 **How to read it:**
-- **Position** comes from a force-directed layout of a k-nearest-neighbor graph, not a direct
-  projection -- each song is pulled toward its most similar neighbors and pushed apart from
-  everything else. This is *not* the same kind of "position" as the Taste Map below.
+- **Position** comes from a force-directed layout of a k-nearest-neighbor graph, not a projection --
+  each song is pulled toward its most similar neighbors and pushed apart from everything else. This
+  is *not* the same kind of "position" as the 2D map below.
 - **A line between two nodes** means one song is genuinely among the other's top few nearest
   neighbors on the selected facet -- not every pair gets a line, only real close matches.
 - **Color** is a K-means cluster computed on the same vectors, purely for visual grouping.
@@ -102,21 +104,11 @@ st.markdown("""
   sitting off on its own with few or no visible connections** is a genuine outlier -- nothing else
   in the library sounds much like it, on this facet specifically (switching facets can change this
   completely, since "similar" means something different per facet).
-- Clicking a node on the live page opens its player and lets you queue up a random / looping /
-  closest-match "next" track.
+- Clicking a node opens its player and lets you queue up a random / looping / closest-match "next" track.
 """)
-st.page_link("pages/6_Explore.py", label="Open Explore →", icon="\U0001F310")
 
-st.divider()
-
-# ---------------------------------------------------------------------------
-# 2. Taste Map
-# ---------------------------------------------------------------------------
-st.header("2. Taste Map -- the whole library, projected")
-st.write(
-    "**Taste Map** looks superficially similar to Explore -- another scatter of dots -- but the "
-    "position means something different here:"
-)
+st.subheader("1b. 2D map (PCA/ICA)")
+st.write("Same page, second view mode -- a projection instead of a graph:")
 
 
 @st.cache_data
@@ -149,29 +141,29 @@ if not taste_df.empty:
 st.markdown("""
 **How to read it:**
 - **Position** here comes from PCA -- the two directions of maximum spread (variance) across the
-  whole library's sound embeddings. Unlike Explore's graph layout, these axes are, in principle,
-  *nameable*: the live page's "Inspect these axes" expander shows you the actual songs sitting at
-  each axis's extremes so you can judge for yourself whether an axis resolves into something you'd
-  call e.g. "quiet/ambient vs. loud/aggressive," or doesn't resolve into anything nameable at all --
-  that's a real, open question, not a guaranteed property of PCA.
+  whole library's sound embeddings. Unlike the network graph, these axes are, in principle,
+  *nameable*: the live page's "Inspect these axes" expander runs a real correlation check against
+  tempo/energy/brightness/harmonic-complexity/rhythmic-density first (see Methodology §4b for what
+  that actually found), then falls back to a qualitative "songs at the extremes" listen for whatever
+  the correlation doesn't explain.
 - **Point density** reflects the real data: a crowded region means the library genuinely has many
   similar-sounding songs there; sparse regions mean that sonic territory is thinly covered.
-- **Switching the "Color by" toggle** between cluster and genre on the live page is the actual test
-  of whether sound and genre agree -- where cluster boundaries track genre boundaries, they do;
-  where a cluster spans several genre colors, the audio is telling you something the label doesn't.
-- Click any point on the live page to hear it immediately.
+- **Switching "Color by"** between cluster and genre is the actual test of whether sound and genre
+  agree -- where cluster boundaries track genre boundaries, they do; where a cluster spans several
+  genre colors, the audio is telling you something the label doesn't.
+- Click any point to hear it immediately -- same click-to-play mechanism as the network graph above.
 """)
-st.page_link("pages/2_Taste_Map.py", label="Open Taste Map →", icon="\U0001F5FA️")
+st.page_link("pages/5_Explore.py", label="Open Explore →", icon="\U0001F310")
 
 st.divider()
 
 # ---------------------------------------------------------------------------
-# 3. Song X-Ray
+# 2. Song X-Ray
 # ---------------------------------------------------------------------------
-st.header("3. Song X-Ray -- one song's anatomy")
+st.header("2. Song X-Ray -- one song's anatomy")
 st.write(
     "Pick any song on the live page and it shows you that song's fingerprints, its segmented "
-    "structure, and where it sits on the Taste Map. Here's a live example:"
+    "structure, and where it sits on the map. Here's a live example:"
 )
 
 xray_song = _find_song(XRAY_EXAMPLE_TITLE)
@@ -220,14 +212,14 @@ st.markdown("""
   derived from -- bright diagonal-parallel stripes mark repeated sections; a mostly-flat matrix
   means the song doesn't repeat within the clip.
 """)
-st.page_link("pages/3_Song_XRay.py", label="Open Song X-Ray →", icon="\U0001F50D")
+st.page_link("pages/2_Song_XRay.py", label="Open Song X-Ray →", icon="\U0001F50D")
 
 st.divider()
 
 # ---------------------------------------------------------------------------
-# 4. Moment Matcher
+# 3. Moment Matcher
 # ---------------------------------------------------------------------------
-st.header("4. Moment Matcher -- finding a match, one moment at a time")
+st.header("3. Moment Matcher -- finding a match, one moment at a time")
 st.write(
     "Moment Matcher has two modes: pick an existing moment in a song and find sonically similar "
     "moments elsewhere (by any facet), or hand-draw a target DNA profile and find whole songs "
@@ -287,17 +279,17 @@ st.markdown("""
 - If a facet-appropriate explanation client is configured, each match also gets a one-sentence,
   plain-language reason generated by the same LLM layer used throughout the app.
 """)
-st.page_link("pages/4_Moment_Matcher.py", label="Open Moment Matcher →", icon="\U0001F3AF")
+st.page_link("pages/3_Moment_Matcher.py", label="Open Moment Matcher →", icon="\U0001F3AF")
 
 st.divider()
 
 # ---------------------------------------------------------------------------
-# 5. Ask the DJ
+# 4. Ask the DJ
 # ---------------------------------------------------------------------------
-st.header("5. Ask the DJ -- a conversational front-end")
+st.header("4. Ask the DJ -- a conversational front-end")
 st.write(
     "Ask the DJ doesn't run its own analysis -- it's a conversational layer *over* Moment Matcher "
-    "and the Taste Map. Not run live on this page (each turn is a real, billed LLM call, so it's not "
+    "and the 2D map. Not run live on this page (each turn is a real, billed LLM call, so it's not "
     "triggered just by loading a walkthrough page), here's an illustrative example of what happens "
     "under the hood for a real request:"
 )
@@ -324,28 +316,25 @@ st.caption(
     "model is instructed to only report what a tool call actually returned, never to invent titles, "
     "artists, or match results."
 )
-st.page_link("pages/5_Ask_The_DJ.py", label="Open Ask the DJ →", icon="\U0001F399️")
+st.page_link("pages/4_Ask_The_DJ.py", label="Open Ask the DJ →", icon="\U0001F399️")
 
 st.divider()
 
 # ---------------------------------------------------------------------------
-# 6. All live pages
+# 5. All live pages
 # ---------------------------------------------------------------------------
-st.header("6. All live pages")
+st.header("5. All live pages")
 
-cta_cols = st.columns(5)
+cta_cols = st.columns(4)
 with cta_cols[0]:
-    st.page_link("pages/6_Explore.py", label="**Explore**", icon="\U0001F310")
-    st.caption("Every song as a node in a network graph. Click one to open the player.")
+    st.page_link("pages/5_Explore.py", label="**Explore**", icon="\U0001F310")
+    st.caption("Network graph or 2D map -- every song, click one to open the player.")
 with cta_cols[1]:
-    st.page_link("pages/2_Taste_Map.py", label="**Taste Map**", icon="\U0001F5FA️")
-    st.caption("A 2D map of the library clustered by sound. Click a point to hear it.")
-with cta_cols[2]:
-    st.page_link("pages/3_Song_XRay.py", label="**Song X-Ray**", icon="\U0001F50D")
+    st.page_link("pages/2_Song_XRay.py", label="**Song X-Ray**", icon="\U0001F50D")
     st.caption("A song's structural anatomy, fingerprints, and DNA in one place.")
-with cta_cols[3]:
-    st.page_link("pages/4_Moment_Matcher.py", label="**Moment Matcher**", icon="\U0001F3AF")
+with cta_cols[2]:
+    st.page_link("pages/3_Moment_Matcher.py", label="**Moment Matcher**", icon="\U0001F3AF")
     st.caption("Pick a moment, get ranked matches on any facet, with explanations.")
-with cta_cols[4]:
-    st.page_link("pages/5_Ask_The_DJ.py", label="**Ask the DJ**", icon="\U0001F399️")
+with cta_cols[3]:
+    st.page_link("pages/4_Ask_The_DJ.py", label="**Ask the DJ**", icon="\U0001F399️")
     st.caption("Describe what you want in plain language -- a conversational front-end over it all.")

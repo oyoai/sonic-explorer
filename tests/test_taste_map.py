@@ -1,7 +1,7 @@
 import numpy as np
 import pytest
 
-from sonic_explorer.analysis.taste_map import compute_taste_map, mean_pool_song_vectors
+from sonic_explorer.analysis.taste_map import compute_taste_map, correlate_axes_with_features, mean_pool_song_vectors
 from sonic_explorer.models import Segment, Song
 from sonic_explorer.repository.db import init_db
 from sonic_explorer.repository.embedding_repository import EmbeddingRepository
@@ -120,3 +120,37 @@ def test_compute_taste_map_ica_handles_empty_and_single_song():
 def test_compute_taste_map_unknown_method_raises():
     with pytest.raises(ValueError):
         compute_taste_map({1: np.array([1.0, 2.0])}, method="tsne")
+
+
+def test_correlate_axes_with_features_detects_perfect_correlation():
+    x = np.array([1.0, 2.0, 3.0, 4.0, 5.0])
+    y = np.array([5.0, 4.0, 3.0, 2.0, 1.0])
+    features = {"tempo": np.array([1.0, 2.0, 3.0, 4.0, 5.0])}
+
+    results = correlate_axes_with_features(x, y, features)
+
+    by_axis = {r.axis: r for r in results}
+    assert by_axis["x"].r == pytest.approx(1.0)
+    assert by_axis["y"].r == pytest.approx(-1.0)
+
+
+def test_correlate_axes_with_features_detects_no_correlation():
+    rng = np.random.default_rng(0)
+    x = rng.normal(size=200)
+    y = rng.normal(size=200)
+    unrelated = rng.normal(size=200)
+
+    results = correlate_axes_with_features(x, y, {"unrelated": unrelated})
+
+    assert all(abs(r.r) < 0.3 for r in results)
+
+
+def test_correlate_axes_with_features_covers_every_axis_feature_pair():
+    x = np.array([1.0, 2.0, 3.0])
+    y = np.array([3.0, 2.0, 1.0])
+    features = {"tempo": np.array([1.0, 2.0, 3.0]), "energy": np.array([3.0, 1.0, 2.0])}
+
+    results = correlate_axes_with_features(x, y, features)
+
+    pairs = {(r.axis, r.feature) for r in results}
+    assert pairs == {("x", "tempo"), ("x", "energy"), ("y", "tempo"), ("y", "energy")}

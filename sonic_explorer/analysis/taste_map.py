@@ -8,7 +8,8 @@ whether ICA's independent components land on more individually-nameable
 qualities ("sound axes") than PCA's variance-maximizing ones, or are just as
 opaque in practice. compute_taste_map() supports both via `method` so the UI
 can show them side by side rather than picking one -- see
-streamlit_app/pages/2_Taste_Map.py's axis-inspection view, the actual
+streamlit_app/pages/5_Explore.py's "2D map" view and its axis-inspection
+expander (backed by correlate_axes_with_features() below), the actual
 evaluation surface for that question."""
 
 from dataclasses import dataclass
@@ -88,3 +89,37 @@ def compute_taste_map(
         for i, sid in enumerate(song_ids)
     ]
     return TasteMapResult(points=points)
+
+
+@dataclass
+class AxisCorrelation:
+    axis: str  # "x" or "y"
+    feature: str
+    r: float
+    p_value: float
+
+
+def correlate_axes_with_features(
+    x: np.ndarray, y: np.ndarray, features: dict[str, np.ndarray]
+) -> list[AxisCorrelation]:
+    """The rigorous, checkable half of axis interpretability (the qualitative
+    "listen to the songs at the extremes" check is a UI concern, not this
+    module's job): does a projection axis actually correlate with an
+    already-computed, independently-meaningful feature (tempo, energy,
+    brightness, ...)? A clean |r| lets an axis be *named* with real evidence.
+    No correlation above noise for either axis is itself a valid, reportable
+    finding -- not every PCA/ICA axis has to resolve into something nameable,
+    and claiming otherwise without a checkable result would be worse than
+    saying so honestly.
+
+    x, y, and every array in features must be the same length and index-
+    aligned (same song order) -- callers restrict to songs that have both a
+    projected point and a fully-computed DNA profile before calling this."""
+    from scipy.stats import pearsonr
+
+    results = []
+    for axis_label, values in [("x", x), ("y", y)]:
+        for feature_name, feature_values in features.items():
+            r, p = pearsonr(values, feature_values)
+            results.append(AxisCorrelation(axis=axis_label, feature=feature_name, r=float(r), p_value=float(p)))
+    return results

@@ -4,7 +4,7 @@ import numpy as np
 import pytest
 
 from sonic_explorer.analysis.song_dna import AXES, fit_normalizer
-from sonic_explorer.llm.agent import DEFAULT_MAX_TOOL_ITERATIONS, FALLBACK_REPLY, MusicAgent
+from sonic_explorer.llm.agent import DEFAULT_MAX_TOOL_ITERATIONS, FALLBACK_REPLY, SYSTEM_PROMPT, MusicAgent
 from sonic_explorer.models import Segment, Song
 from sonic_explorer.repository.db import init_db
 from sonic_explorer.repository.embedding_repository import EmbeddingRepository
@@ -173,6 +173,26 @@ def test_send_message_sanitizes_tool_results_before_returning_to_model(agent_dep
     content_str = tool_result_msg["content"][0]["content"]
     assert "<" not in content_str
     assert ">" not in content_str
+
+
+def test_system_prompt_instructs_committing_to_an_interpretation():
+    """Regression guard for a real observed failure: asked for something
+    unusual (e.g. "sounds like a fart"), the agent refused and handed back a
+    menu of vague options instead of just searching. Live model behavior
+    can't be asserted with a fake client -- this pins the instruction that
+    fixes it so the fix can't silently regress."""
+    lowered = SYSTEM_PROMPT.lower()
+    assert "never a reason to stop and hand the user a menu" in lowered
+    assert "actually run a search" in lowered
+
+
+def test_system_prompt_requires_grounded_explanations():
+    """Regression guard for a real observed failure: match explanations
+    invented plausible-sounding sensory detail (specific instruments, "vibe")
+    that no tool result actually returned."""
+    lowered = SYSTEM_PROMPT.lower()
+    assert "traceable to data a tool actually" in lowered
+    assert "never invent sensory or descriptive detail" in lowered
 
 
 def test_send_message_preserves_history_across_calls(agent_deps):
