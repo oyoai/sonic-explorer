@@ -515,24 +515,13 @@ st.info(
 st.divider()
 
 # ---------------------------------------------------------------------------
-# 7. Explore the live app
+# 7. Next: see it in the app
 # ---------------------------------------------------------------------------
-st.header("7. Explore the live app")
-st.write("Everything above is the methodology. Here's where it actually lives, interactively:")
-
-cta_cols = st.columns(5)
-with cta_cols[0]:
-    st.page_link("pages/5_Explore.py", label="**Explore**", icon="\U0001F310")
-    st.caption("Every song as a node in a network graph. Click one to open the player.")
-with cta_cols[1]:
-    st.page_link("pages/1_Taste_Map.py", label="**Taste Map**", icon="\U0001F5FA️")
-    st.caption("A 2D map of the library clustered by sound. Click a point to hear it.")
-with cta_cols[2]:
-    st.page_link("pages/2_Song_XRay.py", label="**Song X-Ray**", icon="\U0001F50D")
-    st.caption("A song's structural anatomy, fingerprints, and DNA in one place.")
-with cta_cols[3]:
-    st.page_link("pages/3_Moment_Matcher.py", label="**Moment Matcher**", icon="\U0001F3AF")
-    st.caption("Pick a moment, get ranked matches on any facet, with explanations.")
-with cta_cols[4]:
-    st.page_link("pages/4_Ask_The_DJ.py", label="**Ask the DJ**", icon="\U0001F399️")
-    st.caption("Describe what you want in plain language -- a conversational front-end over it all.")
+st.header("7. Next: see it in the app")
+st.write(
+    "That's the methodology. The **App Walkthrough** picks up from here -- a guided pass through "
+    "the live interactive pages themselves, explaining what you're looking at as you go (what the "
+    "point cloud's shape means, what an edge between two nodes represents, how to read the "
+    "clusters) before you drive it yourself."
+)
+st.page_link("pages/1_App_Walkthrough.py", label="**Continue to the App Walkthrough →**", icon="\U0001F9ED")

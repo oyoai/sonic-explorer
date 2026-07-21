@@ -8,7 +8,7 @@ whether ICA's independent components land on more individually-nameable
 qualities ("sound axes") than PCA's variance-maximizing ones, or are just as
 opaque in practice. compute_taste_map() supports both via `method` so the UI
 can show them side by side rather than picking one -- see
-streamlit_app/pages/1_Taste_Map.py's axis-inspection view, the actual
+streamlit_app/pages/2_Taste_Map.py's axis-inspection view, the actual
 evaluation surface for that question."""
 
 from dataclasses import dataclass
