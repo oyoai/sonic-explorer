@@ -9,6 +9,8 @@ synthetic dev dataset (scripts/seed_dev_data.py) or the real synced library,
 no code changes needed either way.
 """
 
+import json
+
 import plotly.graph_objects as go
 
 from sonic_explorer.config import ARTIFACTS_DIR, DB_PATH
@@ -42,6 +44,31 @@ def main():
         print(f"Observed genre-cohesion@{result.k}: {result.observed * 100:.1f}%")
         print(f"Random baseline:               {result.random_baseline * 100:.1f}%")
         print()
+
+    # Structured export for anything downstream (e.g. a presentation/walkthrough
+    # page) that wants the raw numbers rather than re-parsing the chart --
+    # written alongside the HTML chart, both inside the gitignored artifacts
+    # dir since they're derived outputs, not source.
+    results_path = ARTIFACTS_DIR / "genre_cohesion_results.json"
+    with open(results_path, "w") as f:
+        json.dump(
+            {
+                "k": K,
+                "sample_size": SAMPLE_SIZE,
+                "facets": [
+                    {
+                        "facet_name": r.facet_name,
+                        "n_queries": r.n_queries,
+                        "observed_pct": round(r.observed * 100, 1),
+                        "random_baseline_pct": round(r.random_baseline * 100, 1),
+                    }
+                    for r in results
+                ],
+            },
+            f,
+            indent=2,
+        )
+    print(f"Results saved to {results_path}")
 
     plottable = [r for r in results if r.n_queries > 0]
     if not plottable:
