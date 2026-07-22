@@ -7,8 +7,10 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 import streamlit as st
 
 from sonic_explorer.analysis.song_dna import AXES, AXIS_LABELS, nearest_songs_by_dna
+from sonic_explorer.analysis.taste_map import mean_pool_song_vectors
 from sonic_explorer.config import audio_path_for
 from sonic_explorer.facets.registry import default_registry
+from sonic_explorer.retrieval.song_level_index import build_song_level_index, query_song_level
 from components.plotting import song_dna_radar_overlay
 from resources import (
     build_dna_normalizer,
@@ -113,6 +115,21 @@ def get_matches(client, query_song, query_seg, facet_name, k=FINAL_K):
         return candidates[:k], False
 
 
+@st.cache_data(show_spinner=False)
+def _cached_song_vectors(_song_repo, _embedding_repo, facet_name, index_size):
+    return mean_pool_song_vectors(_song_repo, _embedding_repo, facet_name=facet_name)
+
+
+@st.cache_resource(show_spinner="Building song-level index...")
+def _cached_song_level_index(_song_repo, _embedding_repo, facet_name, index_size):
+    """A second FAISS index per facet -- see retrieval/song_level_index.py --
+    IndexIDMap2 objects aren't picklable the way cache_data expects, so this
+    uses cache_resource (same reasoning as get_repositories() caching the
+    segment-level indexes), keyed on index_size so it rebuilds when new
+    embeddings land."""
+    return build_song_level_index(_song_repo, _embedding_repo, facet_name)
+
+
 dna_normalizer = build_dna_normalizer(song_repo, len(songs))
 
 mode = st.radio(
@@ -130,17 +147,32 @@ if mode == "existing_song":
     song_choice = st.selectbox("Song", options=range(len(songs)), format_func=lambda i: labels[i])
     song = songs[song_choice]
 
+    granularity = st.radio(
+        "Match against",
+        options=["moment", "whole_song"],
+        format_func=lambda g: "A specific moment" if g == "moment" else "Whole songs",
+        horizontal=True,
+        help="'A specific moment' ranks individual ~5s clips. 'Whole songs' mean-pools each song's "
+             "segments first, then ranks whole songs -- sharper, more decisive rankings library-wide "
+             "(see Methodology §7d), at the cost of moment-level precision.",
+    )
+
     segments = song_repo.get_segments(song.id)
     if not segments:
         st.warning("This song has no segments yet.")
         st.stop()
 
-    moment_labels = [f"{seg.start_sec:.1f}s – {seg.end_sec:.1f}s" for seg in segments]
-    moment_choice = st.select_slider("Moment", options=range(len(segments)), format_func=lambda i: moment_labels[i])
-    query_segment = segments[moment_choice]
+    if granularity == "moment":
+        moment_labels = [f"{seg.start_sec:.1f}s – {seg.end_sec:.1f}s" for seg in segments]
+        moment_choice = st.select_slider("Moment", options=range(len(segments)), format_func=lambda i: moment_labels[i])
+        query_segment = segments[moment_choice]
 
-    st.markdown(f"**Listening at {query_segment.start_sec:.1f}s – {query_segment.end_sec:.1f}s:**")
-    st.audio(str(audio_path_for(song)), start_time=query_segment.start_sec)
+        st.markdown(f"**Listening at {query_segment.start_sec:.1f}s – {query_segment.end_sec:.1f}s:**")
+        st.audio(str(audio_path_for(song)), start_time=query_segment.start_sec)
+    else:
+        query_segment = None
+        st.markdown("**Listening to the whole song:**")
+        st.audio(str(audio_path_for(song)))
 
     facet_name = st.radio(
         "Match by",
@@ -150,49 +182,92 @@ if mode == "existing_song":
     )
     st.markdown(f"### Match by: {facet_name.capitalize()}")
 
-    if embedding_repo.status(query_segment.id, facet_name) != "done":
-        st.warning(f"This moment hasn't been embedded for the {facet_name.capitalize()} facet yet.")
-        st.stop()
+    query_raw = {axis: getattr(song, axis) for axis in AXES}
+    query_has_dna = all(v is not None for v in query_raw.values())
 
-    matches, was_reranked = get_matches(rerank_client, song, query_segment, facet_name)
+    if granularity == "moment":
+        if embedding_repo.status(query_segment.id, facet_name) != "done":
+            st.warning(f"This moment hasn't been embedded for the {facet_name.capitalize()} facet yet.")
+            st.stop()
 
-    if not matches:
-        st.info("No matches found elsewhere in the library yet.")
-    else:
-        if llm_client is None:
-            st.caption("Set ANTHROPIC_API_KEY to also get a plain-language explanation for each match.")
-        if was_reranked:
-            st.caption("Results re-ranked by Claude for overall fit, not just raw similarity.")
+        matches, was_reranked = get_matches(rerank_client, song, query_segment, facet_name)
 
-        query_raw = {axis: getattr(song, axis) for axis in AXES}
-        query_has_dna = all(v is not None for v in query_raw.values())
+        if not matches:
+            st.info("No matches found elsewhere in the library yet.")
+        else:
+            if llm_client is None:
+                st.caption("Set ANTHROPIC_API_KEY to also get a plain-language explanation for each match.")
+            if was_reranked:
+                st.caption("Results re-ranked by Claude for overall fit, not just raw similarity.")
 
-        for match in matches:
-            pct = max(0.0, match.score) * 100
-            st.markdown(f"**{pct:.0f}% {facet_name} match** — {match.song.title} by {match.song.artist} ({match.song.genre_top})")
-            st.caption(f"at {match.segment.start_sec:.1f}s – {match.segment.end_sec:.1f}s")
-            st.audio(str(audio_path_for(match.song)), start_time=match.segment.start_sec)
+            for match in matches:
+                pct = max(0.0, match.score) * 100
+                st.markdown(f"**{pct:.0f}% {facet_name} match** — {match.song.title} by {match.song.artist} ({match.song.genre_top})")
+                st.caption(f"at {match.segment.start_sec:.1f}s – {match.segment.end_sec:.1f}s")
+                st.audio(str(audio_path_for(match.song)), start_time=match.segment.start_sec)
 
-            explanation = explanation_for_match(llm_client, song, query_segment, match)
-            if explanation:
-                st.markdown(f"\U0001F4AC *{explanation}*")
+                explanation = explanation_for_match(llm_client, song, query_segment, match)
+                if explanation:
+                    st.markdown(f"\U0001F4AC *{explanation}*")
 
-            match_raw = {axis: getattr(match.song, axis) for axis in AXES}
-            if query_has_dna and all(v is not None for v in match_raw.values()):
-                with st.expander("Compare song DNA"):
-                    st.caption(
-                        "Where the shapes overlap, the songs agree on that quality; where one bulges "
-                        "past the other, they diverge."
-                    )
-                    query_norm = dna_normalizer.normalize(query_raw)
-                    match_norm = dna_normalizer.normalize(match_raw)
-                    fig = song_dna_radar_overlay(
-                        axis_labels=[AXIS_LABELS[a] for a in AXES],
-                        values_a=[query_norm[a] for a in AXES], label_a=song.title,
-                        values_b=[match_norm[a] for a in AXES], label_b=match.song.title,
-                    )
-                    st.plotly_chart(fig, width="stretch", key=f"dna_radar_{match.segment.id}")
-            st.divider()
+                match_raw = {axis: getattr(match.song, axis) for axis in AXES}
+                if query_has_dna and all(v is not None for v in match_raw.values()):
+                    with st.expander("Compare song DNA"):
+                        st.caption(
+                            "Where the shapes overlap, the songs agree on that quality; where one bulges "
+                            "past the other, they diverge."
+                        )
+                        query_norm = dna_normalizer.normalize(query_raw)
+                        match_norm = dna_normalizer.normalize(match_raw)
+                        fig = song_dna_radar_overlay(
+                            axis_labels=[AXIS_LABELS[a] for a in AXES],
+                            values_a=[query_norm[a] for a in AXES], label_a=song.title,
+                            values_b=[match_norm[a] for a in AXES], label_b=match.song.title,
+                        )
+                        st.plotly_chart(fig, width="stretch", key=f"dna_radar_{match.segment.id}")
+                st.divider()
+    else:  # whole_song
+        song_vectors = _cached_song_vectors(song_repo, embedding_repo, facet_name, embedding_repo.index_size(facet_name))
+        if song.id not in song_vectors:
+            st.warning(f"This song hasn't been embedded for the {facet_name.capitalize()} facet yet.")
+            st.stop()
+
+        index = _cached_song_level_index(song_repo, embedding_repo, facet_name, embedding_repo.index_size(facet_name))
+        results = query_song_level(index, song_vectors[song.id], k=FINAL_K, exclude_song_id=song.id)
+
+        if not results:
+            st.info("No matches found elsewhere in the library yet.")
+        else:
+            st.caption(
+                "Whole-song mode ranks by mean-pooled similarity across each song's segments -- no "
+                "LLM re-ranking or explanations here (those need a specific moment); see \"A specific "
+                "moment\" above for those."
+            )
+            songs_by_id = {s.id: s for s in songs}
+            for match_song_id, score in results:
+                match_song = songs_by_id.get(match_song_id)
+                if match_song is None:
+                    continue
+                pct = max(0.0, score) * 100
+                st.markdown(f"**{pct:.0f}% {facet_name} match (whole song)** — {match_song.title} by {match_song.artist} ({match_song.genre_top})")
+                st.audio(str(audio_path_for(match_song)))
+
+                match_raw = {axis: getattr(match_song, axis) for axis in AXES}
+                if query_has_dna and all(v is not None for v in match_raw.values()):
+                    with st.expander("Compare song DNA"):
+                        st.caption(
+                            "Where the shapes overlap, the songs agree on that quality; where one bulges "
+                            "past the other, they diverge."
+                        )
+                        query_norm = dna_normalizer.normalize(query_raw)
+                        match_norm = dna_normalizer.normalize(match_raw)
+                        fig = song_dna_radar_overlay(
+                            axis_labels=[AXIS_LABELS[a] for a in AXES],
+                            values_a=[query_norm[a] for a in AXES], label_a=song.title,
+                            values_b=[match_norm[a] for a in AXES], label_b=match_song.title,
+                        )
+                        st.plotly_chart(fig, width="stretch", key=f"dna_radar_song_{match_song_id}")
+                st.divider()
 
 else:  # hand_drawn_profile
     normalized_by_song = build_normalized_dna_by_song(song_repo, dna_normalizer, len(songs))
