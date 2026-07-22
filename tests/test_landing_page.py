@@ -12,7 +12,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "streamlit_app"))
 
 
 def _run_landing() -> AppTest:
-    at = AppTest.from_file("streamlit_app/app.py", default_timeout=120)
+    at = AppTest.from_file("streamlit_app/Overview.py", default_timeout=120)
     at.run()
     return at
 

@@ -235,7 +235,7 @@ st.write(
     "How the library was actually analyzed and improved, with real evidence at each step -- not "
     "just asserted."
 )
-st.page_link("app.py", label="← Back to introduction", icon="\U0001F3A7")
+st.page_link("Overview.py", label="← Back to introduction", icon="\U0001F3A7")
 
 show_data_source_banner()
 
