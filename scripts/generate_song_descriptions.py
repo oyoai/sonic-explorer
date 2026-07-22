@@ -27,6 +27,23 @@ from sonic_explorer.repository.song_repository import SongRepository
 
 CHECKPOINT_EVERY = 25
 
+# AST ("...-10-10-...") is trained on 10s clips -- feeding it a whole song
+# (several minutes) rather than a short window is what actually stalled the
+# first run of this script for over an hour with zero songs completed.
+# Every other AST call site in this codebase (vocal_presence.py's per-segment
+# check, scripts/sample_vocal_segment_prevalence.py) slices a short window
+# before calling the classifier; this script must too. The middle of the
+# song is used rather than the start, to avoid a cold-open silence/fade-in.
+CLIP_DURATION_SEC = 10.0
+
+
+def _representative_clip(audio, sr):
+    clip_len = int(CLIP_DURATION_SEC * sr)
+    if len(audio) <= clip_len:
+        return audio
+    start = (len(audio) - clip_len) // 2
+    return audio[start : start + clip_len]
+
 
 def main():
     secrets = tomllib.loads((Path(__file__).resolve().parents[1] / ".streamlit" / "secrets.toml").read_text())
@@ -51,7 +68,8 @@ def main():
 
         try:
             audio, sr = librosa.load(str(audio_path_for(song)), sr=AST_SAMPLE_RATE, mono=True)
-            tags = get_descriptive_tags(audio, sr)
+            clip = _representative_clip(audio, sr)
+            tags = get_descriptive_tags(clip, sr)
 
             norm_dna = dna_normalizer.normalize(raw_dna)
             description = llm_client.generate_description(
