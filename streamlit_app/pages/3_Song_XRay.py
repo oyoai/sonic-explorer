@@ -17,6 +17,7 @@ from resources import get_repositories, show_data_source_banner
 st.set_page_config(page_title="Song X-Ray", page_icon="\U0001F50D")
 st.title("Song X-Ray")
 st.caption("A song's structural anatomy -- matching colors below mean similar-sounding sections.")
+st.page_link("pages/6_Explore.py", label="← Back to Explore", icon="\U0001F310")
 
 show_data_source_banner()
 
@@ -27,8 +28,19 @@ if not songs:
     st.info("No songs in the library yet.")
     st.stop()
 
+# Reached from Explore's "Open full Song X-Ray" button, which stashes the
+# clicked song's id here before switching pages -- popped so it only applies
+# once; a plain sidebar/URL visit with no context still defaults to index 0.
+context_song_id = st.session_state.pop("xray_context_song_id", None)
+default_index = 0
+if context_song_id is not None:
+    for i, s in enumerate(songs):
+        if s.id == context_song_id:
+            default_index = i
+            break
+
 labels = [f"{s.title} — {s.artist} ({s.genre_top})" for s in songs]
-choice = st.selectbox("Pick a song", options=range(len(songs)), format_func=lambda i: labels[i])
+choice = st.selectbox("Pick a song", options=range(len(songs)), index=default_index, format_func=lambda i: labels[i])
 song = songs[choice]
 
 st.subheader(f"{song.title} — {song.artist}")
@@ -143,6 +155,16 @@ else:
         seg_end = float(timeline.segment_ends[selected_segment_idx])
         st.markdown(f"**Looping section:** {seg_start:.1f}s – {seg_end:.1f}s")
         st.audio(str(audio_path_for(song)), start_time=seg_start, end_time=seg_end, loop=True)
+
+        retrieval_segments = song_repo.get_segments(song.id)
+        if retrieval_segments and st.button("\U0001F3AF Find similar moments →", key="find_similar_moments_btn"):
+            # Structure blocks (variable-length, self-similarity-derived) are a
+            # different segmentation from the fixed ~5s/2.5s-hop segments
+            # Moment Matcher searches over -- map by closest start time rather
+            # than assuming they line up.
+            nearest = min(retrieval_segments, key=lambda seg: abs(seg.start_sec - seg_start))
+            st.session_state["mm_context"] = {"song_id": song.id, "segment_id": nearest.id}
+            st.switch_page("pages/4_Moment_Matcher.py")
     else:
         st.caption("Click a colored block above to loop just that section.")
 

@@ -31,6 +31,6 @@ def test_app_walkthrough_page_has_all_five_sections():
         "2. Song X-Ray -- one song's anatomy",
         "3. Moment Matcher -- finding a match, one moment at a time",
         "4. Ask the DJ -- a conversational front-end",
-        "5. All live pages",
+        "5. Try it yourself",
     ]:
         assert expected in header_texts

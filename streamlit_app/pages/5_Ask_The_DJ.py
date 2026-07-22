@@ -12,9 +12,11 @@ MAX_MESSAGES_PER_SESSION = 30  # simple abuse/cost guardrail for the public depl
 st.set_page_config(page_title="Ask the DJ", page_icon="\U0001F399️")
 st.title("Ask the DJ")
 st.caption(
-    "A conversational front-end over Moment Matcher and the Taste Map -- describe what you want in "
-    "plain language instead of using the module toggles directly."
+    "A conversational companion to **Explore** -- the same library, the same underlying search "
+    "(Moment Matcher's matching, the Taste Map's mood profiles), just reached by describing what "
+    "you want in plain language instead of clicking through the controls yourself."
 )
+st.page_link("pages/6_Explore.py", label="← Back to Explore", icon="\U0001F310")
 
 show_data_source_banner()
 

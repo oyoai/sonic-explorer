@@ -30,6 +30,7 @@ FINAL_K = 6
 st.set_page_config(page_title="Moment Matcher", page_icon="\U0001F3AF")
 st.title("Moment Matcher")
 st.caption("Pick a moment in a song and find sonically similar moments elsewhere in the library.")
+st.page_link("pages/6_Explore.py", label="← Back to Explore", icon="\U0001F310")
 
 show_data_source_banner()
 
@@ -41,6 +42,18 @@ songs = sorted(song_repo.list_songs(), key=lambda s: (s.genre_top, s.title))
 if not songs:
     st.info("No songs in the library yet.")
     st.stop()
+
+# Reached from Song X-Ray's "Find similar moments" button, which stashes the
+# clicked song+segment here before switching pages -- popped so it only
+# applies once; a plain sidebar/URL visit with no context still defaults to
+# index 0 for both the song and the moment.
+mm_context = st.session_state.pop("mm_context", None)
+default_song_index = 0
+if mm_context is not None:
+    for i, s in enumerate(songs):
+        if s.id == mm_context["song_id"]:
+            default_song_index = i
+            break
 
 if "llm_calls" not in st.session_state:
     st.session_state.llm_calls = 0
@@ -144,7 +157,9 @@ mode = st.radio(
 
 if mode == "existing_song":
     labels = [f"{s.title} — {s.artist} ({s.genre_top})" for s in songs]
-    song_choice = st.selectbox("Song", options=range(len(songs)), format_func=lambda i: labels[i])
+    song_choice = st.selectbox(
+        "Song", options=range(len(songs)), index=default_song_index, format_func=lambda i: labels[i]
+    )
     song = songs[song_choice]
 
     granularity = st.radio(
@@ -163,8 +178,17 @@ if mode == "existing_song":
         st.stop()
 
     if granularity == "moment":
+        default_moment_index = 0
+        if mm_context is not None and mm_context["song_id"] == song.id:
+            for i, seg in enumerate(segments):
+                if seg.id == mm_context["segment_id"]:
+                    default_moment_index = i
+                    break
+
         moment_labels = [f"{seg.start_sec:.1f}s – {seg.end_sec:.1f}s" for seg in segments]
-        moment_choice = st.select_slider("Moment", options=range(len(segments)), format_func=lambda i: moment_labels[i])
+        moment_choice = st.select_slider(
+            "Moment", options=range(len(segments)), value=default_moment_index, format_func=lambda i: moment_labels[i]
+        )
         query_segment = segments[moment_choice]
 
         st.markdown(f"**Listening at {query_segment.start_sec:.1f}s – {query_segment.end_sec:.1f}s:**")

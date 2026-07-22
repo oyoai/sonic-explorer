@@ -321,20 +321,29 @@ st.page_link("pages/5_Ask_The_DJ.py", label="Open Ask the DJ →", icon="\U0001F
 st.divider()
 
 # ---------------------------------------------------------------------------
-# 5. All live pages
+# 5. Try it yourself
 # ---------------------------------------------------------------------------
-st.header("5. All live pages")
+st.header("5. Try it yourself")
+st.write(
+    "**Explore is the hub** -- Song X-Ray, Moment Matcher, and Ask the DJ aren't separate "
+    "destinations with their own sidebar entries; they're reached by interacting with Explore "
+    "itself (select a song to open its X-Ray, select a moment there to open Moment Matcher), or "
+    "via Ask the DJ's persistent companion link. The direct links below are for this walkthrough "
+    "specifically -- landing on Song X-Ray or Moment Matcher with no song selected wouldn't mean "
+    "much, so start with Explore."
+)
 
-cta_cols = st.columns(4)
-with cta_cols[0]:
-    st.page_link("pages/6_Explore.py", label="**Explore**", icon="\U0001F310")
-    st.caption("Network graph or 2D map -- every song, click one to open the player.")
-with cta_cols[1]:
-    st.page_link("pages/3_Song_XRay.py", label="**Song X-Ray**", icon="\U0001F50D")
-    st.caption("A song's structural anatomy, fingerprints, and DNA in one place.")
-with cta_cols[2]:
-    st.page_link("pages/4_Moment_Matcher.py", label="**Moment Matcher**", icon="\U0001F3AF")
-    st.caption("Pick a moment, get ranked matches on any facet, with explanations.")
-with cta_cols[3]:
-    st.page_link("pages/5_Ask_The_DJ.py", label="**Ask the DJ**", icon="\U0001F399️")
-    st.caption("Describe what you want in plain language -- a conversational front-end over it all.")
+st.page_link("pages/6_Explore.py", label="**Open Explore →**", icon="\U0001F310")
+st.caption("Network graph or 2D map -- every song, click one to open the player and drill in from there.")
+
+with st.expander("Direct links to the other states (for this walkthrough only)"):
+    cta_cols = st.columns(3)
+    with cta_cols[0]:
+        st.page_link("pages/3_Song_XRay.py", label="**Song X-Ray**", icon="\U0001F50D")
+        st.caption("A song's structural anatomy, fingerprints, and DNA in one place.")
+    with cta_cols[1]:
+        st.page_link("pages/4_Moment_Matcher.py", label="**Moment Matcher**", icon="\U0001F3AF")
+        st.caption("Pick a moment, get ranked matches on any facet, with explanations.")
+    with cta_cols[2]:
+        st.page_link("pages/5_Ask_The_DJ.py", label="**Ask the DJ**", icon="\U0001F399️")
+        st.caption("Describe what you want in plain language -- a companion to Explore.")
