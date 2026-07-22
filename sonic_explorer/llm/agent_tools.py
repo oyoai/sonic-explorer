@@ -1,5 +1,5 @@
 """Tool definitions + executors for the conversational agent layer (spec 2.5,
-Strong tier -- "over Moment Matcher + Taste Map"). Three tools, each a thin
+Strong tier -- "over Moment Matcher + Taste Map"). Four tools, each a thin
 wrapper around infrastructure that already exists and is already tested
 elsewhere -- no new retrieval/search logic, just exposing it to tool-calling:
 
@@ -9,14 +9,23 @@ elsewhere -- no new retrieval/search logic, just exposing it to tool-calling:
   the same mechanism radar-chart-as-query uses -- the spec's explicit hook for
   "make it moodier" style requests: the LLM reasons about which axes a mood
   word implies and picks numeric values itself, no hardcoded word->axis map.
+- search_by_sound_content: substring match against each song's raw AST tags
+  (songs.sound_tags -- see pipeline/sound_tagging.py) and synthesized
+  description (songs.description) -- the DJ's only tool that can answer
+  "anything with a saxophone" / "songs with crow sounds" style requests,
+  which the other three tools have no way to satisfy (they need a reference
+  song, a facet, or numeric mood values, not a described sound/instrument).
 
 Plain Python, no Streamlit/Anthropic SDK import -- these functions take
 already-constructed repos/services as arguments and return JSON-serializable
-dicts, so they're callable identically from a real agent loop or a test."""
+dicts, so they're callable identically from a real agent loop or a test.
+deserialize_tags is pure json (see pipeline/sound_tagging.py's own docstring
+on why it's safe to import at module level -- no torch/transformers pulled in)."""
 
 from sonic_explorer.analysis.song_dna import AXES, AXIS_LABELS, nearest_songs_by_dna
 from sonic_explorer.facets.registry import default_registry
 from sonic_explorer.llm.explain import FACET_DESCRIPTIONS
+from sonic_explorer.pipeline.sound_tagging import deserialize_tags
 
 # Pulled from the real registry rather than hardcoded, so a newly-registered
 # facet (e.g. the stem-separated ones) becomes usable by the agent
@@ -77,6 +86,25 @@ AGENT_TOOLS = [
                 "k": {"type": "integer", "description": "How many matches to return (default 5)."},
             },
             "required": ["tempo_bpm", "energy", "brightness", "harmonic_complexity", "rhythmic_density"],
+        },
+    },
+    {
+        "name": "search_by_sound_content",
+        "description": (
+            "Find songs whose audio was actually detected (via an AudioSet-trained tagger) as "
+            "containing a specific named sound, instrument, or sound event -- e.g. 'crow', "
+            "'saxophone', 'applause', 'sirens' -- or whose short synthesized description matches. "
+            "Use this for requests naming a concrete sound/instrument/sound-event rather than a "
+            "mood or an existing reference song. One or two keywords work better than a full "
+            "sentence -- pick the specific noun the user cares about."
+        ),
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "query": {"type": "string", "description": "A sound/instrument/event keyword, e.g. 'crow' or 'saxophone'."},
+                "k": {"type": "integer", "description": "How many matches to return (default 5)."},
+            },
+            "required": ["query"],
         },
     },
 ]
@@ -174,6 +202,43 @@ def tool_search_by_mood_profile(
     }
 
 
+def tool_search_by_sound_content(song_repo, query: str, k: int = 5) -> dict:
+    """Case-insensitive substring match against each song's raw AST tags
+    (the more reliable signal for a specific named sound/instrument) and its
+    synthesized description (catches vibe-language that never became a
+    discrete tag). Ranked by number of matching tags first, best matching
+    tag's confidence second -- a description-only hit sorts after any
+    tag-matched song, since a tag is a direct model detection and the
+    description is a lossy LLM-compressed summary of a handful of tags."""
+    query_clean = (query or "").strip().lower()
+    if not query_clean:
+        return {"error": "query must not be empty."}
+
+    scored = []
+    for song in song_repo.list_songs():
+        tags = deserialize_tags(song.sound_tags)
+        tag_hits = [(label, score) for label, score in tags if query_clean in label.lower()]
+        description_hit = bool(song.description and query_clean in song.description.lower())
+        if not tag_hits and not description_hit:
+            continue
+        best_tag_score = max((score for _, score in tag_hits), default=0.0)
+        scored.append((len(tag_hits), best_tag_score, song, tag_hits, description_hit))
+
+    scored.sort(key=lambda t: (-t[0], -t[1]))
+    return {
+        "matches": [
+            {
+                "title": song.title,
+                "artist": song.artist,
+                "genre": song.genre_top,
+                "matched_tags": [label for label, _ in tag_hits],
+                "description": song.description,
+            }
+            for _, _, song, tag_hits, description_hit in scored[:k]
+        ]
+    }
+
+
 def execute_tool(
     tool_name: str,
     tool_input: dict,
@@ -194,6 +259,8 @@ def execute_tool(
             return tool_search_similar_songs(song_repo, embedding_repo, retrieval_service, **tool_input)
         if tool_name == "search_by_mood_profile":
             return tool_search_by_mood_profile(song_repo, normalized_dna_by_song, **tool_input)
+        if tool_name == "search_by_sound_content":
+            return tool_search_by_sound_content(song_repo, **tool_input)
         return {"error": f"Unknown tool {tool_name!r}."}
     except TypeError as exc:
         return {"error": f"Invalid arguments for {tool_name}: {exc}"}

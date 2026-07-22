@@ -1,6 +1,6 @@
 import numpy as np
 
-from sonic_explorer.pipeline.sound_tagging import get_descriptive_tags
+from sonic_explorer.pipeline.sound_tagging import deserialize_tags, get_descriptive_tags, serialize_tags
 
 
 def fake_tagger(predictions):
@@ -46,3 +46,16 @@ def test_get_descriptive_tags_no_category_filtering_unlike_vocal_presence():
 
 def test_get_descriptive_tags_empty_predictions_returns_empty_list():
     assert get_descriptive_tags(np.zeros(1000), 16000, tagger_fn=fake_tagger([])) == []
+
+
+def test_serialize_deserialize_tags_round_trip():
+    tags = [("Crow", 0.3), ("Bird vocalization", 0.1)]
+    assert deserialize_tags(serialize_tags(tags)) == tags
+
+
+def test_deserialize_tags_none_returns_empty_list():
+    assert deserialize_tags(None) == []
+
+
+def test_deserialize_tags_empty_string_returns_empty_list():
+    assert deserialize_tags("") == []

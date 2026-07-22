@@ -69,6 +69,17 @@ def test_update_description_round_trips(song_repo):
     assert song_repo.get_song(song_id).description == "calm piano with a warm, sparse texture"
 
 
+def test_new_song_has_no_sound_tags_by_default(song_repo):
+    song_id = song_repo.add_song(make_song(track_id=10))
+    assert song_repo.get_song(song_id).sound_tags is None
+
+
+def test_update_sound_tags_round_trips(song_repo):
+    song_id = song_repo.add_song(make_song(track_id=11))
+    song_repo.update_sound_tags(song_id, '[["Crow", 0.3], ["Bird vocalization", 0.1]]')
+    assert song_repo.get_song(song_id).sound_tags == '[["Crow", 0.3], ["Bird vocalization", 0.1]]'
+
+
 def test_update_filepath(song_repo):
     song_id = song_repo.add_song(make_song(track_id=7))
     song_repo.update_filepath(song_id, "/data/audio/7.mp3")
@@ -231,6 +242,10 @@ def test_migration_adds_description_column_to_pre_existing_db(tmp_path):
     assert song.description is None
     repo.update_description(song.id, "a real description")
     assert repo.get_song(song.id).description == "a real description"
+
+    assert song.sound_tags is None
+    repo.update_sound_tags(song.id, '[["Crow", 0.3]]')
+    assert repo.get_song(song.id).sound_tags == '[["Crow", 0.3]]'
 
 
 def test_add_segments_and_get_segments(song_repo):

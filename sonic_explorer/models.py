@@ -36,3 +36,10 @@ class Song:
     # hop") from AST tags + DNA -- see pipeline/sound_tagging.py and
     # scripts/generate_song_descriptions.py. None until that batch script runs.
     description: str | None = None
+    # Raw AST/AudioSet tags this description was synthesized from, JSON-encoded
+    # as [[label, score], ...] (see pipeline/sound_tagging.serialize_tags) --
+    # kept separately from `description` because a short synthesized phrase
+    # necessarily drops most detected tags, which makes it unreliable for
+    # exact sound-content search (e.g. "crow sounds"); the agent's
+    # search_by_sound_content tool matches against this field directly.
+    sound_tags: str | None = None

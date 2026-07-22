@@ -56,10 +56,19 @@ class SongRepository:
             rhythmic_density=row["rhythmic_density"],
             is_saved=bool(row["is_saved"]),
             description=row["description"],
+            sound_tags=row["sound_tags"],
         )
 
     def update_description(self, song_id: int, description: str) -> None:
         self.conn.execute("UPDATE songs SET description = ? WHERE id = ?", (description, song_id))
+        self.conn.commit()
+
+    def update_sound_tags(self, song_id: int, sound_tags: str) -> None:
+        """sound_tags is a JSON-encoded string -- see
+        pipeline/sound_tagging.serialize_tags(); this method stores it
+        opaquely, same as every other repository method's relationship to
+        its column, no parsing here."""
+        self.conn.execute("UPDATE songs SET sound_tags = ? WHERE id = ?", (sound_tags, song_id))
         self.conn.commit()
 
     def save_song(self, song_id: int) -> None:

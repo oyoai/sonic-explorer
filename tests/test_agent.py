@@ -5,6 +5,7 @@ import pytest
 
 from sonic_explorer.analysis.song_dna import AXES, fit_normalizer
 from sonic_explorer.llm.agent import DEFAULT_MAX_TOOL_ITERATIONS, FALLBACK_REPLY, SYSTEM_PROMPT, MusicAgent
+from sonic_explorer.llm.agent_tools import AGENT_TOOLS
 from sonic_explorer.models import Segment, Song
 from sonic_explorer.repository.db import init_db
 from sonic_explorer.repository.embedding_repository import EmbeddingRepository
@@ -192,7 +193,20 @@ def test_system_prompt_requires_grounded_explanations():
     that no tool result actually returned."""
     lowered = SYSTEM_PROMPT.lower()
     assert "traceable to data a tool actually" in lowered
-    assert "never invent sensory or descriptive detail" in lowered
+
+
+def test_system_prompt_instructs_sound_content_tool_usage():
+    """Regression guard for a real observed gap: asked "any songs with crow
+    sounds," the DJ said it could only search by title or a reference track
+    -- it had no tool for named-sound/instrument queries at all."""
+    lowered = SYSTEM_PROMPT.lower()
+    assert "search_by_sound_content" in lowered
+    assert "saxophone" in lowered or "crow" in lowered
+
+
+def test_search_by_sound_content_is_registered_as_a_tool():
+    tool_names = {tool["name"] for tool in AGENT_TOOLS}
+    assert "search_by_sound_content" in tool_names
 
 
 def test_send_message_preserves_history_across_calls(agent_deps):

@@ -60,6 +60,7 @@ _MIGRATIONS: dict[str, list[tuple[str, str]]] = {
         ("rhythmic_density", "REAL"),
         ("is_saved", "INTEGER DEFAULT 0"),
         ("description", "TEXT"),
+        ("sound_tags", "TEXT"),
     ],
 }
 

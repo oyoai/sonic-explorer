@@ -6,8 +6,14 @@ top-K tags above a confidence floor, unfiltered by category -- the caller
 (llm/explain.py's description synthesis) decides what to do with them.
 
 Same lazy-import/injectable-tagger discipline as vocal_presence.py: runs on
-CPU, never imported by the deployed app or the main test suite."""
+CPU, never imported by the deployed app or the main test suite.
 
+serialize_tags/deserialize_tags are the one exception to "never imported by
+the deployed app" -- they're pure json, no torch/transformers import, safe
+for the deployed app's agent_tools.search_by_sound_content to call against
+the sound_tags column without pulling in the tagger itself."""
+
+import json
 from typing import Callable
 
 import numpy as np
@@ -60,3 +66,15 @@ def get_descriptive_tags(
     above_floor = [p for p in predictions if p["score"] >= min_confidence]
     above_floor.sort(key=lambda p: -p["score"])
     return [(p["label"], float(p["score"])) for p in above_floor[:top_k]]
+
+
+def serialize_tags(tags: list[tuple[str, float]]) -> str:
+    return json.dumps([[label, score] for label, score in tags])
+
+
+def deserialize_tags(sound_tags: str | None) -> list[tuple[str, float]]:
+    """[] for None/empty input -- callers (e.g. agent_tools.search_by_sound_content)
+    can iterate the result unconditionally without a None-check per song."""
+    if not sound_tags:
+        return []
+    return [(label, float(score)) for label, score in json.loads(sound_tags)]
