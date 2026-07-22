@@ -33,19 +33,6 @@ from resources import build_dna_normalizer, build_normalized_dna_by_song, get_re
 #   curation pass, not a reusable pipeline step)
 # ---------------------------------------------------------------------------
 
-GENRE_COHESION_RESULTS = {
-    "k": 10,
-    "sample_size": 500,
-    "facets": [
-        {"facet_name": "sound", "n_queries": 500, "observed_pct": 54.4, "random_baseline_pct": 11.9},
-        {"facet_name": "harmony", "n_queries": 500, "observed_pct": 21.2, "random_baseline_pct": 11.7},
-        {"facet_name": "vocal", "n_queries": 500, "observed_pct": 36.1, "random_baseline_pct": 11.7},
-        {"facet_name": "drums", "n_queries": 500, "observed_pct": 36.6, "random_baseline_pct": 11.7},
-        {"facet_name": "bass", "n_queries": 500, "observed_pct": 27.2, "random_baseline_pct": 11.7},
-        {"facet_name": "instrumental", "n_queries": 500, "observed_pct": 40.6, "random_baseline_pct": 11.7},
-    ],
-}
-
 NN_EXAMPLES = [
     {"facet": "sound", "query": {"title": "Terminally in Love With You", "artist": "Shy Kids", "genre": "Pop"},
      "match": {"title": "Ave", "artist": "PC-ONE", "genre": "Experimental"}, "score_pct": 90.1,
@@ -104,17 +91,17 @@ FINGERPRINT_EXAMPLE_TITLES = [
 ]
 
 # ---------------------------------------------------------------------------
-# Section 7's case-study evidence: real results from one-time experiments
+# Section 6's case-study evidence: real results from one-time experiments
 # (scripts/filter_vocal_facet_by_ast.py's validation runs, scripts/
 # whiten_harmony_index.py, scripts/compare_song_level_retrieval.py) --
 # embedded as literals rather than recomputed live, since a "before" state
 # for an already-applied change (e.g. the harmony index, now permanently
 # whitened) no longer exists to recompute against. Same rationale as
-# GENRE_COHESION_RESULTS/NN_EXAMPLES above: real numbers, captured once, not
-# fabricated for presentation.
+# NN_EXAMPLES above: real numbers, captured once, not fabricated for
+# presentation.
 # ---------------------------------------------------------------------------
 
-# 7a: whole-clip AST scoring (the FAILED first design) vs. per-segment max
+# 6a: whole-clip AST scoring (the FAILED first design) vs. per-segment max
 # scoring (the working redesign), on the "Speech" label specifically for the
 # whole-clip case and the best-matching vocal-keyword label for per-segment.
 VOCAL_GATE_WHOLE_CLIP_SCORES = [
@@ -161,7 +148,7 @@ VOCAL_GATE_HUMAN_SPOTCHECK = [
     ("Thursday & Snow (Reprise)", "Hip-Hop", 0.0228, "vocal", "no vocal", False),
 ]
 
-# 7b: real AST/AudioSet tag output, curated for variety (instrumental with
+# 6b: real AST/AudioSet tag output, curated for variety (instrumental with
 # specific-instrument tags, ambient/textural, soundtrack, vocal genres).
 AST_CAPABILITY_EXAMPLES = [
     {"title": "3rd Chair", "genre": "Instrumental",
@@ -176,15 +163,15 @@ AST_CAPABILITY_EXAMPLES = [
      "tags": [("Mantra", 0.085), ("Chant", 0.036), ("Speech", 0.011), ("Electronic music", 0.014)]},
 ]
 
-# 7c: harmony whitening before/after (k=10, sample_size=300, seed=42).
+# 6c: harmony whitening before/after (k=10, sample_size=300, seed=42).
 HARMONY_WHITENING_RESULTS = {
     "before": {"top1_mean": 0.983, "random_mean": 0.847, "margin_mean": 0.0027, "cohesion_pct": 20.7, "baseline_pct": 11.5},
     "after": {"top1_mean": 0.865, "random_mean": -0.016, "margin_mean": 0.0187, "cohesion_pct": 20.1, "baseline_pct": 11.5},
 }
 
-# 7d: segment-level vs. song-level retrieval, all six facets (k=10,
+# 6d: segment-level vs. song-level retrieval, all six facets (k=10,
 # sample_size=300, seed=42) -- harmony's numbers here are measured on the
-# already-whitened index (7c ran first).
+# already-whitened index (6c ran first).
 SONG_LEVEL_COMPARISON = [
     {"facet": "sound", "seg_margin": 0.0080, "song_margin": 0.0185, "seg_cohesion": 55.4, "song_cohesion": 52.5},
     {"facet": "harmony", "seg_margin": 0.0187, "song_margin": 0.0326, "seg_cohesion": 20.1, "song_cohesion": 21.8},
@@ -194,7 +181,7 @@ SONG_LEVEL_COMPARISON = [
     {"facet": "instrumental", "seg_margin": 0.0105, "song_margin": 0.0194, "seg_cohesion": 38.5, "song_cohesion": 44.1},
 ]
 
-# 7e: does fixed-window segmentation explain 7a's vocal-gate errors? Checked
+# 6e: does fixed-window segmentation explain 6a's vocal-gate errors? Checked
 # against the Structure facet's already-computed novelty detection for the
 # same 10 blind-listened segments -- no new audio processing, a pure
 # correlation check against existing data.
@@ -243,12 +230,12 @@ def _find_song(title: str):
     return None
 
 
-st.title("Sonic Explorer")
-st.write("Explore your music library by how it actually sounds — not tags or genre labels.")
-st.caption(
-    "This page walks through the actual methodology, with real evidence at each step -- not just "
-    "asserted -- before opening into the live interactive app at the end."
+st.title("Methodology")
+st.write(
+    "How the library was actually analyzed and improved, with real evidence at each step -- not "
+    "just asserted."
 )
+st.page_link("app.py", label="← Back to introduction", icon="\U0001F3A7")
 
 show_data_source_banner()
 
@@ -791,63 +778,20 @@ for facet in FACET_ORDER:
 st.divider()
 
 # ---------------------------------------------------------------------------
-# 6. Evaluation
+# 6. Model improvement case studies
 # ---------------------------------------------------------------------------
-st.header("6. Evaluation")
+st.header("6. Model improvement case studies")
 st.write(
-    f"Quantitative check: do a facet's nearest neighbors actually share genre more often than "
-    f"chance, at k={GENRE_COHESION_RESULTS['k']} (sampled over {GENRE_COHESION_RESULTS['facets'][0]['n_queries']} "
-    f"queries per facet)? Genre is a proxy, not ground truth for \"sounds similar\" -- but a facet "
-    f"that shows no lift over random would be a red flag."
+    "The **Results** page's genre-cohesion numbers established real weaknesses per facet, not "
+    "just aggregate scores. This section documents concrete attempts to fix or explain them -- "
+    "each follows the same discipline: state a hypothesis, test it against the real library, "
+    "report the honest result, whether or not it fully worked. §4b's axis-interpretability check "
+    "(correlate first, qualitative-listen only where correlation doesn't resolve it) already "
+    "followed this same pattern -- it belongs to this same family of case studies, just located "
+    "earlier in the narrative."
 )
 
-facets_data = GENRE_COHESION_RESULTS["facets"]
-eval_fig = go.Figure(data=[
-    go.Bar(name="Observed", x=[f["facet_name"].capitalize() for f in facets_data],
-           y=[f["observed_pct"] for f in facets_data],
-           text=[f"{f['observed_pct']:.1f}%" for f in facets_data], textposition="auto"),
-    go.Bar(name="Random baseline", x=[f["facet_name"].capitalize() for f in facets_data],
-           y=[f["random_baseline_pct"] for f in facets_data],
-           text=[f"{f['random_baseline_pct']:.1f}%" for f in facets_data], textposition="auto"),
-])
-eval_fig.update_layout(
-    height=400, margin=dict(l=10, r=10, t=10, b=10), barmode="group",
-    yaxis_title="% of neighbors sharing genre",
-)
-st.plotly_chart(eval_fig, width="stretch", key="genre_cohesion_chart")
-
-st.caption(
-    "Every facet clears its random baseline by a wide margin -- Sound strongest (54.4% vs. 11.9%), "
-    "Instrumental/Drums/Vocal in the middle (36-41%), Bass and Harmony weakest but still clearly "
-    "above chance (21-27%). The ablation-style finding: facets genuinely diverge from each other "
-    "rather than one just riding Sound's coattails -- Harmony in particular captures something "
-    "clearly different (and on this metric, weaker) than the full mix."
-)
-st.info(
-    "These numbers were captured before a stem-facet reprocessing pass currently underway (fixing "
-    "a data-quality issue where a handful of near-silent isolated stems were being indexed as if "
-    "meaningful). Expect Vocal/Drums/Bass/Instrumental numbers to shift slightly once that "
-    "finishes -- Sound is unaffected. Harmony's number here is also its pre-whitening baseline; "
-    "see §7c for the whitening experiment's own before/after measurement.",
-    icon="\U0001F6A7",
-)
-
-st.divider()
-
-# ---------------------------------------------------------------------------
-# 7. Model improvement case studies
-# ---------------------------------------------------------------------------
-st.header("7. Model improvement case studies")
-st.write(
-    "§6 established real weaknesses per facet, not just aggregate scores. This section documents "
-    "concrete attempts to fix or explain them -- each follows the same discipline: state a "
-    "hypothesis, test it against the real library, report the honest result, whether or not it "
-    "fully worked. §4b's axis-interpretability check (correlate first, qualitative-listen only "
-    "where correlation doesn't resolve it) already followed this same pattern -- it belongs to this "
-    "same family of case studies, just located earlier in the narrative."
-)
-
-st.subheader("7a. Vocal-facet cross-check: hypothesis, failure, redesign, validation")
+st.subheader("6a. Vocal-facet cross-check: hypothesis, failure, redesign, validation")
 st.write(
     "§3b noted the vocal facet's honest limitation: Demucs' \"vocal\" stem can carry real energy "
     "from non-vocal content (confirmed case: \"3rd Chair\", a cello/violin piece, scored 0.58 "
@@ -917,7 +861,7 @@ st.info(
     icon="⏳",
 )
 
-st.subheader("7b. Sound recognition as a general capability")
+st.subheader("6b. Sound recognition as a general capability")
 st.write(
     "Separate from the vocal-gate application above: the same pretrained AST/AudioSet model is a "
     "real, standalone capability -- given any clip, it tags what it hears against 527 general audio "
@@ -932,12 +876,12 @@ st.caption(
     "(Cello, Bowed string instrument, Violin) with no model fine-tuning on this library at all. "
     "That specificity is what makes instrument/texture tagging a plausible future capability (e.g. "
     "tag-based search in Ask the DJ), not yet built. **Worth being precise about scope, though:** "
-    "7a's human spot-check found the singing/speech keyword-threshold specifically unreliable -- "
+    "6a's human spot-check found the singing/speech keyword-threshold specifically unreliable -- "
     "that's a narrower claim than \"AST tagging doesn't work.\" The broad instrument/texture tags "
     "shown above weren't the part that failed."
 )
 
-st.subheader("7c. Harmony whitening: fixing the score geometry vs. fixing the task")
+st.subheader("6c. Harmony whitening: fixing the score geometry vs. fixing the task")
 st.write(
     "§5a found harmony's random-pair baseline sitting at 0.85-0.95 cosine similarity -- the raw "
     "24-dim chroma-derived space (12 pitch classes × mean + std) has very little natural spread, so "
@@ -974,7 +918,7 @@ st.caption(
     "and Ask the DJ, even without a genre-cohesion lift."
 )
 
-st.subheader("7d. Song-level aggregation: pooling segments before ranking")
+st.subheader("6d. Song-level aggregation: pooling segments before ranking")
 st.write(
     "§5a's other finding: every facet's top-1-vs-top-2 margin is small (typically <0.01) -- with "
     "~14,600 segments and often only a few hundred per genre, there's usually a long plateau of "
@@ -1018,11 +962,11 @@ st.info(
     icon="✅",
 )
 
-st.subheader("7e. Does segment misalignment explain the vocal-gate errors? A structural cross-check")
+st.subheader("6e. Does segment misalignment explain the vocal-gate errors? A structural cross-check")
 st.write(
-    "7a's segments are cut at fixed clock intervals (every ~2.5s, 5s windows), regardless of what's "
+    "6a's segments are cut at fixed clock intervals (every ~2.5s, 5s windows), regardless of what's "
     "actually happening musically -- a boundary can fall mid-vocal-line or anywhere arbitrary. "
-    "**Hypothesis:** that misalignment could explain some of 7a's confusing results. Checked directly "
+    "**Hypothesis:** that misalignment could explain some of 6a's confusing results. Checked directly "
     "against the Structure facet's already-computed novelty detection for the same 10 blind-listened "
     "segments -- no new audio processing, a pure correlation check against data that already existed."
 )
@@ -1070,13 +1014,13 @@ st.info(
 st.divider()
 
 # ---------------------------------------------------------------------------
-# 8. Next: see it in the app
+# 7. Next: Results
 # ---------------------------------------------------------------------------
-st.header("8. Next: see it in the app")
+st.header("7. Next: Results")
 st.write(
-    "That's the methodology. The **App Walkthrough** picks up from here -- a guided pass through "
-    "the live interactive pages themselves, explaining what you're looking at as you go (what the "
-    "point cloud's shape means, what an edge between two nodes represents, how to read the "
-    "clusters) before you drive it yourself."
+    "That's the methodology -- how the library was analyzed and iterated on, including the "
+    "honest failures along the way. **Results** picks up next with the quantitative evaluation "
+    "numbers those case studies were measured against, before the **App Walkthrough** takes you "
+    "into the live interactive pages themselves."
 )
-st.page_link("pages/1_App_Walkthrough.py", label="**Continue to the App Walkthrough →**", icon="\U0001F9ED")
+st.page_link("pages/1_Results.py", label="**Continue to Results →**", icon="\U0001F4CA")
