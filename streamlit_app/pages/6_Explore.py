@@ -21,7 +21,7 @@ from components.plotting import (
     fingerprint_thumbnail,
     network_graph_figure,
 )
-from resources import get_repositories, show_data_source_banner
+from resources import get_repositories, show_data_source_banner, show_logo
 
 FACET_REGISTRY = default_registry()
 QUEUE_MODE_LABELS = {"random": "Random", "loop": "Loop", "closest_match": "Closest match"}
@@ -56,6 +56,7 @@ if not all_songs:
     st.info("No songs in the library yet.")
     st.stop()
 
+show_logo()
 show_data_source_banner()
 
 if "explore_selected_song_id" not in st.session_state:

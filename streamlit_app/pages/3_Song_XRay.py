@@ -12,13 +12,14 @@ from sonic_explorer.analysis.taste_map import compute_taste_map, mean_pool_song_
 from sonic_explorer.config import audio_path_for
 from sonic_explorer.facets.fingerprint import composite_fingerprint, structure_fingerprint
 from components.plotting import composite_fingerprint_thumbnail, fingerprint_thumbnail
-from resources import get_repositories, show_data_source_banner
+from resources import get_repositories, show_data_source_banner, show_logo
 
 st.set_page_config(page_title="Song X-Ray", page_icon="\U0001F50D")
 st.title("Song X-Ray")
 st.caption("A song's structural anatomy -- matching colors below mean similar-sounding sections.")
 st.page_link("pages/6_Explore.py", label="← Back to Explore", icon="\U0001F310")
 
+show_logo()
 show_data_source_banner()
 
 song_repo, embedding_repo, retrieval_service = get_repositories()

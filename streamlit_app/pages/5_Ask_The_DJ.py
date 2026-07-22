@@ -5,7 +5,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 import streamlit as st
 
-from resources import get_agent, get_repositories, show_data_source_banner
+from resources import get_agent, get_repositories, show_data_source_banner, show_logo
 
 MAX_MESSAGES_PER_SESSION = 30  # simple abuse/cost guardrail for the public deployment (spec section 11)
 
@@ -18,6 +18,7 @@ st.caption(
 )
 st.page_link("pages/6_Explore.py", label="← Back to Explore", icon="\U0001F310")
 
+show_logo()
 show_data_source_banner()
 
 song_repo, embedding_repo, retrieval_service = get_repositories()

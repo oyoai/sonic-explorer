@@ -15,7 +15,7 @@ from sonic_explorer.config import audio_path_for
 from sonic_explorer.evaluation.retrieval_diagnostics import top1_score_distribution
 from sonic_explorer.facets.fingerprint import composite_fingerprint, structure_fingerprint
 from components.plotting import composite_fingerprint_thumbnail, fingerprint_thumbnail, song_dna_radar_overlay
-from resources import build_dna_normalizer, build_normalized_dna_by_song, get_repositories, show_data_source_banner
+from resources import build_dna_normalizer, build_normalized_dna_by_song, get_repositories, show_data_source_banner, show_logo
 
 # ---------------------------------------------------------------------------
 # Curated evidence, embedded directly rather than loaded from data/artifacts/
@@ -237,6 +237,7 @@ st.write(
 )
 st.page_link("Overview.py", label="← Back to introduction", icon="\U0001F3A7")
 
+show_logo()
 show_data_source_banner()
 
 if all_songs:

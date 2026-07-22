@@ -5,17 +5,21 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 import streamlit as st
 
-from resources import get_repositories, show_data_source_banner
+from resources import LOGO_PATH, get_repositories, show_data_source_banner, show_logo
 
 
 def render_overview() -> None:
     st.set_page_config(page_title="Sonic Explorer", page_icon="\U0001F3A7", layout="wide")
 
-    st.title("Sonic Explorer")
+    if LOGO_PATH.exists():
+        st.image(str(LOGO_PATH), width=420)
+    else:
+        st.title("Sonic Explorer")
     st.write(
         "Explore your music library by how it actually sounds — not tags or genre labels."
     )
 
+    show_logo()
     show_data_source_banner()
 
     song_repo, embedding_repo, retrieval_service = get_repositories()

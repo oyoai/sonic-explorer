@@ -6,7 +6,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 import plotly.graph_objects as go
 import streamlit as st
 
-from resources import get_repositories, show_data_source_banner
+from resources import get_repositories, show_data_source_banner, show_logo
 
 # ---------------------------------------------------------------------------
 # Curated evidence, embedded directly rather than loaded from data/artifacts/
@@ -50,6 +50,7 @@ st.write(
 )
 st.page_link("pages/0_Methodology.py", label="← Back to Methodology", icon="\U0001F52C")
 
+show_logo()
 show_data_source_banner()
 
 st.divider()

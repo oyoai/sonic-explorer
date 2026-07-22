@@ -18,7 +18,7 @@ from components.plotting import (
     network_graph_figure,
     song_dna_radar_overlay,
 )
-from resources import build_dna_normalizer, get_repositories, show_data_source_banner
+from resources import build_dna_normalizer, get_repositories, show_data_source_banner, show_logo
 
 MOMENT_MATCHER_EXAMPLE_TITLE = "Cipralex (c/ Pulso)"
 XRAY_EXAMPLE_TITLE = "Cipralex (c/ Pulso)"
@@ -47,6 +47,7 @@ st.write(
     "currently-running components, not screenshots."
 )
 st.page_link("pages/1_Results.py", label="← Back to Results", icon="\U0001F4CA")
+show_logo()
 show_data_source_banner()
 
 if not all_songs:
