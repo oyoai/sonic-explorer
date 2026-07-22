@@ -29,6 +29,7 @@ dev = [
     "pytest",
     "librosa",
     "soundfile",
+    "ruff",
 ]
 
 [build-system]
@@ -37,3 +38,22 @@ build-backend = "setuptools.build_meta"
 
 [tool.setuptools.packages.find]
 include = ["sonic_explorer*"]
+
+[tool.ruff]
+line-length = 120
+target-version = "py310"
+# Exploratory, throwaway by design (see spec section 4.2's "workflow
+# narrative": notebooks are for fast exploration, promoted code is what
+# gets held to a bar) -- not worth linting to the same standard as the
+# package/app/scripts.
+exclude = ["notebooks"]
+
+[tool.ruff.lint]
+# Deliberately narrow: catches real bugs (unused imports/vars, undefined
+# names) without relitigating this codebase's existing style (long lines in
+# docstrings, comment-heavy rationale) via a full default rule set.
+select = ["E9", "F", "B"]
+ignore = ["F401"]  # re-exports and lazily-imported optional deps (torch/demucs) trip this legitimately
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["F841"]  # fixtures assigned-and-unused are a common, harmless pytest pattern

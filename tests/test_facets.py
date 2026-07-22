@@ -52,7 +52,7 @@ def test_registry_unknown_name_raises():
     registry = FacetRegistry()
     try:
         registry.get("nope")
-        assert False, "expected KeyError"
+        raise AssertionError("expected KeyError")
     except KeyError:
         pass
 

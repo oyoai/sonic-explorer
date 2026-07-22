@@ -80,13 +80,13 @@ def run_batch_embedding(
         for facet in facets:
             pending = [
                 (seg_id, seg)
-                for seg_id, seg in zip(seg_ids, segments)
+                for seg_id, seg in zip(seg_ids, segments, strict=False)
                 if embedding_repo.status(seg_id, facet.name) != "done"
             ]
             if pending:
                 windows = [audio[int(seg.start_sec * sr):int(seg.end_sec * sr)] for _, seg in pending]
                 vectors = facet.embed_batch(windows, sr)
-                for (seg_id, _), vector in zip(pending, vectors):
+                for (seg_id, _), vector in zip(pending, vectors, strict=False):
                     embedding_repo.add_to_index(facet.name, seg_id, vector)
                     pending_confirmation[facet.name].append((seg_id, vector.shape[-1]))
 

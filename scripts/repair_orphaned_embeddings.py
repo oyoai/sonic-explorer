@@ -16,14 +16,12 @@ import faiss
 from sonic_explorer.config import ARTIFACTS_DIR, DB_PATH
 from sonic_explorer.repository.db import init_db
 from sonic_explorer.repository.embedding_repository import EmbeddingRepository
-from sonic_explorer.repository.song_repository import SongRepository
 
 FACET_NAME = "sound"
 
 
 def main():
     conn = init_db(DB_PATH)
-    song_repo = SongRepository(conn)
     embedding_repo = EmbeddingRepository(conn, artifacts_dir=ARTIFACTS_DIR)
     embedding_repo.load_index(FACET_NAME)
 

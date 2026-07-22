@@ -110,7 +110,7 @@ else:
     color_map = {lab: palette[i % len(palette)] for i, lab in enumerate(unique_labels)}
 
     durations = timeline.segment_ends - timeline.segment_starts
-    hover_text = [f"{s:.1f}s – {e:.1f}s" for s, e in zip(timeline.segment_starts, timeline.segment_ends)]
+    hover_text = [f"{s:.1f}s – {e:.1f}s" for s, e in zip(timeline.segment_starts, timeline.segment_ends, strict=False)]
 
     timeline_fig = go.Figure(go.Bar(
         x=durations,

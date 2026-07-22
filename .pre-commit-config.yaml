@@ -1,0 +1,12 @@
+repos:
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.8.4
+    hooks:
+      - id: ruff
+        args: [--fix]
+        # Deliberately no ruff-format hook: this codebase's existing style
+        # (compact, carefully-wrapped one-liners) is a real choice, not
+        # sloppiness -- ruff format's opinionated reformatting would touch
+        # ~57 files for style alone, pure churn with no bug-catching value.
+        # Lint-and-fix (real bugs: unused imports, undefined names, unsafe
+        # zip()) stays; formatting doesn't.

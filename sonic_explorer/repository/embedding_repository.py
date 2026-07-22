@@ -122,7 +122,7 @@ class EmbeddingRepository:
         index = self._indexes[facet_name]
         k = min(k, index.ntotal)
         scores, ids = index.search(vec.reshape(1, -1), k)
-        return [(int(seg_id), float(score)) for seg_id, score in zip(ids[0], scores[0]) if seg_id != -1]
+        return [(int(seg_id), float(score)) for seg_id, score in zip(ids[0], scores[0], strict=False) if seg_id != -1]
 
     def index_size(self, facet_name: str) -> int:
         return self._indexes[facet_name].ntotal if facet_name in self._indexes else 0

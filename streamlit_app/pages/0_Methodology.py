@@ -443,7 +443,7 @@ if dna_songs_with_values:
             marker_lines.append(("slow example", getattr(slow_song, axis), "rgb(99,110,250)"))
         if fast_song is not None:
             marker_lines.append(("fast example", getattr(fast_song, axis), "rgb(239,85,59)"))
-        for label, val, color in marker_lines:
+        for _label, val, color in marker_lines:
             hist_fig.add_vline(x=val, line=dict(color=color, dash="dash", width=2))
         hist_fig.update_layout(
             height=220, margin=dict(l=10, r=10, t=30, b=10), title=AXIS_LABELS[axis],
@@ -510,7 +510,7 @@ if fp_song is not None:
         unique_labels = sorted(set(timeline.segment_labels.tolist()))
         color_map = {lab: palette[i % len(palette)] for i, lab in enumerate(unique_labels)}
         durations = timeline.segment_ends - timeline.segment_starts
-        hover_text = [f"{s:.1f}s – {e:.1f}s" for s, e in zip(timeline.segment_starts, timeline.segment_ends)]
+        hover_text = [f"{s:.1f}s – {e:.1f}s" for s, e in zip(timeline.segment_starts, timeline.segment_ends, strict=False)]
         timeline_fig = go.Figure(go.Bar(
             x=durations, y=["Structure"] * len(durations), base=timeline.segment_starts, orientation="h",
             marker_color=[color_map[lab] for lab in timeline.segment_labels.tolist()],

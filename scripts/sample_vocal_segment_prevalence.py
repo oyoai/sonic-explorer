@@ -105,7 +105,7 @@ def main():
           f"({below_threshold.mean():.1%})")
 
     # how many distinct SONGS have at least one flagged segment, for context
-    flagged_songs = {r["song_id"] for r, below in zip(rows, below_threshold) if below}
+    flagged_songs = {r["song_id"] for r, below in zip(rows, below_threshold, strict=False) if below}
     print(f"distinct songs with >=1 flagged segment: {len(flagged_songs)}/{len(segs_by_song)} "
           f"({len(flagged_songs) / len(segs_by_song):.1%})")
 

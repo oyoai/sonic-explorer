@@ -31,7 +31,7 @@ def add_song_with_segments(song_repo, embedding_repo, track_id, vectors, facet_n
         for i in range(len(vectors))
     ]
     seg_ids = song_repo.add_segments(song_id, segments)
-    for seg_id, vec in zip(seg_ids, vectors):
+    for seg_id, vec in zip(seg_ids, vectors, strict=False):
         embedding_repo.add_vector(facet_name, seg_id, vec)
     return song_id
 

@@ -48,7 +48,7 @@ def query_song_level(
         return []
 
     scores, ids = index.search(vec.reshape(1, -1), fetch_k)
-    results = [(int(sid), float(score)) for sid, score in zip(ids[0], scores[0]) if sid != -1]
+    results = [(int(sid), float(score)) for sid, score in zip(ids[0], scores[0], strict=False) if sid != -1]
     if exclude_song_id is not None:
         results = [r for r in results if r[0] != exclude_song_id]
     return results[:k]

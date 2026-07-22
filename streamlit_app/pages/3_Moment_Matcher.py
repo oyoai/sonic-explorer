@@ -280,7 +280,7 @@ else:  # hand_drawn_profile
     )
     target = {}
     slider_cols = st.columns(len(AXES))
-    for axis, col in zip(AXES, slider_cols):
+    for axis, col in zip(AXES, slider_cols, strict=False):
         with col:
             target[axis] = st.slider(AXIS_LABELS[axis], min_value=0.0, max_value=1.0, value=0.5, step=0.01, key=f"dna_slider_{axis}")
 

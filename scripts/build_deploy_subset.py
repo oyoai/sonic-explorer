@@ -53,7 +53,7 @@ def main():
         by_genre.setdefault(song.genre_top, []).append(song)
 
     sampled = []
-    for genre, songs in by_genre.items():
+    for _genre, songs in by_genre.items():
         idx = rng.choice(len(songs), size=min(SONGS_PER_GENRE, len(songs)), replace=False)
         sampled.extend(songs[i] for i in idx)
     print(f"Sampled {len(sampled)} songs across {len(by_genre)} genres")
@@ -87,7 +87,7 @@ def main():
         old_segments = src_song_repo.get_segments(old_song.id)
         new_segment_ids = dst_song_repo.add_segments(new_song_id, old_segments)
 
-        for old_seg, new_seg_id in zip(old_segments, new_segment_ids):
+        for old_seg, new_seg_id in zip(old_segments, new_segment_ids, strict=False):
             for facet_name in FACETS:
                 if src_embedding_repo.status(old_seg.id, facet_name) == "done":
                     vector = src_embedding_repo.get_vector(facet_name, old_seg.id)

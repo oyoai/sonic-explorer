@@ -132,7 +132,7 @@ def run_batch_stem_embedding(
                     continue
                 windows = [w for _, w in to_embed]
                 vectors = facet.embed_batch(windows, sr)
-                for (seg_id, _), vector in zip(to_embed, vectors):
+                for (seg_id, _), vector in zip(to_embed, vectors, strict=False):
                     embedding_repo.add_to_index(facet_name, seg_id, vector)
                     pending_confirmation[facet_name].append((seg_id, vector.shape[-1]))
         except Exception as exc:  # noqa: BLE001 -- deliberately broad, see docstring
