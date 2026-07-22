@@ -32,3 +32,7 @@ class Song:
     # bookmarked into "my library" (spec 2.1) -- no separate user/auth model,
     # a single implicit library is enough for this project's scope
     is_saved: bool = False
+    # LLM-synthesized natural-language description ("calm piano," "sassy hip
+    # hop") from AST tags + DNA -- see pipeline/sound_tagging.py and
+    # scripts/generate_song_descriptions.py. None until that batch script runs.
+    description: str | None = None

@@ -19,6 +19,10 @@ data/**/*.db
 data/**/*.index
 *.log
 
+# regenerable feature cache for CNN training (357MB) -- rebuilt by
+# scripts/train_genre_cnn.py on first run, never committed.
+scripts/genre_cnn_features.npz
+
 # local env / secrets
 .env
 .streamlit/secrets.toml

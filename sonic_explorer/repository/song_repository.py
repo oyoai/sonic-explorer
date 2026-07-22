@@ -55,7 +55,12 @@ class SongRepository:
             harmonic_complexity=row["harmonic_complexity"],
             rhythmic_density=row["rhythmic_density"],
             is_saved=bool(row["is_saved"]),
+            description=row["description"],
         )
+
+    def update_description(self, song_id: int, description: str) -> None:
+        self.conn.execute("UPDATE songs SET description = ? WHERE id = ?", (description, song_id))
+        self.conn.commit()
 
     def save_song(self, song_id: int) -> None:
         self.conn.execute("UPDATE songs SET is_saved = 1 WHERE id = ?", (song_id,))

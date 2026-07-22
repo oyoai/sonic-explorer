@@ -33,6 +33,8 @@ song = songs[choice]
 
 st.subheader(f"{song.title} — {song.artist}")
 st.caption(f"Genre: {song.genre_top}")
+if song.description:
+    st.caption(f"\U0001F3B6 *{song.description}*")
 st.audio(str(audio_path_for(song)))
 
 # Fetched once, used by both the fingerprint row and the timeline chart below.

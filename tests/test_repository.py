@@ -58,6 +58,17 @@ def test_get_song_missing_returns_none(song_repo):
     assert song_repo.get_song(999) is None
 
 
+def test_new_song_has_no_description_by_default(song_repo):
+    song_id = song_repo.add_song(make_song(track_id=8))
+    assert song_repo.get_song(song_id).description is None
+
+
+def test_update_description_round_trips(song_repo):
+    song_id = song_repo.add_song(make_song(track_id=9))
+    song_repo.update_description(song_id, "calm piano with a warm, sparse texture")
+    assert song_repo.get_song(song_id).description == "calm piano with a warm, sparse texture"
+
+
 def test_update_filepath(song_repo):
     song_id = song_repo.add_song(make_song(track_id=7))
     song_repo.update_filepath(song_id, "/data/audio/7.mp3")
@@ -192,6 +203,34 @@ def test_migration_adds_is_saved_column_to_pre_existing_db(tmp_path):
     assert song.is_saved is False
     repo.save_song(song.id)
     assert repo.get_song(song.id).is_saved is True
+
+
+def test_migration_adds_description_column_to_pre_existing_db(tmp_path):
+    """Same class of regression as the is_saved/song-DNA migration tests: a
+    DB created before description existed must gain the column (defaulting
+    to NULL/None) without losing existing data."""
+    import sqlite3
+
+    from sonic_explorer.repository.db import SCHEMA, init_db
+
+    db_path = tmp_path / "old.db"
+    raw_conn = sqlite3.connect(str(db_path))
+    raw_conn.executescript(SCHEMA)
+    raw_conn.execute(
+        "INSERT INTO songs (fma_track_id, filepath, title, artist, genre_top, duration_sec) "
+        "VALUES (1, '/x.mp3', 'Old Song', 'Artist', 'Rock', 30.0)"
+    )
+    raw_conn.commit()
+    raw_conn.close()
+
+    conn = init_db(db_path)
+    repo = SongRepository(conn)
+    song = repo.get_song_by_fma_track_id(1)
+
+    assert song.title == "Old Song"
+    assert song.description is None
+    repo.update_description(song.id, "a real description")
+    assert repo.get_song(song.id).description == "a real description"
 
 
 def test_add_segments_and_get_segments(song_repo):
