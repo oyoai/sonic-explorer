@@ -15,9 +15,7 @@ _GENRE_PALETTE = px.colors.qualitative.Set2
 
 def _genre_color_map(genre_counts: dict[str, int]) -> dict[str, str]:
     """Consistent genre->color assignment, sorted largest-genre-first --
-    shared by every genre-colored visual on the Overview page (the waffle
-    grid and the composition bar) so the same genre reads as the same color
-    in both rather than each picking colors independently."""
+    used by the Overview page's waffle grid (library_waffle_grid)."""
     ordered = sorted(genre_counts.keys(), key=lambda g: -genre_counts[g])
     return {genre: _GENRE_PALETTE[i % len(_GENRE_PALETTE)] for i, genre in enumerate(ordered)}
 
@@ -114,38 +112,6 @@ def network_graph_figure(nodes_df, edges, selected_song_id=None) -> go.Figure:
     return fig
 
 
-def genre_breakdown_bar(genre_counts: dict[str, int]) -> go.Figure:
-    """A single horizontal stacked bar, one segment per genre sized by its
-    share of the library -- a compact "at a glance" composition view for the
-    Overview page, in the same small-multiple spirit as the fingerprint
-    thumbnails above. Sorted descending so the largest genre anchors the left
-    edge, matching how Methodology's own genre bar chart orders things."""
-    items = sorted(genre_counts.items(), key=lambda kv: -kv[1])
-    total = sum(genre_counts.values()) or 1
-    color_map = _genre_color_map(genre_counts)
-
-    fig = go.Figure()
-    for genre, count in items:
-        fig.add_trace(go.Bar(
-            x=[count], y=["Library"], orientation="h", name=genre,
-            marker=dict(color=color_map[genre]),
-            text=f"{genre} ({count / total:.0%})", textposition="inside", insidetextanchor="middle",
-            hovertemplate=f"{genre}: {count} songs (%{{customdata:.0%}})<extra></extra>",
-            customdata=[count / total],
-        ))
-    fig.update_layout(
-        barmode="stack",
-        height=70,
-        margin=dict(l=0, r=0, t=0, b=0),
-        showlegend=False,
-        xaxis=dict(visible=False),
-        yaxis=dict(visible=False),
-        plot_bgcolor="rgba(0,0,0,0)",
-        paper_bgcolor="rgba(0,0,0,0)",
-    )
-    return fig
-
-
 def library_waffle_grid(songs_df, genre_counts: dict[str, int]) -> go.Figure:
     """One small square per song (songs_df needs columns title, genre),
     arranged in contiguous same-genre blocks -- the classic waffle-chart
@@ -192,31 +158,6 @@ def library_waffle_grid(songs_df, genre_counts: dict[str, int]) -> go.Figure:
         xaxis=dict(visible=False, range=[-1, cols]),
         yaxis=dict(visible=False, range=[-rows, 1], scaleanchor="x", scaleratio=1),
         legend=dict(orientation="h", yanchor="top", y=-0.08, x=0.5, xanchor="center", font=dict(size=11)),
-        plot_bgcolor="rgba(0,0,0,0)",
-        paper_bgcolor="rgba(0,0,0,0)",
-    )
-    return fig
-
-
-def cluster_density_preview(points_df) -> go.Figure:
-    """A small, non-interactive preview of the library's sonic clustering --
-    points_df needs columns x, y, cluster (see analysis.taste_map.compute_taste_map).
-    Deliberately stripped down (no axes, no legend, no hover) since this is a
-    teaser for the real, full Explore map, not a substitute for it."""
-    fig = go.Figure(go.Scatter(
-        x=points_df["x"], y=points_df["y"], mode="markers",
-        marker=dict(
-            size=5, color=points_df["cluster"], colorscale="Viridis", opacity=0.75,
-            line=dict(width=0),
-        ),
-        hoverinfo="skip",
-    ))
-    fig.update_layout(
-        height=220,
-        margin=dict(l=0, r=0, t=0, b=0),
-        showlegend=False,
-        xaxis=dict(visible=False),
-        yaxis=dict(visible=False),
         plot_bgcolor="rgba(0,0,0,0)",
         paper_bgcolor="rgba(0,0,0,0)",
     )

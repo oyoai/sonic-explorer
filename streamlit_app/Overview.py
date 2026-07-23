@@ -6,16 +6,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 import pandas as pd
 import streamlit as st
 
-from sonic_explorer.analysis.taste_map import compute_taste_map, mean_pool_song_vectors
-from components.plotting import cluster_density_preview, genre_breakdown_bar, library_waffle_grid
+from components.plotting import library_waffle_grid
 from resources import LOGO_PATH, get_repositories, show_data_source_banner, show_logo
-
-
-@st.cache_data
-def _overview_cluster_preview_df(_song_repo, _embedding_repo, cache_key):
-    song_vectors = mean_pool_song_vectors(_song_repo, _embedding_repo)
-    result = compute_taste_map(song_vectors)
-    return pd.DataFrame([{"x": p.x, "y": p.y, "cluster": p.cluster} for p in result.points])
 
 
 def render_overview() -> None:
@@ -32,7 +24,7 @@ def render_overview() -> None:
     show_logo()
     show_data_source_banner()
 
-    song_repo, embedding_repo, retrieval_service = get_repositories()
+    song_repo, _, _ = get_repositories()
     all_songs = song_repo.list_songs()
 
     if all_songs:
@@ -45,18 +37,6 @@ def render_overview() -> None:
         st.plotly_chart(
             library_waffle_grid(songs_df, genre_counts), width="stretch", key="overview_waffle_grid"
         )
-
-        viz_cols = st.columns([3, 2])
-        with viz_cols[0]:
-            st.caption("Genre composition")
-            st.plotly_chart(genre_breakdown_bar(genre_counts), width="stretch", key="overview_genre_bar")
-        with viz_cols[1]:
-            st.caption("Sonic clusters, discovered from audio alone — full map in **Explore**")
-            preview_df = _overview_cluster_preview_df(song_repo, embedding_repo, embedding_repo.index_size("sound"))
-            if not preview_df.empty:
-                st.plotly_chart(
-                    cluster_density_preview(preview_df), width="stretch", key="overview_cluster_preview"
-                )
 
     st.divider()
 

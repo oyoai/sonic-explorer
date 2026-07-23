@@ -65,10 +65,10 @@ def test_landing_page_no_longer_mentions_embedded_segments():
     assert "Embedded segments" not in caption_texts
 
 
-def test_landing_page_renders_waffle_and_cluster_visuals_without_exception():
-    """The waffle grid, genre-breakdown bar, and cluster-density preview all
-    must execute against the real repositories with no exception -- AppTest
-    in this Streamlit version has no typed plotly_chart accessor to assert
-    on directly, so a clean run is the meaningful check here."""
+def test_landing_page_renders_waffle_grid_without_exception():
+    """The waffle grid must execute against the real repositories with no
+    exception -- AppTest in this Streamlit version has no typed plotly_chart
+    accessor to assert on directly, so a clean run is the meaningful check
+    here."""
     at = _run_landing()
     assert not at.exception
