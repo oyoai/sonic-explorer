@@ -61,6 +61,21 @@ def test_methodology_page_has_case_study_subsections():
     assert any("6e. Does segment misalignment explain" in s for s in subheader_texts)
 
 
+def test_methodology_page_dna_example_is_computed_dynamically_not_missing():
+    """Regression test for a real deployed-app bug: 3a used to reference two
+    hardcoded song titles that didn't exist in the smaller deploy_data
+    subset, showing a literal warning instead of the DNA comparison. 3a now
+    computes its two examples from whatever library is actually loaded, so
+    this must never show that warning against the real repositories."""
+    at = _run_methodology()
+    warning_texts = " ".join(w.value for w in at.warning)
+    assert "not enough songs with computed dna" not in warning_texts.lower()
+
+    markdown_texts = " ".join(m.value for m in at.markdown)
+    assert "Slowest / calmest" in markdown_texts
+    assert "Fastest / most energetic" in markdown_texts
+
+
 def test_methodology_page_fingerprint_picker_switches_song():
     """The fingerprint picker (added so users can browse multiple structure
     examples, not just one hardcoded case) must actually re-render for a

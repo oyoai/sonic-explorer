@@ -75,21 +75,7 @@ NN_EXAMPLES = [
 
 FACET_ORDER = ["sound", "harmony", "vocal", "drums", "bass", "instrumental"]
 
-DNA_EXAMPLE_TITLES = {
-    "slow": "three lullabies 1",
-    "fast": "A ninja among culturachippers",
-}
-
-# A handful of songs spanning the structural-confidence range, so "scroll
-# through a few examples" has real variety to scroll through rather than one
-# fixed case -- picked from earlier candidate-gathering, not exhaustive.
-FINGERPRINT_EXAMPLE_TITLES = [
-    "Cipralex (c/ Pulso)",
-    "three lullabies 1",
-    "A ninja among culturachippers",
-    "Kodak Ghosts",
-    "OST 05 Go Go Go",
-]
+FINGERPRINT_GALLERY_SIZE = 5  # a few genuinely different songs to scroll through, not exhaustive
 
 # ---------------------------------------------------------------------------
 # Section 6's case-study evidence: real results from one-time experiments
@@ -361,10 +347,24 @@ st.write(
 )
 
 st.subheader("3a. Song DNA -- does it actually track fast/energetic vs. slow/calm?")
-st.write("Picked the two songs at opposite ends of a combined tempo+energy+rhythmic-density ranking:")
+st.write("The two songs at opposite ends of a combined tempo+energy+rhythmic-density ranking:")
 
-slow_song = _find_song(DNA_EXAMPLE_TITLES["slow"])
-fast_song = _find_song(DNA_EXAMPLE_TITLES["fast"])
+dna_songs_with_values = [s for s in all_songs if all(getattr(s, axis) is not None for axis in AXES)]
+dna_normalizer = build_dna_normalizer(song_repo, len(all_songs))
+normalized_dna_by_song = build_normalized_dna_by_song(song_repo, dna_normalizer, len(all_songs))
+
+# Picked dynamically from whatever library is actually loaded (full local
+# set or the deployed subset), not two hardcoded titles -- a fixed pair
+# could easily not exist in a smaller deployed subset (confirmed: it
+# didn't), and "genuine extremes of this distribution" is only a true claim
+# if the examples are recomputed against the distribution actually shown
+# below, not carried over from a different-sized library.
+_ranked_by_combined_dna = sorted(
+    (s for s in dna_songs_with_values if s.id in normalized_dna_by_song),
+    key=lambda s: sum(normalized_dna_by_song[s.id][a] for a in ("tempo_bpm", "energy", "rhythmic_density")),
+)
+slow_song = _ranked_by_combined_dna[0] if _ranked_by_combined_dna else None
+fast_song = _ranked_by_combined_dna[-1] if len(_ranked_by_combined_dna) > 1 else None
 
 if slow_song is not None and fast_song is not None:
     dna_cols = st.columns(2)
@@ -389,8 +389,6 @@ if slow_song is not None and fast_song is not None:
 - Rhythmic density: **{fast_song.rhythmic_density:.2f}**
 """)
 
-    dna_normalizer = build_dna_normalizer(song_repo, len(all_songs))
-    normalized_dna_by_song = build_normalized_dna_by_song(song_repo, dna_normalizer, len(all_songs))
     if slow_song.id in normalized_dna_by_song and fast_song.id in normalized_dna_by_song:
         axis_labels = [AXIS_LABELS[a] for a in AXES]
         slow_norm = normalized_dna_by_song[slow_song.id]
@@ -409,7 +407,7 @@ if slow_song is not None and fast_song is not None:
             "which is exactly what a clean fast/slow contrast should look like."
         )
 else:
-    st.warning("DNA example songs not found in the current library.")
+    st.warning("Not enough songs with computed DNA in the current library to show this comparison.")
 
 st.caption(
     "All five axes point the same direction for both songs -- a clean, internally consistent "
@@ -421,7 +419,6 @@ st.caption(
 )
 
 st.markdown("**Full-library distributions** -- where do these two examples sit against everyone else?")
-dna_songs_with_values = [s for s in all_songs if all(getattr(s, axis) is not None for axis in AXES)]
 if dna_songs_with_values:
     dna_hist_cols = st.columns(3)
     for i, axis in enumerate(AXES):
@@ -442,8 +439,8 @@ if dna_songs_with_values:
             st.plotly_chart(hist_fig, width="stretch", key=f"dna_hist_{axis}")
     st.caption(
         f"n={len(dna_songs_with_values)} songs with fully-computed DNA. Dashed lines mark the two "
-        "curated examples above (blue = slow, red = fast) -- both sit at genuine, non-cherry-picked "
-        "extremes of their respective distributions, not just relative to each other."
+        "examples above (blue = slow, red = fast) -- both are the genuine extremes of this exact "
+        "distribution, not carried over from a different library."
     )
 
 st.subheader("3b. Fingerprints -- structure, sound, harmony, and how they combine")
@@ -454,7 +451,20 @@ st.write(
     "see all of them together, exactly as the live Song X-Ray page renders them:"
 )
 
-fp_candidates = [t for t in FINGERPRINT_EXAMPLE_TITLES if _find_song(t) is not None]
+# One song per genre (first encountered in id order), up to a handful --
+# real variety without pinning to specific titles. Unlike 3a's DNA extremes
+# or 5b's curated matches, any reasonably diverse song demonstrates the
+# fingerprint feature equally well, so there's no evidence tied to specific
+# titles to preserve here -- dynamic selection is strictly more robust than
+# a fixed list that might not exist in a smaller deployed subset.
+_fp_seen_genres: set[str] = set()
+fp_candidates = []
+for _s in all_songs:
+    if _s.genre_top not in _fp_seen_genres:
+        _fp_seen_genres.add(_s.genre_top)
+        fp_candidates.append(_s.title)
+    if len(fp_candidates) >= FINGERPRINT_GALLERY_SIZE:
+        break
 fp_choice = st.selectbox("Pick a song", options=fp_candidates, key="walkthrough_fp_picker")
 fp_song = _find_song(fp_choice) if fp_choice else None
 

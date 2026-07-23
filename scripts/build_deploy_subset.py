@@ -26,6 +26,34 @@ FACETS = default_registry().names()  # sound, harmony, vocal, drums, bass, instr
 SOURCE_DATA_DIR = PROJECT_ROOT / "data"
 DEPLOY_DATA_DIR = PROJECT_ROOT / "deploy_data"
 
+# Songs whose exact identity matters to hardcoded evidence in Methodology's
+# 5b (real precomputed similarity scores + LLM-generated explanations tied
+# to these specific pairs -- see NN_EXAMPLES in
+# streamlit_app/pages/0_Methodology.py). Unlike that page's 3a/3b examples
+# (made dataset-size-agnostic instead, since any song works equally well
+# there), 5b's examples can't be dynamically substituted without regenerating
+# real explanations, so they're force-included here regardless of the random
+# stratified sample -- otherwise the deployed subset silently drops the
+# audio player for whichever of these the random draw missed (confirmed:
+# 23 of 24 were missing before this existed). Kept as a plain literal list
+# rather than imported from 0_Methodology.py, which isn't import-safe (its
+# module-level code calls Streamlit commands that need a real script run) --
+# if NN_EXAMPLES changes there, update this list too.
+REQUIRED_EXAMPLE_TITLES = [
+    "Terminally in Love With You", "Ave",
+    "Elektra (You Were Such Fun)", "Mr. Person",
+    "Ordinary Girl", "Plasma",
+    "Mad Honey", "This is based upon a true story",
+    "A Friendly Noose", "300 Days In July",
+    "something brewing", "Unless",
+    "Lovedropper", "western chow yun-fat",
+    "It's Okay, Roseanne", "Sillable",
+    "The Drop (Gung Who Version)", "The Beast Is A Computer In Luxemburg",
+    "Inspiration", "All I Am",
+    "Sam's Song", "Spot Rockers",
+    "Squinting at the Sun (radio edit)", "Do Easy",
+]
+
 
 def main():
     if not (SOURCE_DATA_DIR / "artifacts" / "sonic_explorer.db").exists():
@@ -57,6 +85,21 @@ def main():
         idx = rng.choice(len(songs), size=min(SONGS_PER_GENRE, len(songs)), replace=False)
         sampled.extend(songs[i] for i in idx)
     print(f"Sampled {len(sampled)} songs across {len(by_genre)} genres")
+
+    sampled_ids = {s.id for s in sampled}
+    songs_by_title = {s.title: s for s in all_songs}
+    n_added, n_missing = 0, 0
+    for title in REQUIRED_EXAMPLE_TITLES:
+        song = songs_by_title.get(title)
+        if song is None:
+            print(f"WARNING: required example song {title!r} not found in source library at all -- skipping")
+            n_missing += 1
+        elif song.id not in sampled_ids:
+            sampled.append(song)
+            sampled_ids.add(song.id)
+            n_added += 1
+    print(f"Force-included {n_added} required example songs not already in the sample "
+          f"({n_missing} missing from the source library entirely) -- {len(sampled)} songs total")
 
     n_audio_copied = 0
     n_structure_copied = 0
