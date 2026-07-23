@@ -25,11 +25,11 @@ GENRE_COHESION_RESULTS = {
     "sample_size": 500,
     "facets": [
         {"facet_name": "sound", "n_queries": 500, "observed_pct": 54.4, "random_baseline_pct": 11.9},
-        {"facet_name": "harmony", "n_queries": 500, "observed_pct": 21.2, "random_baseline_pct": 11.7},
-        {"facet_name": "vocal", "n_queries": 500, "observed_pct": 36.1, "random_baseline_pct": 11.7},
-        {"facet_name": "drums", "n_queries": 500, "observed_pct": 36.6, "random_baseline_pct": 11.7},
-        {"facet_name": "bass", "n_queries": 500, "observed_pct": 27.2, "random_baseline_pct": 11.7},
-        {"facet_name": "instrumental", "n_queries": 500, "observed_pct": 40.6, "random_baseline_pct": 11.7},
+        {"facet_name": "harmony", "n_queries": 500, "observed_pct": 21.4, "random_baseline_pct": 11.7},
+        {"facet_name": "vocal", "n_queries": 500, "observed_pct": 38.1, "random_baseline_pct": 13.9},
+        {"facet_name": "drums", "n_queries": 500, "observed_pct": 37.4, "random_baseline_pct": 13.1},
+        {"facet_name": "bass", "n_queries": 500, "observed_pct": 26.7, "random_baseline_pct": 12.5},
+        {"facet_name": "instrumental", "n_queries": 500, "observed_pct": 41.5, "random_baseline_pct": 11.8},
     ],
 }
 
@@ -83,18 +83,21 @@ st.plotly_chart(eval_fig, width="stretch", key="genre_cohesion_chart")
 
 st.caption(
     "Every facet clears its random baseline by a wide margin -- Sound strongest (54.4% vs. 11.9%), "
-    "Instrumental/Drums/Vocal in the middle (36-41%), Bass and Harmony weakest but still clearly "
+    "Instrumental/Vocal/Drums in the middle (37-42%), Bass and Harmony weakest but still clearly "
     "above chance (21-27%). The ablation-style finding: facets genuinely diverge from each other "
     "rather than one just riding Sound's coattails -- Harmony in particular captures something "
     "clearly different (and on this metric, weaker) than the full mix."
 )
 st.info(
-    "These numbers were captured before a stem-facet reprocessing pass currently underway (fixing "
-    "a data-quality issue where a handful of near-silent isolated stems were being indexed as if "
-    "meaningful). Expect Vocal/Drums/Bass/Instrumental numbers to shift slightly once that "
-    "finishes -- Sound is unaffected. Harmony's number here is also its pre-whitening baseline; "
-    "see Methodology §6c for the whitening experiment's own before/after measurement.",
-    icon="\U0001F6A7",
+    "These numbers reflect the completed stem-facet reprocessing pass (fixed a data-quality issue "
+    "where a handful of near-silent isolated stems were being indexed as if meaningful -- Sound and "
+    "Harmony were never affected, since neither depends on stem separation). The shift was real but "
+    "modest: Vocal/Drums/Instrumental all moved a couple points, and interestingly the *random-pair "
+    "baseline* moved too (11.7% -> 12.5-13.9% for the four stem facets) -- removing near-silent noise "
+    "from the index changed what a \"random\" pair typically looks like, not just what a \"good\" match "
+    "looks like. Harmony's number here is also its pre-whitening baseline; see Methodology §6c for "
+    "the whitening experiment's own before/after measurement.",
+    icon="✅",
 )
 
 st.divider()

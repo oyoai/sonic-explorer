@@ -62,6 +62,8 @@ def main():
     n_structure_copied = 0
     n_segments_copied = {facet_name: 0 for facet_name in FACETS}
     n_dna_copied = 0
+    n_description_copied = 0
+    n_sound_tags_copied = 0
 
     for old_song in sampled:
         new_song = Song(
@@ -83,6 +85,12 @@ def main():
                 rhythmic_density=old_song.rhythmic_density,
             )
             n_dna_copied += 1
+        if old_song.description:
+            dst_song_repo.update_description(new_song_id, old_song.description)
+            n_description_copied += 1
+        if old_song.sound_tags:
+            dst_song_repo.update_sound_tags(new_song_id, old_song.sound_tags)
+            n_sound_tags_copied += 1
 
         old_segments = src_song_repo.get_segments(old_song.id)
         new_segment_ids = dst_song_repo.add_segments(new_song_id, old_segments)
@@ -115,6 +123,8 @@ def main():
     print(f"Audio files copied: {n_audio_copied}")
     print(f"Structure artifacts copied: {n_structure_copied}")
     print(f"Song DNA copied: {n_dna_copied}")
+    print(f"Descriptions copied: {n_description_copied}")
+    print(f"Sound tags copied: {n_sound_tags_copied}")
     print(f"Deploy data written to {DEPLOY_DATA_DIR}")
 
 
