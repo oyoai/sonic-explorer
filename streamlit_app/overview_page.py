@@ -27,8 +27,37 @@ circular."""
 import pandas as pd
 import streamlit as st
 
-from components.plotting import library_waffle_grid
+from components.plotting import library_waffle_grid, network_graph_figure
 from resources import LOGO_PATH, get_repositories, show_data_source_banner, show_logo
+from sonic_explorer.analysis.network_graph import build_genre_similarity_graph, build_similarity_graph
+from sonic_explorer.analysis.taste_map import mean_pool_song_vectors
+
+
+@st.cache_data
+def _build_naive_vs_real_graphs(_song_repo, _embedding_repo, cache_key: int):
+    """Same songs, two edge rules: genre-tag-only (naive) vs. audio-embedding
+    cosine similarity (this project) -- built from the same vector set so the
+    comparison isolates the edge rule, not which songs are shown. cache_key
+    (song count) invalidates the cache when the library changes, since
+    _song_repo/_embedding_repo are excluded from Streamlit's cache hashing by
+    the leading underscore, same convention as Explore's build_explore_graph."""
+    songs_by_id = {s.id: s for s in _song_repo.list_songs()}
+    vectors = mean_pool_song_vectors(_song_repo, _embedding_repo)
+
+    real_result = build_similarity_graph(vectors)
+    genre_result = build_genre_similarity_graph({sid: songs_by_id[sid].genre_top for sid in vectors})
+
+    def _nodes_df(result):
+        return pd.DataFrame([
+            {
+                "song_id": n.song_id, "x": n.x, "y": n.y, "cluster": n.cluster,
+                "title": songs_by_id[n.song_id].title, "artist": songs_by_id[n.song_id].artist,
+                "genre": songs_by_id[n.song_id].genre_top,
+            }
+            for n in result.nodes
+        ])
+
+    return _nodes_df(genre_result), genre_result.edges, _nodes_df(real_result), real_result.edges
 
 
 def render_overview() -> None:
@@ -45,7 +74,7 @@ def render_overview() -> None:
     show_logo()
     show_data_source_banner()
 
-    song_repo, _, _ = get_repositories()
+    song_repo, embedding_repo, _ = get_repositories()
     all_songs = song_repo.list_songs()
 
     if all_songs:
@@ -93,14 +122,40 @@ def render_overview() -> None:
     )
 
     st.subheader("1.1 The naive approach — and why it falls short")
-    st.info(
-        "**Placeholder.** This subsection should show a concrete naive baseline (e.g. "
-        "genre-tag-based \"similarity\" — group songs by their label and call that similar) "
-        "running against a couple of real examples, to make the motivation tangible before the "
-        "facet-based approach is introduced. Not written yet — needs a real worked example "
-        "rather than an asserted claim, so it's left as a stub instead of guessed at.",
-        icon="\U0001F6A7",
+    st.write(
+        "A tag-only system calls two songs \"similar\" because they share a genre label — no "
+        "listening involved. Below are the same songs, laid out two ways: **left**, an edge is "
+        "drawn only if two songs share a genre tag; **right**, an edge is drawn if two songs' "
+        "audio embeddings are actually close. Same songs, same number of edges per song — the "
+        "only thing that changes between the two graphs is the rule for drawing a line."
     )
+
+    if all_songs:
+        genre_nodes, genre_edges, real_nodes, real_edges = _build_naive_vs_real_graphs(
+            song_repo, embedding_repo, len(all_songs)
+        )
+        if not real_nodes.empty:
+            col_naive, col_real = st.columns(2)
+            with col_naive:
+                st.caption("**Naive — genre tag only.** Every edge is a shared label, nothing heard.")
+                st.plotly_chart(
+                    network_graph_figure(genre_nodes, genre_edges), width="stretch", key="overview_genre_graph"
+                )
+            with col_real:
+                st.caption("**This project — audio embeddings.** Edges come from what the audio sounds like.")
+                st.plotly_chart(
+                    network_graph_figure(real_nodes, real_edges), width="stretch", key="overview_real_graph"
+                )
+            st.caption(
+                "The naive graph's islands are fully genre-separated by construction — a genre-only "
+                "edge rule can never connect two different genres. The audio graph has no such "
+                "restriction, and its cross-genre edges are exactly the connections a tag-only system "
+                "could never find."
+            )
+        else:
+            st.info("No embedded songs available yet to build this comparison.", icon="\U0001F6A7")
+    else:
+        st.info("No songs available yet to build this comparison.", icon="\U0001F6A7")
 
     st.subheader("1.2 Related work")
     st.caption(
