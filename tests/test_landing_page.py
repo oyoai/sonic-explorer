@@ -48,14 +48,25 @@ def test_landing_page_has_naive_baseline_placeholder_and_real_related_work():
     assert "dropped" in warning_texts.lower()
 
 
-def test_landing_page_renders_animated_stats_iframe():
+def test_landing_page_reports_real_song_and_genre_counts():
+    """Regression guard for the stat-box -> waffle-grid replacement: the
+    caption above the grid must show real, computed numbers, not a stale
+    hardcoded string."""
     at = _run_landing()
-    iframe_found = any(type(node).__name__ == "UnknownElement" for node in at.main.children.values())
-    assert iframe_found
+    caption_texts = [c.value for c in at.caption]
+    assert any("songs across" in c and "genres" in c for c in caption_texts)
 
 
-def test_landing_page_renders_genre_and_cluster_visuals_without_exception():
-    """Both new Plotly visuals (genre-breakdown bar, cluster density preview)
+def test_landing_page_no_longer_mentions_embedded_segments():
+    """The 'Embedded segments' stat was removed outright -- it referenced a
+    concept (segments) never explained this early on the page."""
+    at = _run_landing()
+    caption_texts = " ".join(c.value for c in at.caption)
+    assert "Embedded segments" not in caption_texts
+
+
+def test_landing_page_renders_waffle_and_cluster_visuals_without_exception():
+    """The waffle grid, genre-breakdown bar, and cluster-density preview all
     must execute against the real repositories with no exception -- AppTest
     in this Streamlit version has no typed plotly_chart accessor to assert
     on directly, so a clean run is the meaningful check here."""

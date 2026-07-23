@@ -7,8 +7,7 @@ import pandas as pd
 import streamlit as st
 
 from sonic_explorer.analysis.taste_map import compute_taste_map, mean_pool_song_vectors
-from components.animated_stats import animated_stat_row
-from components.plotting import cluster_density_preview, genre_breakdown_bar
+from components.plotting import cluster_density_preview, genre_breakdown_bar, library_waffle_grid
 from resources import LOGO_PATH, get_repositories, show_data_source_banner, show_logo
 
 
@@ -37,18 +36,14 @@ def render_overview() -> None:
     all_songs = song_repo.list_songs()
 
     if all_songs:
-        genres = sorted({s.genre_top for s in all_songs})
         genre_counts: dict[str, int] = {}
         for s in all_songs:
             genre_counts[s.genre_top] = genre_counts.get(s.genre_top, 0) + 1
 
-        st.iframe(
-            animated_stat_row([
-                ("Songs in library", len(all_songs)),
-                ("Genres", len(genres)),
-                ("Embedded segments (sound facet)", embedding_repo.index_size("sound")),
-            ]),
-            height=100,
+        st.caption(f"{len(all_songs)} songs across {len(genre_counts)} genres — one square per song")
+        songs_df = pd.DataFrame([{"title": s.title, "genre": s.genre_top} for s in all_songs])
+        st.plotly_chart(
+            library_waffle_grid(songs_df, genre_counts), width="stretch", key="overview_waffle_grid"
         )
 
         viz_cols = st.columns([3, 2])

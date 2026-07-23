@@ -14,7 +14,13 @@ import pandas as pd
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "streamlit_app"))
 
-from components.plotting import cluster_density_preview, extract_selected_song_id, genre_breakdown_bar, network_graph_figure
+from components.plotting import (
+    cluster_density_preview,
+    extract_selected_song_id,
+    genre_breakdown_bar,
+    library_waffle_grid,
+    network_graph_figure,
+)
 
 
 def test_network_graph_figure_customdata_round_trips_song_ids():
@@ -69,6 +75,47 @@ def test_genre_breakdown_bar_sorted_descending_by_count():
 
 def test_genre_breakdown_bar_empty_counts_does_not_raise():
     fig = genre_breakdown_bar({})
+    assert len(fig.data) == 0
+
+
+def test_genre_breakdown_bar_and_waffle_grid_share_colors():
+    """The bar and the waffle grid must assign the same color to the same
+    genre -- both derive from the same _genre_color_map helper."""
+    genre_counts = {"Rock": 10, "Jazz": 5, "Pop": 15}
+    songs_df = pd.DataFrame([
+        {"title": "A", "genre": "Rock"}, {"title": "B", "genre": "Jazz"}, {"title": "C", "genre": "Pop"},
+    ])
+
+    bar_colors = {trace.name: trace.marker.color for trace in genre_breakdown_bar(genre_counts).data}
+    waffle_colors = {
+        trace.name.rsplit(" (", 1)[0]: trace.marker.color for trace in library_waffle_grid(songs_df, genre_counts).data
+    }
+
+    assert bar_colors == waffle_colors
+
+
+def test_library_waffle_grid_one_cell_per_song():
+    songs_df = pd.DataFrame([{"title": f"Song {i}", "genre": "Rock"} for i in range(12)])
+    fig = library_waffle_grid(songs_df, {"Rock": 12})
+
+    total_cells = sum(len(trace.x) for trace in fig.data)
+    assert total_cells == 12
+
+
+def test_library_waffle_grid_legend_shows_every_genre_and_count():
+    songs_df = pd.DataFrame(
+        [{"title": f"R{i}", "genre": "Rock"} for i in range(3)]
+        + [{"title": f"J{i}", "genre": "Jazz"} for i in range(2)]
+    )
+    fig = library_waffle_grid(songs_df, {"Rock": 3, "Jazz": 2})
+
+    names = {trace.name for trace in fig.data}
+    assert names == {"Rock (3)", "Jazz (2)"}
+
+
+def test_library_waffle_grid_empty_library_does_not_raise():
+    songs_df = pd.DataFrame(columns=["title", "genre"])
+    fig = library_waffle_grid(songs_df, {})
     assert len(fig.data) == 0
 
 

@@ -1,5 +1,7 @@
 """Shared Plotly rendering helpers for the interface layer."""
 
+import math
+
 import plotly.express as px
 import plotly.graph_objects as go
 
@@ -7,6 +9,17 @@ import plotly.graph_objects as go
 # value, avoiding misread intensity -- an actual data-viz standard, not a
 # decorative choice. All three are built into Plotly, no extra dependency.
 FINGERPRINT_COLORSCALE = "Magma"
+
+_GENRE_PALETTE = px.colors.qualitative.Set2
+
+
+def _genre_color_map(genre_counts: dict[str, int]) -> dict[str, str]:
+    """Consistent genre->color assignment, sorted largest-genre-first --
+    shared by every genre-colored visual on the Overview page (the waffle
+    grid and the composition bar) so the same genre reads as the same color
+    in both rather than each picking colors independently."""
+    ordered = sorted(genre_counts.keys(), key=lambda g: -genre_counts[g])
+    return {genre: _GENRE_PALETTE[i % len(_GENRE_PALETTE)] for i, genre in enumerate(ordered)}
 
 
 def extract_selected_song_id(point):
@@ -109,13 +122,13 @@ def genre_breakdown_bar(genre_counts: dict[str, int]) -> go.Figure:
     edge, matching how Methodology's own genre bar chart orders things."""
     items = sorted(genre_counts.items(), key=lambda kv: -kv[1])
     total = sum(genre_counts.values()) or 1
-    palette = px.colors.qualitative.Set2
+    color_map = _genre_color_map(genre_counts)
 
     fig = go.Figure()
-    for i, (genre, count) in enumerate(items):
+    for genre, count in items:
         fig.add_trace(go.Bar(
             x=[count], y=["Library"], orientation="h", name=genre,
-            marker=dict(color=palette[i % len(palette)]),
+            marker=dict(color=color_map[genre]),
             text=f"{genre} ({count / total:.0%})", textposition="inside", insidetextanchor="middle",
             hovertemplate=f"{genre}: {count} songs (%{{customdata:.0%}})<extra></extra>",
             customdata=[count / total],
@@ -127,6 +140,58 @@ def genre_breakdown_bar(genre_counts: dict[str, int]) -> go.Figure:
         showlegend=False,
         xaxis=dict(visible=False),
         yaxis=dict(visible=False),
+        plot_bgcolor="rgba(0,0,0,0)",
+        paper_bgcolor="rgba(0,0,0,0)",
+    )
+    return fig
+
+
+def library_waffle_grid(songs_df, genre_counts: dict[str, int]) -> go.Figure:
+    """One small square per song (songs_df needs columns title, genre),
+    arranged in contiguous same-genre blocks -- the classic waffle-chart
+    convention -- so genre proportions read directly from the grid's shape,
+    not just individual colors. One trace per genre gives Plotly's native
+    legend (color swatch + name + count) for free, readable without hovering
+    anything; hovering a single cell additionally shows that one song's
+    title and genre. Grid/cell size adapts to library size so this stays a
+    lightweight, roughly-fixed-height landing-page element whether it's
+    rendering a 200-song deploy subset or the full ~1400-song local library."""
+    color_map = _genre_color_map(genre_counts)
+    ordered_genres = sorted(genre_counts.keys(), key=lambda g: -genre_counts[g])
+
+    songs_by_genre: dict[str, list[str]] = {g: [] for g in ordered_genres}
+    for row in songs_df.itertuples():
+        if row.genre in songs_by_genre:
+            songs_by_genre[row.genre].append(row.title)
+
+    n = len(songs_df)
+    cols = max(1, math.ceil(math.sqrt(n * 2.2))) if n else 1
+    rows = math.ceil(n / cols) if cols else 1
+    cell_px = max(4, min(14, 260 // max(rows, 1)))
+
+    fig = go.Figure()
+    position = 0
+    for genre in ordered_genres:
+        titles = songs_by_genre[genre]
+        xs, ys, hover = [], [], []
+        for title in titles:
+            row_idx, col_idx = divmod(position, cols)
+            xs.append(col_idx)
+            ys.append(-row_idx)
+            hover.append(f"{title} — {genre}")
+            position += 1
+        fig.add_trace(go.Scatter(
+            x=xs, y=ys, mode="markers", name=f"{genre} ({len(titles)})",
+            marker=dict(symbol="square", size=cell_px, color=color_map[genre], line=dict(width=0)),
+            hovertext=hover, hoverinfo="text",
+        ))
+
+    fig.update_layout(
+        height=rows * cell_px + 110,
+        margin=dict(l=0, r=0, t=0, b=0),
+        xaxis=dict(visible=False, range=[-1, cols]),
+        yaxis=dict(visible=False, range=[-rows, 1], scaleanchor="x", scaleratio=1),
+        legend=dict(orientation="h", yanchor="top", y=-0.08, x=0.5, xanchor="center", font=dict(size=11)),
         plot_bgcolor="rgba(0,0,0,0)",
         paper_bgcolor="rgba(0,0,0,0)",
     )
