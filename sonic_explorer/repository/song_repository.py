@@ -57,6 +57,10 @@ class SongRepository:
             is_saved=bool(row["is_saved"]),
             description=row["description"],
             sound_tags=row["sound_tags"],
+            genres_all=row["genres_all"],
+            album_id=row["album_id"],
+            album_title=row["album_title"],
+            track_tags=row["track_tags"],
         )
 
     def update_description(self, song_id: int, description: str) -> None:
@@ -69,6 +73,19 @@ class SongRepository:
         opaquely, same as every other repository method's relationship to
         its column, no parsing here."""
         self.conn.execute("UPDATE songs SET sound_tags = ? WHERE id = ?", (sound_tags, song_id))
+        self.conn.commit()
+
+    def update_metadata_extras(
+        self, song_id: int, genres_all: str | None, album_id: int | None,
+        album_title: str | None, track_tags: str | None,
+    ) -> None:
+        """genres_all/track_tags are JSON-encoded strings, stored opaquely
+        (see scripts/enrich_fma_metadata.py) -- same discipline as
+        update_sound_tags(), no parsing here."""
+        self.conn.execute(
+            "UPDATE songs SET genres_all = ?, album_id = ?, album_title = ?, track_tags = ? WHERE id = ?",
+            (genres_all, album_id, album_title, track_tags, song_id),
+        )
         self.conn.commit()
 
     def save_song(self, song_id: int) -> None:

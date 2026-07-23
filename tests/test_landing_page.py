@@ -31,16 +31,17 @@ def test_landing_page_is_not_a_passthrough():
 
 
 def test_landing_page_has_naive_vs_real_comparison_and_real_related_work():
-    """1.1 is now a real naive-vs-audio graph comparison (no longer a
-    placeholder); 1.2 has real (web-verified) citations -- regression guard
-    against either silently reverting to a stub."""
+    """1.1 is now a real naive-vs-audio graph comparison, combining every
+    available non-audio metadata signal rather than a genre-only strawman
+    (no longer a placeholder); 1.2 has real (web-verified) citations --
+    regression guard against either silently reverting to a stub."""
     at = _run_landing()
     subheader_texts = [s.value for s in at.subheader]
     assert any("naive approach" in s for s in subheader_texts)
     assert any("Related work" in s for s in subheader_texts)
 
     caption_texts = " ".join(c.value for c in at.caption)
-    assert "genre tag only" in caption_texts
+    assert "genre + genre hierarchy + album + tags" in caption_texts
     assert "audio embeddings" in caption_texts
 
     markdown_texts = " ".join(m.value for m in at.markdown)
@@ -54,9 +55,9 @@ def test_landing_page_has_naive_vs_real_comparison_and_real_related_work():
 
 
 def test_landing_page_renders_naive_vs_real_graphs_without_exception():
-    """The two side-by-side network graphs (genre-tag-only vs. audio
-    embeddings) in 1.1 must execute against the real repositories with no
-    exception -- AppTest has no typed plotly_chart accessor to assert on
+    """The two side-by-side network graphs (combined metadata baseline vs.
+    audio embeddings) in 1.1 must execute against the real repositories with
+    no exception -- AppTest has no typed plotly_chart accessor to assert on
     directly here either, so a clean run is the meaningful check."""
     at = _run_landing()
     assert not at.exception

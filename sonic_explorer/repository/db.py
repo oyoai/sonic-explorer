@@ -62,6 +62,10 @@ _MIGRATIONS: dict[str, list[tuple[str, str]]] = {
         ("is_saved", "INTEGER DEFAULT 0"),
         ("description", "TEXT"),
         ("sound_tags", "TEXT"),
+        ("genres_all", "TEXT"),
+        ("album_id", "INTEGER"),
+        ("album_title", "TEXT"),
+        ("track_tags", "TEXT"),
     ],
 }
 

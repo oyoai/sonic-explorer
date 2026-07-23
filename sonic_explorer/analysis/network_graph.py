@@ -11,16 +11,19 @@ Explore (global) and My Library both call build_similarity_graph() with a
 different song_vectors dict (all songs vs. only saved ones) -- one
 implementation, filtered by what's passed in, not a second code path.
 
-build_genre_similarity_graph() is the naive baseline for Overview section
-1.1: "similarity" here is a genre indicator (1.0 same genre, 0.0 otherwise)
-instead of cosine similarity over audio embeddings -- no audio analysis at
-all. It reuses the exact same k-NN + spring-layout + clustering pipeline as
-the real graph rather than connecting every same-genre pair as a full clique:
-a literal clique scales O(songs-per-genre^2) and would produce ~120k edges
-at this project's full ~1400-song library (unrenderable), while k-NN sampling
-stays O(songs * k) at any library size and still shows the thing the
-comparison is meant to show -- fully genre-siloed islands with zero
-cross-genre edges, next to the real graph's cross-genre bridges.
+build_metadata_similarity_graph() is the naive baseline for Overview section
+1.1 -- deliberately the *strongest* defensible non-audio baseline, not a
+genre-only strawman: it averages four independently-computed [0, 1]
+similarity signals (genre_top match, FMA's fuller genres_all overlap, same-
+album membership, free-text tag overlap), none of which involve listening to
+the audio at all. It reuses the exact same k-NN + spring-layout + clustering
+pipeline as the real graph rather than connecting every same-genre pair as a
+full clique: a literal clique scales O(songs-per-genre^2) and would produce
+~120k edges at this project's full ~1400-song library (unrenderable), while
+k-NN sampling stays O(songs * k) at any library size and still shows the
+thing the comparison is meant to show -- mostly genre-clustered songs with
+occasional real cross-genre edges (shared tag, shared album) the audio graph
+is free to draw far more of.
 
 build_blended_similarity_graph() supports picking several facets at once
 (e.g. sound + vocal): it blends by averaging each facet's independently-
@@ -135,28 +138,102 @@ def build_similarity_graph(
     return _graph_from_similarity(song_ids, sims, matrix, k_neighbors, n_clusters, random_state)
 
 
-def build_genre_similarity_graph(
-    song_genres: dict[int, str],
+@dataclass
+class SongMetadata:
+    genre_top: str
+    genres_all: frozenset = frozenset()  # FMA sub-genre IDs (int)
+    album_id: int | None = None
+    tags: frozenset = frozenset()  # uploader-supplied free text (str)
+
+
+def _jaccard_similarity_matrix(sets: list[frozenset], vocabulary: list) -> np.ndarray:
+    """Vectorized Jaccard overlap over a shared multi-hot encoding -- an n^2
+    matrix multiply, not a Python double loop, so this stays cheap at library
+    scale. Two empty sets never count as similar (0/0 -> 0, not 1): "neither
+    song has any tags" isn't evidence they're alike."""
+    vocab_index = {item: i for i, item in enumerate(vocabulary)}
+    multi_hot = np.zeros((len(sets), len(vocabulary)))
+    for i, s in enumerate(sets):
+        for item in s:
+            multi_hot[i, vocab_index[item]] = 1.0
+    intersection = multi_hot @ multi_hot.T
+    row_sums = multi_hot.sum(axis=1)
+    union = row_sums[:, None] + row_sums[None, :] - intersection
+    return np.divide(intersection, union, out=np.zeros_like(intersection), where=union > 0)
+
+
+def _exact_match_similarity_matrix(values: list) -> np.ndarray:
+    """1.0 where two songs share the same non-null value (e.g. album_id),
+    0.0 otherwise -- two songs both missing the value must never count as a
+    match, so each None is remapped to its own unique sentinel first."""
+    resolved = []
+    next_sentinel = -1
+    for v in values:
+        if v is None:
+            resolved.append(next_sentinel)
+            next_sentinel -= 1
+        else:
+            resolved.append(v)
+    arr = np.array(resolved).reshape(-1, 1)
+    return (arr == arr.T).astype(float)
+
+
+def build_metadata_similarity_graph(
+    song_metadata: dict[int, SongMetadata],
     k_neighbors: int = DEFAULT_K_NEIGHBORS,
     random_state: int = 42,
 ) -> NetworkGraphResult:
-    """The naive, audio-free baseline: songs are "similar" iff they share a
-    genre tag. song_genres is {song_id: genre_top}. Clusters are the genres
-    themselves (one-hot vectors of the same genre are identical points, so
-    KMeans with n_clusters = number of distinct genres always separates them
-    perfectly -- no coincidental overlap to worry about)."""
-    song_ids = list(song_genres.keys())
+    """No single metadata field is a fair audio-free baseline on its own
+    (genre_top alone is a strawman), so this equal-weight-averages four
+    independently-computed [0, 1] similarity signals -- genre_top match,
+    genres_all overlap, same-album membership, tag overlap -- the same
+    blend-independent-[0,1]-scores approach build_blended_similarity_graph
+    already uses for audio facets (see module docstring), reused here for a
+    second kind of heterogeneous signal rather than inventing a new design.
+    Equal weights, not hand-tuned ones: nothing here was picked to nudge the
+    outcome toward a particular story. A signal that's empty across the
+    whole library (e.g. no song has recovered tag data) safely contributes a
+    zero matrix rather than distorting the average.
+
+    Clusters are still genre_top (via the same one-hot-KMeans trick as the
+    single-signal version this replaced), purely so every graph on the page
+    uses consistent, readable color-coding -- edges are free to cross those
+    colors now (a shared tag or album can connect two genres), which is the
+    point: any cross-genre edge here is real recovered metadata signal, not
+    a structural impossibility the way it was for a genre-only baseline."""
+    song_ids = list(song_metadata.keys())
     if not song_ids:
         return NetworkGraphResult(nodes=[], edges=[])
 
-    genres = sorted({g for g in song_genres.values()})
+    genres = sorted({m.genre_top for m in song_metadata.values()})
     genre_index = {g: i for i, g in enumerate(genres)}
-    one_hot = np.zeros((len(song_ids), len(genres)))
+    genre_one_hot = np.zeros((len(song_ids), len(genres)))
     for i, sid in enumerate(song_ids):
-        one_hot[i, genre_index[song_genres[sid]]] = 1.0
+        genre_one_hot[i, genre_index[song_metadata[sid].genre_top]] = 1.0
 
-    sims = one_hot @ one_hot.T if len(song_ids) >= 2 else None
-    return _graph_from_similarity(song_ids, sims, one_hot, k_neighbors, len(genres), random_state)
+    if len(song_ids) < 2:
+        return _graph_from_similarity(song_ids, None, genre_one_hot, k_neighbors, len(genres), random_state)
+
+    genre_sim = genre_one_hot @ genre_one_hot.T
+
+    all_sub_genres = sorted({g for m in song_metadata.values() for g in m.genres_all})
+    genres_all_sim = (
+        _jaccard_similarity_matrix([song_metadata[sid].genres_all for sid in song_ids], all_sub_genres)
+        if all_sub_genres
+        else np.zeros((len(song_ids), len(song_ids)))
+    )
+
+    album_sim = _exact_match_similarity_matrix([song_metadata[sid].album_id for sid in song_ids])
+
+    all_tags = sorted({t for m in song_metadata.values() for t in m.tags})
+    tags_sim = (
+        _jaccard_similarity_matrix([song_metadata[sid].tags for sid in song_ids], all_tags)
+        if all_tags
+        else np.zeros((len(song_ids), len(song_ids)))
+    )
+
+    combined_sims = (genre_sim + genres_all_sim + album_sim + tags_sim) / 4.0
+    return _graph_from_similarity(song_ids, combined_sims, genre_one_hot, k_neighbors, len(genres), random_state)
 
 
 def build_blended_similarity_graph(

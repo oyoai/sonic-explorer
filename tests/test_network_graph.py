@@ -2,8 +2,9 @@ import numpy as np
 import pytest
 
 from sonic_explorer.analysis.network_graph import (
+    SongMetadata,
     build_blended_similarity_graph,
-    build_genre_similarity_graph,
+    build_metadata_similarity_graph,
     build_similarity_graph,
 )
 
@@ -173,56 +174,106 @@ def test_build_blended_similarity_graph_handles_single_common_song():
     assert result.edges == []
 
 
-def test_build_genre_similarity_graph_handles_empty_input():
-    result = build_genre_similarity_graph({})
+def test_build_metadata_similarity_graph_handles_empty_input():
+    result = build_metadata_similarity_graph({})
     assert result.nodes == []
     assert result.edges == []
 
 
-def test_build_genre_similarity_graph_handles_single_song():
-    result = build_genre_similarity_graph({1: "Rock"})
+def test_build_metadata_similarity_graph_handles_single_song():
+    result = build_metadata_similarity_graph({1: SongMetadata(genre_top="Rock")})
     assert len(result.nodes) == 1
     assert result.nodes[0].song_id == 1
     assert result.edges == []
 
 
-def test_build_genre_similarity_graph_edges_never_cross_genres():
-    """The whole point of the naive baseline: zero audio analysis, so a song
-    can never be connected to a song of a different genre."""
-    song_genres = {i: "Rock" for i in range(10)} | {i + 100: "Jazz" for i in range(10)}
+def test_build_metadata_similarity_graph_genre_only_still_isolates_by_genre():
+    """With no genres_all/album/tags data at all (the common case until
+    enrichment has run), this must behave exactly like the old genre-only
+    baseline: zero cross-genre edges."""
+    metadata = {i: SongMetadata(genre_top="Rock") for i in range(10)} | {
+        i + 100: SongMetadata(genre_top="Jazz") for i in range(10)
+    }
 
-    result = build_genre_similarity_graph(song_genres, k_neighbors=3)
+    result = build_metadata_similarity_graph(metadata, k_neighbors=3)
 
     for edge in result.edges:
-        assert song_genres[edge.song_id_a] == song_genres[edge.song_id_b]
+        assert metadata[edge.song_id_a].genre_top == metadata[edge.song_id_b].genre_top
 
 
-def test_build_genre_similarity_graph_clusters_match_genres_exactly():
-    song_genres = {i: "Rock" for i in range(5)} | {i + 100: "Jazz" for i in range(5)}
+def test_build_metadata_similarity_graph_shared_album_can_cross_genres():
+    """The whole point of strengthening the baseline beyond genre-only: a
+    real non-audio signal (same album) can legitimately connect two
+    different genres, unlike the old genre-only version where that was
+    structurally impossible."""
+    metadata = {
+        1: SongMetadata(genre_top="Rock", album_id=99),
+        2: SongMetadata(genre_top="Jazz", album_id=99),  # same album, different genre
+        3: SongMetadata(genre_top="Pop", album_id=1),
+        4: SongMetadata(genre_top="Classical", album_id=2),
+    }
 
-    result = build_genre_similarity_graph(song_genres, k_neighbors=2)
+    result = build_metadata_similarity_graph(metadata, k_neighbors=1)
 
-    rock_clusters = {n.cluster for n in result.nodes if song_genres[n.song_id] == "Rock"}
-    jazz_clusters = {n.cluster for n in result.nodes if song_genres[n.song_id] == "Jazz"}
+    edge_pairs = {frozenset((e.song_id_a, e.song_id_b)) for e in result.edges}
+    assert frozenset((1, 2)) in edge_pairs
+
+
+def test_build_metadata_similarity_graph_shared_tags_boost_similarity():
+    metadata = {
+        1: SongMetadata(genre_top="Rock", tags=frozenset({"chill", "instrumental"})),
+        2: SongMetadata(genre_top="Rock", tags=frozenset({"chill", "instrumental"})),
+        3: SongMetadata(genre_top="Rock", tags=frozenset({"aggressive"})),
+    }
+
+    result = build_metadata_similarity_graph(metadata, k_neighbors=1)
+
+    edge_pairs = {frozenset((e.song_id_a, e.song_id_b)) for e in result.edges}
+    assert frozenset((1, 2)) in edge_pairs  # closer match should win the single k=1 slot
+
+
+def test_build_metadata_similarity_graph_empty_optional_signals_dont_crash():
+    """No song has genres_all/tags data and no two share an album -- every
+    optional signal matrix is all-zero, so this degrades to genre_sim/4
+    everywhere, not a divide-by-zero or shape error."""
+    metadata = {i: SongMetadata(genre_top="Rock" if i % 2 == 0 else "Jazz") for i in range(8)}
+
+    result = build_metadata_similarity_graph(metadata, k_neighbors=2)
+
+    assert len(result.nodes) == 8
+    for edge in result.edges:
+        assert 0.0 <= edge.weight <= 1.0 + 1e-9
+
+
+def test_build_metadata_similarity_graph_clusters_still_match_genre():
+    metadata = {i: SongMetadata(genre_top="Rock") for i in range(5)} | {
+        i + 100: SongMetadata(genre_top="Jazz", album_id=1) for i in range(5)
+    }
+
+    result = build_metadata_similarity_graph(metadata, k_neighbors=2)
+
+    rock_clusters = {n.cluster for n in result.nodes if metadata[n.song_id].genre_top == "Rock"}
+    jazz_clusters = {n.cluster for n in result.nodes if metadata[n.song_id].genre_top == "Jazz"}
     assert len(rock_clusters) == 1
     assert len(jazz_clusters) == 1
     assert rock_clusters != jazz_clusters
 
 
-def test_build_genre_similarity_graph_edge_count_scales_with_k_not_genre_size():
-    """Regression guard for the reason this exists instead of a literal
-    per-genre clique: edge count must stay close to n*k/2, not blow up to
-    O(songs_per_genre^2), even with a large single genre."""
-    song_genres = {i: "Rock" for i in range(200)}
+def test_build_metadata_similarity_graph_edge_count_scales_with_k_not_genre_size():
+    """Regression guard for the reason this reuses k-NN sampling instead of a
+    literal per-genre clique: edge count must stay close to n*k/2, not blow
+    up to O(songs_per_genre^2), even with a large single genre."""
+    metadata = {i: SongMetadata(genre_top="Rock") for i in range(200)}
 
-    result = build_genre_similarity_graph(song_genres, k_neighbors=4)
+    result = build_metadata_similarity_graph(metadata, k_neighbors=4)
 
     assert len(result.edges) < 200 * 4  # well under a clique's ~19900 edges
 
 
-def test_build_genre_similarity_graph_all_nodes_present():
-    song_genres = {i: g for i, g in enumerate(["Rock", "Jazz", "Pop", "Rock", "Pop"])}
+def test_build_metadata_similarity_graph_all_nodes_present():
+    genres = ["Rock", "Jazz", "Pop", "Rock", "Pop"]
+    metadata = {i: SongMetadata(genre_top=g) for i, g in enumerate(genres)}
 
-    result = build_genre_similarity_graph(song_genres, k_neighbors=2)
+    result = build_metadata_similarity_graph(metadata, k_neighbors=2)
 
-    assert {n.song_id for n in result.nodes} == set(song_genres.keys())
+    assert {n.song_id for n in result.nodes} == set(metadata.keys())

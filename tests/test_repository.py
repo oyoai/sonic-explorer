@@ -248,6 +248,54 @@ def test_migration_adds_description_column_to_pre_existing_db(tmp_path):
     assert repo.get_song(song.id).sound_tags == '[["Crow", 0.3]]'
 
 
+def test_new_song_has_no_metadata_extras_by_default(song_repo):
+    song_id = song_repo.add_song(make_song())
+    song = song_repo.get_song(song_id)
+    assert song.genres_all is None
+    assert song.album_id is None
+    assert song.album_title is None
+    assert song.track_tags is None
+
+
+def test_update_metadata_extras_round_trips(song_repo):
+    song_id = song_repo.add_song(make_song())
+    song_repo.update_metadata_extras(
+        song_id, genres_all="[15, 12]", album_id=42, album_title="Test Album", track_tags='["chill", "ambient"]'
+    )
+    song = song_repo.get_song(song_id)
+    assert song.genres_all == "[15, 12]"
+    assert song.album_id == 42
+    assert song.album_title == "Test Album"
+    assert song.track_tags == '["chill", "ambient"]'
+
+
+def test_migration_adds_metadata_extras_columns_to_pre_existing_db(tmp_path):
+    """Same class of regression as the description/sound_tags migration test:
+    a DB created before these FMA-enrichment columns existed must gain them
+    (defaulting to NULL/None) without losing existing data."""
+    import sqlite3
+
+    from sonic_explorer.repository.db import SCHEMA, init_db
+
+    db_path = tmp_path / "old.db"
+    raw_conn = sqlite3.connect(str(db_path))
+    raw_conn.executescript(SCHEMA)
+    raw_conn.execute(
+        "INSERT INTO songs (fma_track_id, filepath, title, artist, genre_top, duration_sec) "
+        "VALUES (1, '/x.mp3', 'Old Song', 'Artist', 'Rock', 30.0)"
+    )
+    raw_conn.commit()
+    raw_conn.close()
+
+    conn = init_db(db_path)
+    repo = SongRepository(conn)
+    song = repo.get_song_by_fma_track_id(1)
+
+    assert song.genres_all is None
+    repo.update_metadata_extras(song.id, genres_all="[15]", album_id=1, album_title="A", track_tags="[]")
+    assert repo.get_song(song.id).genres_all == "[15]"
+
+
 def test_add_segments_and_get_segments(song_repo):
     song_id = song_repo.add_song(make_song())
     segments = [

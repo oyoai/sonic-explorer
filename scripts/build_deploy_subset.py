@@ -64,6 +64,7 @@ def main():
     n_dna_copied = 0
     n_description_copied = 0
     n_sound_tags_copied = 0
+    n_metadata_extras_copied = 0
 
     for old_song in sampled:
         new_song = Song(
@@ -91,6 +92,15 @@ def main():
         if old_song.sound_tags:
             dst_song_repo.update_sound_tags(new_song_id, old_song.sound_tags)
             n_sound_tags_copied += 1
+        if old_song.genres_all or old_song.album_id or old_song.track_tags:
+            dst_song_repo.update_metadata_extras(
+                new_song_id,
+                genres_all=old_song.genres_all,
+                album_id=old_song.album_id,
+                album_title=old_song.album_title,
+                track_tags=old_song.track_tags,
+            )
+            n_metadata_extras_copied += 1
 
         old_segments = src_song_repo.get_segments(old_song.id)
         new_segment_ids = dst_song_repo.add_segments(new_song_id, old_segments)
@@ -125,6 +135,7 @@ def main():
     print(f"Song DNA copied: {n_dna_copied}")
     print(f"Descriptions copied: {n_description_copied}")
     print(f"Sound tags copied: {n_sound_tags_copied}")
+    print(f"FMA metadata extras (genres_all/album/tags) copied: {n_metadata_extras_copied}")
     print(f"Deploy data written to {DEPLOY_DATA_DIR}")
 
 
