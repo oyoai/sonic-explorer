@@ -30,8 +30,34 @@ def test_landing_page_is_not_a_passthrough():
     assert "1. What this is" in header_texts
 
 
-def test_landing_page_has_naive_baseline_and_related_work_placeholders():
+def test_landing_page_has_naive_baseline_placeholder_and_real_related_work():
+    """1.1 is still an honest stub; 1.2 has real (web-verified) citations now
+    -- regression guard against either silently reverting to a placeholder."""
     at = _run_landing()
     subheader_texts = [s.value for s in at.subheader]
     assert any("naive approach" in s for s in subheader_texts)
     assert any("Related work" in s for s in subheader_texts)
+
+    markdown_texts = " ".join(m.value for m in at.markdown)
+    assert "Tovstogan" in markdown_texts
+    assert "Vohra" in markdown_texts
+    assert "VidTune" in markdown_texts
+    assert "Audiobrain" not in markdown_texts  # dropped -- couldn't be verified, see the warning box
+
+    warning_texts = " ".join(w.value for w in at.warning)
+    assert "dropped" in warning_texts.lower()
+
+
+def test_landing_page_renders_animated_stats_iframe():
+    at = _run_landing()
+    iframe_found = any(type(node).__name__ == "UnknownElement" for node in at.main.children.values())
+    assert iframe_found
+
+
+def test_landing_page_renders_genre_and_cluster_visuals_without_exception():
+    """Both new Plotly visuals (genre-breakdown bar, cluster density preview)
+    must execute against the real repositories with no exception -- AppTest
+    in this Streamlit version has no typed plotly_chart accessor to assert
+    on directly, so a clean run is the meaningful check here."""
+    at = _run_landing()
+    assert not at.exception

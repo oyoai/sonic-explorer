@@ -14,7 +14,7 @@ import pandas as pd
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "streamlit_app"))
 
-from components.plotting import extract_selected_song_id, network_graph_figure
+from components.plotting import cluster_density_preview, extract_selected_song_id, genre_breakdown_bar, network_graph_figure
 
 
 def test_network_graph_figure_customdata_round_trips_song_ids():
@@ -55,3 +55,28 @@ def test_extract_selected_song_id_customdata_not_indexable():
 
 def test_extract_selected_song_id_point_not_dict_like():
     assert extract_selected_song_id(object()) is None
+
+
+def test_genre_breakdown_bar_one_trace_per_genre():
+    fig = genre_breakdown_bar({"Rock": 10, "Jazz": 5, "Pop": 15})
+    assert len(fig.data) == 3
+
+
+def test_genre_breakdown_bar_sorted_descending_by_count():
+    fig = genre_breakdown_bar({"Rock": 10, "Jazz": 5, "Pop": 15})
+    assert [trace.name for trace in fig.data] == ["Pop", "Rock", "Jazz"]
+
+
+def test_genre_breakdown_bar_empty_counts_does_not_raise():
+    fig = genre_breakdown_bar({})
+    assert len(fig.data) == 0
+
+
+def test_cluster_density_preview_plots_every_point():
+    points_df = pd.DataFrame([
+        {"x": 0.0, "y": 0.0, "cluster": 0},
+        {"x": 1.0, "y": 1.0, "cluster": 1},
+        {"x": 2.0, "y": -1.0, "cluster": 0},
+    ])
+    fig = cluster_density_preview(points_df)
+    assert len(fig.data[0].x) == 3

@@ -3,9 +3,20 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
+import pandas as pd
 import streamlit as st
 
+from sonic_explorer.analysis.taste_map import compute_taste_map, mean_pool_song_vectors
+from components.animated_stats import animated_stat_row
+from components.plotting import cluster_density_preview, genre_breakdown_bar
 from resources import LOGO_PATH, get_repositories, show_data_source_banner, show_logo
+
+
+@st.cache_data
+def _overview_cluster_preview_df(_song_repo, _embedding_repo, cache_key):
+    song_vectors = mean_pool_song_vectors(_song_repo, _embedding_repo)
+    result = compute_taste_map(song_vectors)
+    return pd.DataFrame([{"x": p.x, "y": p.y, "cluster": p.cluster} for p in result.points])
 
 
 def render_overview() -> None:
@@ -27,10 +38,30 @@ def render_overview() -> None:
 
     if all_songs:
         genres = sorted({s.genre_top for s in all_songs})
-        stat_cols = st.columns(3)
-        stat_cols[0].metric("Songs in library", len(all_songs))
-        stat_cols[1].metric("Genres", len(genres))
-        stat_cols[2].metric("Embedded segments (sound facet)", embedding_repo.index_size("sound"))
+        genre_counts: dict[str, int] = {}
+        for s in all_songs:
+            genre_counts[s.genre_top] = genre_counts.get(s.genre_top, 0) + 1
+
+        st.iframe(
+            animated_stat_row([
+                ("Songs in library", len(all_songs)),
+                ("Genres", len(genres)),
+                ("Embedded segments (sound facet)", embedding_repo.index_size("sound")),
+            ]),
+            height=100,
+        )
+
+        viz_cols = st.columns([3, 2])
+        with viz_cols[0]:
+            st.caption("Genre composition")
+            st.plotly_chart(genre_breakdown_bar(genre_counts), width="stretch", key="overview_genre_bar")
+        with viz_cols[1]:
+            st.caption("Sonic clusters, discovered from audio alone — full map in **Explore**")
+            preview_df = _overview_cluster_preview_df(song_repo, embedding_repo, embedding_repo.index_size("sound"))
+            if not preview_df.empty:
+                st.plotly_chart(
+                    cluster_density_preview(preview_df), width="stretch", key="overview_cluster_preview"
+                )
 
     st.divider()
 
@@ -76,12 +107,37 @@ def render_overview() -> None:
     )
 
     st.subheader("1.2 Related work")
-    st.info(
-        "**Placeholder.** This subsection should briefly place Sonic Explorer against existing "
-        "content-based music-information-retrieval approaches and commercial systems (e.g. "
-        "audio-feature-based recommendation, embedding-based audio search) — a few citations and "
-        "a short contrast, not a full literature review. Not written yet — left as a stub rather "
-        "than filled with unverified claims.",
+    st.caption(
+        "This project's approach was developed independently, before any literature search "
+        "happened. A subsequent search found it aligns with several current research "
+        "directions -- convergent, not derivative."
+    )
+    st.markdown(
+        "- **Tovstogan, Serra & Bogdanov (2022), \"Visualization of deep audio embeddings for "
+        "music exploration and rediscovery\"** (SMC 2022) -- the closest academic precedent to "
+        "this project's Explore/Taste Map: a web interface visualizing personal music "
+        "collections via audio embeddings and 2D projections. This project differs by adding "
+        "moment-level (not just song-level) matching, several independently-computed facets "
+        "with LLM explanations per match, and a conversational agent layer.\n"
+        "- **Vohra & Akama (2026), \"Interpretable and Perceptually-Aligned Music Similarity with "
+        "Pretrained Embeddings\"** -- directly parallels this project's stem-separated facets "
+        "and calibration-to-blend-weights plan: source separation (their work; Demucs here too) "
+        "plus linear optimization against human ABX preference judgments, yielding interpretable, "
+        "instrument-wise contributions to perceived similarity.\n"
+        "- **VidTune (CHI 2026)** -- uses CLAP + t-SNE for a \"Music Map,\" and explicitly frames "
+        "its layout as an approximate similarity space rather than individually interpretable "
+        "axes -- directly relevant precedent for this project's own PCA/ICA axis-interpretability "
+        "findings (Methodology §4b), whatever they turn out to show for a given projection."
+    )
+    st.warning(
+        "**Verification status:** these three citations were checked (title, authors, venue, "
+        "and that the described finding is actually what the paper says) via web search against "
+        "the papers' own listings and, for Vohra & Akama, the arXiv abstract directly -- not a "
+        "full read of each paper. A fourth candidate citation (a commercial tool, initially "
+        "described as clustering catalogs by acoustic similarity via CLAP + UMAP/t-SNE) was "
+        "checked the same way and **dropped**: the company is real, but its own site makes no "
+        "mention of any such product, and the technical description couldn't be confirmed "
+        "against an actual source. Treat this section as checked-but-not-final until read in full.",
         icon="\U0001F6A7",
     )
 
