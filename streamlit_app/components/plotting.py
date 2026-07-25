@@ -2,6 +2,7 @@
 
 import math
 
+import numpy as np
 import plotly.express as px
 import plotly.graph_objects as go
 
@@ -15,7 +16,7 @@ _GENRE_PALETTE = px.colors.qualitative.Set2
 
 def _genre_color_map(genre_counts: dict[str, int]) -> dict[str, str]:
     """Consistent genre->color assignment, sorted largest-genre-first --
-    used by the Overview page's waffle grid (library_waffle_grid)."""
+    used by Methodology's waffle grid (library_waffle_grid)."""
     ordered = sorted(genre_counts.keys(), key=lambda g: -genre_counts[g])
     return {genre: _GENRE_PALETTE[i % len(_GENRE_PALETTE)] for i, genre in enumerate(ordered)}
 
@@ -59,6 +60,35 @@ def composite_fingerprint_thumbnail(composite, title: str = "Composite") -> go.F
         margin=dict(l=0, r=0, t=30, b=0),
         xaxis=dict(visible=False),
         yaxis=dict(visible=False),
+    )
+    return fig
+
+
+def waveform_figure(
+    envelope, title: str = "", highlight_range: tuple[float, float] | None = None,
+    duration_sec: float | None = None, color: str = "rgb(99,110,250)", height: int = 140,
+) -> go.Figure:
+    """Real amplitude-envelope waveform plot (see analysis/waveform_preview.
+    waveform_envelope) -- Approach's step-by-step visuals build on this
+    instead of abstract shapes, so the mechanic being explained (slicing,
+    isolating, collapsing to a point) is shown against real audio, not a
+    generic placeholder. highlight_range (start_sec, end_sec) shades a
+    region -- used for the segmentation-window step; duration_sec maps the
+    envelope's fixed n_points onto a real time axis, defaulting to sample
+    index if not given."""
+    n = len(envelope)
+    x = np.linspace(0, duration_sec, n) if duration_sec else np.arange(n)
+    fig = go.Figure(go.Scatter(x=x, y=envelope, mode="lines", fill="tozeroy", line=dict(color=color, width=1)))
+    if highlight_range is not None:
+        fig.add_vrect(
+            x0=highlight_range[0], x1=highlight_range[1],
+            fillcolor="rgba(255,255,255,0.15)", line_width=0,
+        )
+    fig.update_layout(
+        height=height, margin=dict(l=10, r=10, t=30 if title else 5, b=20),
+        title=dict(text=title, font=dict(size=13)) if title else None,
+        xaxis=dict(title="seconds" if duration_sec else None), yaxis=dict(visible=False),
+        showlegend=False, plot_bgcolor="rgba(0,0,0,0)",
     )
     return fig
 
@@ -120,8 +150,9 @@ def library_waffle_grid(songs_df, genre_counts: dict[str, int]) -> go.Figure:
     legend (color swatch + name + count) for free, readable without hovering
     anything; hovering a single cell additionally shows that one song's
     title and genre. Grid/cell size adapts to library size so this stays a
-    lightweight, roughly-fixed-height landing-page element whether it's
-    rendering a 200-song deploy subset or the full ~1400-song local library."""
+    lightweight, roughly-fixed-height element (Methodology's dataset section)
+    whether it's rendering a ~200-song deploy subset or the full ~1400-song
+    local library."""
     color_map = _genre_color_map(genre_counts)
     ordered_genres = sorted(genre_counts.keys(), key=lambda g: -genre_counts[g])
 

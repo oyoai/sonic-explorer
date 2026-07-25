@@ -11,12 +11,24 @@ import streamlit as st
 
 from sonic_explorer.analysis.song_dna import AXES, AXIS_LABELS
 from sonic_explorer.analysis.taste_map import compute_taste_map, correlate_axes_with_features, mean_pool_song_vectors
-from sonic_explorer.config import audio_path_for
+from sonic_explorer.config import HOP_SEC, WINDOW_SEC, audio_path_for
 from sonic_explorer.evaluation.retrieval_diagnostics import top1_score_distribution
 from sonic_explorer.facets.fingerprint import composite_fingerprint, structure_fingerprint
-from components.plotting import composite_fingerprint_thumbnail, fingerprint_thumbnail, song_dna_radar_overlay
-from overview_page import OVERVIEW_PAGE
-from resources import build_dna_normalizer, build_normalized_dna_by_song, get_repositories, show_data_source_banner, show_logo
+from sonic_explorer.pipeline.sound_tagging import deserialize_tags
+from components.plotting import (
+    composite_fingerprint_thumbnail,
+    fingerprint_thumbnail,
+    library_waffle_grid,
+    song_dna_radar_overlay,
+)
+from resources import (
+    build_dna_normalizer,
+    build_normalized_dna_by_song,
+    get_repositories,
+    is_deploy_subset,
+    show_data_source_banner,
+    show_logo,
+)
 
 # ---------------------------------------------------------------------------
 # Curated evidence, embedded directly rather than loaded from data/artifacts/
@@ -75,10 +87,10 @@ NN_EXAMPLES = [
 
 FACET_ORDER = ["sound", "harmony", "vocal", "drums", "bass", "instrumental"]
 
-FINGERPRINT_GALLERY_SIZE = 5  # a few genuinely different songs to scroll through, not exhaustive
+GALLERY_SIZE = 5  # a few genuinely different songs to scroll through, not exhaustive
 
 # ---------------------------------------------------------------------------
-# Section 6's case-study evidence: real results from one-time experiments
+# Section 7's case-study evidence: real results from one-time experiments
 # (scripts/filter_vocal_facet_by_ast.py's validation runs, scripts/
 # whiten_harmony_index.py, scripts/compare_song_level_retrieval.py) --
 # embedded as literals rather than recomputed live, since a "before" state
@@ -88,7 +100,7 @@ FINGERPRINT_GALLERY_SIZE = 5  # a few genuinely different songs to scroll throug
 # presentation.
 # ---------------------------------------------------------------------------
 
-# 6a: whole-clip AST scoring (the FAILED first design) vs. per-segment max
+# 7a: whole-clip AST scoring (the FAILED first design) vs. per-segment max
 # scoring (the working redesign), on the "Speech" label specifically for the
 # whole-clip case and the best-matching vocal-keyword label for per-segment.
 VOCAL_GATE_WHOLE_CLIP_SCORES = [
@@ -135,7 +147,7 @@ VOCAL_GATE_HUMAN_SPOTCHECK = [
     ("Thursday & Snow (Reprise)", "Hip-Hop", 0.0228, "vocal", "no vocal", False),
 ]
 
-# 6b: real AST/AudioSet tag output, curated for variety (instrumental with
+# 7b: real AST/AudioSet tag output, curated for variety (instrumental with
 # specific-instrument tags, ambient/textural, soundtrack, vocal genres).
 AST_CAPABILITY_EXAMPLES = [
     {"title": "3rd Chair", "genre": "Instrumental",
@@ -150,15 +162,15 @@ AST_CAPABILITY_EXAMPLES = [
      "tags": [("Mantra", 0.085), ("Chant", 0.036), ("Speech", 0.011), ("Electronic music", 0.014)]},
 ]
 
-# 6c: harmony whitening before/after (k=10, sample_size=300, seed=42).
+# 7c: harmony whitening before/after (k=10, sample_size=300, seed=42).
 HARMONY_WHITENING_RESULTS = {
     "before": {"top1_mean": 0.983, "random_mean": 0.847, "margin_mean": 0.0027, "cohesion_pct": 20.7, "baseline_pct": 11.5},
     "after": {"top1_mean": 0.865, "random_mean": -0.016, "margin_mean": 0.0187, "cohesion_pct": 20.1, "baseline_pct": 11.5},
 }
 
-# 6d: segment-level vs. song-level retrieval, all six facets (k=10,
+# 7d: segment-level vs. song-level retrieval, all six facets (k=10,
 # sample_size=300, seed=42) -- harmony's numbers here are measured on the
-# already-whitened index (6c ran first).
+# already-whitened index (7c ran first).
 SONG_LEVEL_COMPARISON = [
     {"facet": "sound", "seg_margin": 0.0080, "song_margin": 0.0185, "seg_cohesion": 55.4, "song_cohesion": 52.5},
     {"facet": "harmony", "seg_margin": 0.0187, "song_margin": 0.0326, "seg_cohesion": 20.1, "song_cohesion": 21.8},
@@ -168,7 +180,7 @@ SONG_LEVEL_COMPARISON = [
     {"facet": "instrumental", "seg_margin": 0.0105, "song_margin": 0.0194, "seg_cohesion": 38.5, "song_cohesion": 44.1},
 ]
 
-# 6e: does fixed-window segmentation explain 6a's vocal-gate errors? Checked
+# 7e: does fixed-window segmentation explain 7a's vocal-gate errors? Checked
 # against the Structure facet's already-computed novelty detection for the
 # same 10 blind-listened segments -- no new audio processing, a pure
 # correlation check against existing data.
@@ -217,31 +229,40 @@ def _find_song(title: str):
     return None
 
 
+# One song per genre (first encountered in id order), up to a handful --
+# real variety without pinning to specific titles that might not exist in a
+# smaller deployed subset. Shared by both per-song sections below (4 and 5b)
+# rather than computed twice.
+_gallery_seen_genres: set[str] = set()
+GALLERY_CANDIDATES: list[str] = []
+for _s in all_songs:
+    if _s.genre_top not in _gallery_seen_genres:
+        _gallery_seen_genres.add(_s.genre_top)
+        GALLERY_CANDIDATES.append(_s.title)
+    if len(GALLERY_CANDIDATES) >= GALLERY_SIZE:
+        break
+
+
 st.title("Methodology")
 st.write(
     "How the library was actually analyzed and improved, with real evidence at each step -- not "
     "just asserted."
 )
-st.page_link(OVERVIEW_PAGE, label="← Back to introduction", icon="\U0001F3A7")
+st.page_link("pages/0_Approach.py", label="← Back to Approach", icon="\U0001F9E9")
 
 show_logo()
 show_data_source_banner()
 
-if all_songs:
-    stat_col1, stat_col2 = st.columns(2)
-    stat_col1.metric("Songs in library", len(all_songs))
-    stat_col2.metric("Embedded segments (sound facet)", embedding_repo.index_size("sound"))
-
 st.divider()
 
 # ---------------------------------------------------------------------------
-# 1. Data
+# 1. The dataset
 # ---------------------------------------------------------------------------
-st.header("1. Data")
+st.header("1. The dataset")
 st.write(
     "The library is a curated subset of the Free Music Archive (FMA) -- Creative Commons-licensed "
     "tracks spanning 8 genres. Every clip is a **30-second preview**, not a full track -- worth "
-    "keeping in mind for the structure section below, since it genuinely limits what \"structure\" "
+    "keeping in mind for the Structure section below, since it genuinely limits what \"structure\" "
     "can mean here."
 )
 
@@ -251,18 +272,29 @@ if all_songs:
     for s in all_songs:
         genre_counts[s.genre_top] = genre_counts.get(s.genre_top, 0) + 1
     genre_items = sorted(genre_counts.items(), key=lambda kv: -kv[1])
+    largest_genre, largest_n = genre_items[0]
+    smallest_genre, smallest_n = genre_items[-1]
 
-    fig = go.Figure(go.Bar(
-        x=[g for g, _ in genre_items], y=[c for _, c in genre_items],
-        text=[c for _, c in genre_items], textposition="auto",
-    ))
-    fig.update_layout(height=350, margin=dict(l=10, r=10, t=10, b=10), yaxis_title="songs")
-    st.plotly_chart(fig, width="stretch", key="genre_breakdown_chart")
-    st.caption(
-        "8 genres, not evenly represented -- International and Electronic lead, several genres sit "
-        "well under half that count. Worth keeping in mind when reading genre-cohesion numbers "
-        "later: a facet has an easier time on an over-represented genre."
+    songs_df = pd.DataFrame([{"title": s.title, "genre": s.genre_top} for s in all_songs])
+    st.plotly_chart(
+        library_waffle_grid(songs_df, genre_counts), width="stretch", key="genre_waffle_grid"
     )
+    if is_deploy_subset():
+        st.caption(
+            f"{len(all_songs)} songs across {len(genre_counts)} genres — this is the deployed "
+            f"subset: a genre-stratified sample built to be close to even (~25 songs/genre), plus "
+            f"a handful of specific songs later sections need force-included on top (see "
+            f"scripts/build_deploy_subset.py) — so counts here actually range {smallest_n}-"
+            f"{largest_n} per genre, not perfectly even, but nowhere near the full library's real "
+            f"imbalance either."
+        )
+    else:
+        st.caption(
+            f"{len(all_songs)} songs across {len(genre_counts)} genres — not evenly represented: "
+            f"**{largest_genre}** leads at {largest_n}, **{smallest_genre}** trails at {smallest_n}. "
+            "Worth keeping in mind when reading genre-cohesion numbers later: a facet has an easier "
+            "time on an over-represented genre."
+        )
 
     st.subheader("Track duration")
     durations = [s.duration_sec for s in all_songs if s.duration_sec is not None]
@@ -274,7 +306,7 @@ if all_songs:
         f"{n_exactly_30}/{len(durations)} songs ({n_exactly_30 / len(durations):.0%}) are within "
         "0.05s of exactly 30.0 seconds -- not an approximation, every clip in this library really is "
         "a uniform 30-second preview. This is the empirical basis for the structure-facet limitation "
-        "discussed in §3."
+        "discussed in §4."
     )
 
     st.subheader("Artists")
@@ -308,12 +340,35 @@ if all_songs:
 st.divider()
 
 # ---------------------------------------------------------------------------
-# 2. Facets
+# 2. Segmentation
 # ---------------------------------------------------------------------------
-st.header("2. Facets")
+st.header("2. Segmentation")
+st.write(
+    f"Every song is sliced into overlapping {WINDOW_SEC:.0f}-second windows, {HOP_SEC:.1f}s apart -- "
+    f"**{song_repo.count_segments()} segments** across the library as loaded right now (this number "
+    "is computed live, not carried over from a different-sized library). Segmentation choice was one "
+    "of this project's genuinely open questions: fixed-clock windows are simple and guarantee uniform "
+    "coverage, but a boundary can fall anywhere -- mid-note, mid-transition -- regardless of what's "
+    "actually happening musically. Structurally-aware segmentation (cutting at real transitions "
+    "instead) was considered; §7e's case study revisits this honestly with real evidence, rather than "
+    "asserting either approach is obviously better."
+)
+
+st.divider()
+
+# ---------------------------------------------------------------------------
+# 3. The six similarity facets
+# ---------------------------------------------------------------------------
+st.header("3. The six similarity facets")
 st.write(
     "Similarity isn't one thing. Instead of a single blended score, the library is embedded along "
-    "several independent facets -- each captures a genuinely different aspect of how a song sounds."
+    "several independent facets -- each captures a genuinely different aspect of how a song sounds. "
+    "Four of the six (Vocal, Drums, Bass, Instrumental) run on Demucs-isolated stems rather than the "
+    "full mix -- the same source-separation-plus-independent-scoring design Vohra & Akama (2026) "
+    "validate against real human ABX preference judgments in \"Interpretable and Perceptually-Aligned "
+    "Music Similarity with Pretrained Embeddings\" -- directly relevant precedent, since §8's "
+    "calibration study plans to turn human preference ratings into per-facet blend weights the same "
+    "way."
 )
 st.markdown("""
 | Facet | What it captures | How it's computed |
@@ -324,29 +379,178 @@ st.markdown("""
 | **Drums** | Isolated drum/percussion pattern and timbre | Demucs source separation + CLAP |
 | **Bass** | Isolated bassline tone and pattern | Demucs source separation + CLAP |
 | **Instrumental** | Backing instrumentation with vocals removed | Demucs source separation + CLAP |
-| **Structure** | The song's verse/chorus-style shape | Self-similarity matrix -- *visualized, not embedded/searchable* |
 """)
 st.caption(
-    "Structure is deliberately different from the other six: it's a song-level visualization "
-    "(a self-similarity matrix and the fingerprints derived from it), not a per-segment vector in a "
-    "FAISS index. That's why it's excluded from the retrieval/evaluation numbers further down -- "
-    "genre-cohesion@k measures nearest-neighbor retrieval, which doesn't apply the same way to "
-    "something that's visualized rather than searched."
+    "**Honest limitation on the four stem-based facets:** Demucs' separation isn't perfect -- an "
+    "isolated \"vocal\" stem can still carry real energy from non-vocal content bleeding through "
+    "(confirmed case: \"3rd Chair\", a cello/violin piece, scored a 0.58 stem-to-mix energy ratio -- "
+    "well above the energy gate's 0.05 threshold -- despite having no real vocals at all). §7a "
+    "explores this in depth: a real attempted fix, why it didn't fully work, and what's still open."
+)
+
+st.subheader("3a. Score distributions across the whole library")
+st.write(
+    "Genre-cohesion (§7) asks whether a facet's neighbors share a label. That's not the whole "
+    "story -- a facet can beat the random baseline on label-sharing while still producing a nearly "
+    "flat score landscape underneath, where the \"best\" match isn't meaningfully better than the "
+    "10th. This samples real queries per facet and compares the actual top-1 match score against a "
+    "random-pair baseline, both drawn from the live index -- not simulated."
+)
+
+
+@st.cache_data(show_spinner="Sampling retrieval scores...")
+def _score_distribution(_song_repo, _embedding_repo, facet_name, index_size, sample_size=200):
+    result = top1_score_distribution(_song_repo, _embedding_repo, facet_name=facet_name, sample_size=sample_size)
+    return result.n_queries, result.top1_scores, result.random_pair_scores
+
+
+score_dist_cols = st.columns(3)
+for i, facet_name in enumerate(FACET_ORDER):
+    n_queries, top1_scores, random_scores = _score_distribution(
+        song_repo, embedding_repo, facet_name, embedding_repo.index_size(facet_name)
+    )
+    with score_dist_cols[i % 3]:
+        if n_queries == 0:
+            st.caption(f"{facet_name.capitalize()}: no embedded segments yet.")
+            continue
+        dist_fig = go.Figure()
+        dist_fig.add_trace(go.Histogram(x=top1_scores, name="top-1 match", opacity=0.7, nbinsx=20))
+        dist_fig.add_trace(go.Histogram(x=random_scores, name="random pair", opacity=0.7, nbinsx=20))
+        dist_fig.update_layout(
+            height=240, margin=dict(l=10, r=10, t=30, b=10), barmode="overlay",
+            title=f"{facet_name.capitalize()} (n={n_queries})", showlegend=(i == 0),
+            legend=dict(orientation="h", y=-0.15),
+        )
+        st.plotly_chart(dist_fig, width="stretch", key=f"score_dist_{facet_name}")
+
+st.caption(
+    f"Every facet's top-1 distribution sits clearly to the right of its random-pair distribution -- "
+    "real signal, not noise. But look closely at **Harmony**: its random-pair scores already cluster "
+    "up near 0.85-0.95, so even a \"real\" top-1 match only pulls a little further right -- the "
+    "12-dim chroma embedding space itself has very little natural spread, which is the mechanistic "
+    "reason harmony scored weakest on genre-cohesion too. **Sound, Vocal, Drums, Bass, and "
+    "Instrumental** all show a much wider gap between the two distributions -- a clearly discriminative "
+    "space, even where genre-cohesion alone made a facet look mediocre. Separately (not visible in "
+    f"these histograms): the gap between the top-1 and 2nd-best score is small for every facet "
+    f"(typically <0.01) -- with {song_repo.count_segments()} segments and no more than a few hundred "
+    "per genre, there's usually a long plateau of near-tied candidates rather than one sharply-best "
+    "match."
 )
 
 st.divider()
 
 # ---------------------------------------------------------------------------
-# 3. Song DNA & Fingerprints
+# 4. Structure / Abstractivity
 # ---------------------------------------------------------------------------
-st.header("3. Song DNA & fingerprints")
+st.header("4. Structure / Abstractivity")
 st.write(
-    "Each song also gets a handful of aggregate scalar stats (\"song DNA\") -- tempo, energy, "
-    "brightness, harmonic complexity, rhythmic density -- and a small visual \"fingerprint\" per "
-    "facet, both cheap byproducts of the same audio analysis."
+    "Structure is deliberately different from the other six facets: it's a song-level visualization "
+    "(a self-similarity matrix and the fingerprints derived from it), not a per-segment vector in a "
+    "FAISS index. That's why it's excluded from §3's retrieval/evaluation numbers -- genre-cohesion@k "
+    "measures nearest-neighbor retrieval, which doesn't apply the same way to something that's "
+    "visualized rather than searched. Pick a song to see its structure:"
 )
 
-st.subheader("3a. Song DNA -- does it actually track fast/energetic vs. slow/calm?")
+structure_choice = st.selectbox("Pick a song", options=GALLERY_CANDIDATES, key="structure_picker")
+structure_song = _find_song(structure_choice) if structure_choice else None
+
+if structure_song is not None:
+    st.markdown(f"**{structure_song.title}** — {structure_song.artist} ({structure_song.genre_top})")
+    st.audio(str(audio_path_for(structure_song)))
+
+    try:
+        structure_matrix = embedding_repo.get_structure_matrix(structure_song.id)
+    except FileNotFoundError:
+        structure_matrix = None
+    try:
+        structure_timeline = embedding_repo.get_structure_timeline(structure_song.id)
+    except FileNotFoundError:
+        structure_timeline = None
+
+    if structure_timeline is not None and structure_timeline.has_clear_structure:
+        st.caption(
+            "Each colored block below is a stretch of the song; same color = similar-sounding "
+            "sections, discovered automatically from the audio, no manual labeling."
+        )
+        palette = px.colors.qualitative.Set2
+        unique_labels = sorted(set(structure_timeline.segment_labels.tolist()))
+        color_map = {lab: palette[i % len(palette)] for i, lab in enumerate(unique_labels)}
+        seg_durations = structure_timeline.segment_ends - structure_timeline.segment_starts
+        hover_text = [
+            f"{s:.1f}s – {e:.1f}s"
+            for s, e in zip(structure_timeline.segment_starts, structure_timeline.segment_ends, strict=False)
+        ]
+        timeline_fig = go.Figure(go.Bar(
+            x=seg_durations, y=["Structure"] * len(seg_durations), base=structure_timeline.segment_starts,
+            orientation="h", marker_color=[color_map[lab] for lab in structure_timeline.segment_labels.tolist()],
+            marker_line_width=0, hovertext=hover_text, hoverinfo="text",
+        ))
+        timeline_fig.update_layout(
+            height=120, showlegend=False, xaxis_title="Time (s)",
+            yaxis=dict(showticklabels=False), margin=dict(l=10, r=10, t=10, b=40), bargap=0,
+        )
+        st.plotly_chart(timeline_fig, width="stretch", key="structure_timeline")
+    elif structure_timeline is not None and structure_timeline.novelty_curve is not None:
+        st.caption(
+            "This song evolves gradually rather than repeating in clear sections -- shown as a "
+            "continuous novelty curve instead of colored blocks."
+        )
+        curve_fig = go.Figure(go.Scatter(
+            x=structure_timeline.novelty_times, y=structure_timeline.novelty_curve, mode="lines", fill="tozeroy",
+            line=dict(color="rgb(99,110,250)"),
+        ))
+        curve_fig.update_layout(
+            height=140, xaxis_title="Time (s)",
+            yaxis=dict(title="novelty", showticklabels=False, range=[0, 1]),
+            margin=dict(l=10, r=10, t=10, b=40),
+        )
+        st.plotly_chart(curve_fig, width="stretch", key="structure_novelty_curve")
+
+    with st.expander("Zoom in further: raw self-similarity matrix"):
+        st.caption(
+            "The matrix everything above is derived from -- the main diagonal is deliberately left "
+            "blank; bright parallel stripes off the diagonal are what mark repeated sections."
+        )
+        if structure_matrix is not None:
+            heatmap = px.imshow(
+                structure_matrix, color_continuous_scale="Magma", origin="lower",
+                labels=dict(x="beat", y="beat", color="similarity"),
+            )
+            heatmap.update_layout(height=420)
+            st.plotly_chart(heatmap, width="stretch", key="structure_ssm_matrix")
+        else:
+            st.warning("No structure matrix computed for this song yet.")
+
+st.write(
+    "Checked all 1,394 songs in the full local library (not this deployed view specifically -- a "
+    "one-time check, not re-run live) with detected structural boundaries for any segment whose "
+    "label repeats later in the timeline (genuine \"the verse comes back\" recurrence). **Zero** "
+    "songs showed this. Every clearly-structured song's segments are uniquely labeled -- a monotonic "
+    "evolution across the clip, not a loop. That tracks: 30 seconds usually isn't long enough to "
+    "play out a full section and return to an earlier one. So the honest framing is that the "
+    "structure facet shows *how a song's texture evolves across its first 30 seconds*, not "
+    "full-song verse/chorus form -- that would need complete tracks."
+)
+st.caption(
+    "**Honest limitation on the algorithm itself:** validated against synthetic audio with known "
+    "ground truth (a pure tone produces zero detected peaks; two audibly distinct halves produce "
+    "exactly one peak, accurate to within 0.01s of the true midpoint) -- but not re-confirmed by "
+    "ear against every real recording shown above. Use the player above for your own last-mile check."
+)
+
+st.divider()
+
+# ---------------------------------------------------------------------------
+# 5. Per-song artifacts
+# ---------------------------------------------------------------------------
+st.header("5. Per-song artifacts")
+st.write(
+    "Each song also gets a handful of aggregate scalar stats (\"song DNA\"), a small visual "
+    "\"fingerprint\" per facet, an LLM-synthesized natural-language description, and raw AST/AudioSet "
+    "sound tags -- all cheap byproducts of the same audio analysis."
+)
+
+st.subheader("5a. Song DNA -- does it actually track fast/energetic vs. slow/calm?")
 st.write("The two songs at opposite ends of a combined tempo+energy+rhythmic-density ranking:")
 
 dna_songs_with_values = [s for s in all_songs if all(getattr(s, axis) is not None for axis in AXES)]
@@ -443,47 +647,41 @@ if dna_songs_with_values:
         "distribution, not carried over from a different library."
     )
 
-st.subheader("3b. Fingerprints -- structure, sound, harmony, and how they combine")
+st.subheader("5b. Fingerprints, description, and sound tags")
 st.write(
-    "Every song gets a small visual fingerprint per facet, plus a composite that overlays three of "
-    "them as color channels (structure = red, sound = green, harmony = blue) -- where the channels "
-    "agree the image reads bright and neutral, where they diverge it casts a color. Pick a song to "
-    "see all of them together, exactly as the live Song X-Ray page renders them:"
+    "Every song also gets a small visual fingerprint per facet, plus a composite that overlays "
+    "three of them as color channels (structure = red, sound = green, harmony = blue) -- where the "
+    "channels agree the image reads bright and neutral, where they diverge it casts a color. An "
+    "LLM-synthesized description and the raw AST/AudioSet tags it was built from round out the "
+    "picture for the same song. Pick one, exactly as the live Song X-Ray page renders it:"
 )
 
-# One song per genre (first encountered in id order), up to a handful --
-# real variety without pinning to specific titles. Unlike 3a's DNA extremes
-# or 5b's curated matches, any reasonably diverse song demonstrates the
-# fingerprint feature equally well, so there's no evidence tied to specific
-# titles to preserve here -- dynamic selection is strictly more robust than
-# a fixed list that might not exist in a smaller deployed subset.
-_fp_seen_genres: set[str] = set()
-fp_candidates = []
-for _s in all_songs:
-    if _s.genre_top not in _fp_seen_genres:
-        _fp_seen_genres.add(_s.genre_top)
-        fp_candidates.append(_s.title)
-    if len(fp_candidates) >= FINGERPRINT_GALLERY_SIZE:
-        break
-fp_choice = st.selectbox("Pick a song", options=fp_candidates, key="walkthrough_fp_picker")
+fp_choice = st.selectbox("Pick a song", options=GALLERY_CANDIDATES, key="walkthrough_fp_picker")
 fp_song = _find_song(fp_choice) if fp_choice else None
 
 if fp_song is not None:
     st.markdown(f"**{fp_song.title}** — {fp_song.artist} ({fp_song.genre_top})")
     st.audio(str(audio_path_for(fp_song)))
 
-    try:
-        matrix = embedding_repo.get_structure_matrix(fp_song.id)
-    except FileNotFoundError:
-        matrix = None
-    try:
-        timeline = embedding_repo.get_structure_timeline(fp_song.id)
-    except FileNotFoundError:
-        timeline = None
+    if fp_song.description:
+        st.write(f"*{fp_song.description}*")
+    tags = deserialize_tags(fp_song.sound_tags) if fp_song.sound_tags else []
+    if tags:
+        tag_text = " · ".join(f"{label} ({score:.0%})" for label, score in tags[:6])
+        st.caption(f"Raw AST sound tags: {tag_text}")
 
-    structure_fp = structure_fingerprint(matrix) if matrix is not None else None
-    sound_fp = timeline.sound_fingerprint if timeline is not None else None
-    harmony_fp = timeline.harmony_fingerprint if timeline is not None else None
+    try:
+        fp_matrix = embedding_repo.get_structure_matrix(fp_song.id)
+    except FileNotFoundError:
+        fp_matrix = None
+    try:
+        fp_timeline = embedding_repo.get_structure_timeline(fp_song.id)
+    except FileNotFoundError:
+        fp_timeline = None
+
+    structure_fp = structure_fingerprint(fp_matrix) if fp_matrix is not None else None
+    sound_fp = fp_timeline.sound_fingerprint if fp_timeline is not None else None
+    harmony_fp = fp_timeline.harmony_fingerprint if fp_timeline is not None else None
 
     fp_cols = st.columns(4)
     if structure_fp is not None:
@@ -500,89 +698,28 @@ if fp_song is not None:
             composite = composite_fingerprint(structure_fp, sound_fp, harmony_fp)
             st.plotly_chart(composite_fingerprint_thumbnail(composite), width="stretch", key="wt_fp_composite")
 
-    if timeline is not None and timeline.has_clear_structure:
-        st.caption(
-            "Each colored block below is a stretch of the song; same color = similar-sounding "
-            "sections, discovered automatically from the audio, no manual labeling."
-        )
-        palette = px.colors.qualitative.Set2
-        unique_labels = sorted(set(timeline.segment_labels.tolist()))
-        color_map = {lab: palette[i % len(palette)] for i, lab in enumerate(unique_labels)}
-        durations = timeline.segment_ends - timeline.segment_starts
-        hover_text = [f"{s:.1f}s – {e:.1f}s" for s, e in zip(timeline.segment_starts, timeline.segment_ends, strict=False)]
-        timeline_fig = go.Figure(go.Bar(
-            x=durations, y=["Structure"] * len(durations), base=timeline.segment_starts, orientation="h",
-            marker_color=[color_map[lab] for lab in timeline.segment_labels.tolist()],
-            marker_line_width=0, hovertext=hover_text, hoverinfo="text",
-        ))
-        timeline_fig.update_layout(
-            height=120, showlegend=False, xaxis_title="Time (s)",
-            yaxis=dict(showticklabels=False), margin=dict(l=10, r=10, t=10, b=40), bargap=0,
-        )
-        st.plotly_chart(timeline_fig, width="stretch", key="wt_structure_timeline")
-    elif timeline is not None and timeline.novelty_curve is not None:
-        st.caption(
-            "This song evolves gradually rather than repeating in clear sections -- shown as a "
-            "continuous novelty curve instead of colored blocks."
-        )
-        curve_fig = go.Figure(go.Scatter(
-            x=timeline.novelty_times, y=timeline.novelty_curve, mode="lines", fill="tozeroy",
-            line=dict(color="rgb(99,110,250)"),
-        ))
-        curve_fig.update_layout(
-            height=140, xaxis_title="Time (s)",
-            yaxis=dict(title="novelty", showticklabels=False, range=[0, 1]),
-            margin=dict(l=10, r=10, t=10, b=40),
-        )
-        st.plotly_chart(curve_fig, width="stretch", key="wt_novelty_curve")
-
-    with st.expander("Zoom in further: raw self-similarity matrix"):
-        st.caption(
-            "The matrix everything above is derived from -- the main diagonal is deliberately left "
-            "blank; bright parallel stripes off the diagonal are what mark repeated sections."
-        )
-        if matrix is not None:
-            heatmap = px.imshow(
-                matrix, color_continuous_scale="Magma", origin="lower",
-                labels=dict(x="beat", y="beat", color="similarity"),
-            )
-            heatmap.update_layout(height=420)
-            st.plotly_chart(heatmap, width="stretch", key="wt_ssm_matrix")
-        else:
-            st.warning("No structure matrix computed for this song yet.")
-
-st.write(
-    "Checked all 1394 songs with detected structural boundaries for any segment whose label "
-    "repeats later in the timeline (genuine \"the verse comes back\" recurrence). **Zero** songs "
-    "show this. Every clearly-structured song's segments are uniquely labeled -- a monotonic "
-    "evolution across the clip, not a loop. That tracks: 30 seconds usually isn't long enough to "
-    "play out a full section and return to an earlier one. So the honest framing is that the "
-    "structure facet shows *how a song's texture evolves across its first 30 seconds*, not "
-    "full-song verse/chorus form -- that would need complete tracks."
-)
-st.caption(
-    "**Honest limitation on the algorithm itself:** validated against synthetic audio with known "
-    "ground truth (a pure tone produces zero detected peaks; two audibly distinct halves produce "
-    "exactly one peak, accurate to within 0.01s of the true midpoint) -- but not re-confirmed by "
-    "ear against every real recording shown above. Use the players above for your own last-mile check."
-)
-
 st.divider()
 
 # ---------------------------------------------------------------------------
-# 4. Taste Map
+# 6. The 2D map and axis interpretability
 # ---------------------------------------------------------------------------
-st.header("4. Taste Map -- the whole library at once")
+st.header("6. The 2D map and axis interpretability")
 st.caption(
     "This is the methodology behind the projection -- the live, interactive, clickable version of "
     "this same map lives in **Explore** (\"2D map\" view), not on this page."
 )
-st.subheader("4a. Projecting the library")
+st.subheader("6a. Projecting the library")
 st.write(
     "Mean-pool every song's sound-facet segment embeddings into one vector per song, then project "
     "the whole library down to 2D (PCA) and cluster it (K-means) -- entirely from audio, no genre "
     "labels involved in either step. Coloring the same map by the *known* genre labels afterward is "
-    "a direct visual test of whether sonic clusters actually line up with genre, or cut across it."
+    "a direct visual test of whether sonic clusters actually line up with genre, or cut across it. "
+    "Tovstogan, Serra & Bogdanov (2022), \"Visualization of deep audio embeddings for music "
+    "exploration and rediscovery\" (SMC 2022), is the closest academic precedent to this exact "
+    "technique -- a web interface visualizing personal music collections via audio embeddings and 2D "
+    "projections. This project's version differs by adding moment-level (not just song-level) "
+    "matching, several independently-computed facets with LLM explanations per match, and a "
+    "conversational agent layer."
 )
 
 
@@ -647,14 +784,17 @@ if not taste_df.empty:
 else:
     st.info("No embedded songs yet -- Taste Map needs the sound facet's segment embeddings.")
 
-st.subheader("4b. Are the axes interpretable? A rigorous check, not a guess")
+st.subheader("6b. Are the axes interpretable? A rigorous check, not a guess")
 st.write(
     "\"Inspect the songs at each axis's extremes and see if you'd name it\" is a real technique, but "
     "it's qualitative and subjective on its own. The rigorous version: correlate each axis against "
     "features that are *already independently computed and meaningful* (tempo, energy, brightness, "
     "harmonic complexity, rhythmic density) -- a clean correlation coefficient is checkable evidence "
     "for what an axis represents; a clean *absence* of correlation is itself a valid, honest finding, "
-    "not a failure to report."
+    "not a failure to report. VidTune (CHI 2026) uses CLAP + t-SNE for a \"Music Map\" and explicitly "
+    "frames its layout as an approximate similarity space rather than individually interpretable "
+    "axes -- directly relevant precedent for the finding below, whatever it turns out to show for a "
+    "given projection."
 )
 
 if not taste_df.empty:
@@ -697,71 +837,13 @@ if not taste_df.empty:
         "PCA's x-axis, that fallback is genuinely needed."
     )
 
-st.divider()
-
-# ---------------------------------------------------------------------------
-# 5. Retrieval
-# ---------------------------------------------------------------------------
-st.header("5. Retrieval")
-st.write(
-    "Every facet gets its own FAISS index of segment embeddings. Finding \"similar\" moments is "
-    "cosine-similarity nearest-neighbor search within one facet's index -- picking a different "
-    "facet changes what \"similar\" means, using the exact same mechanism."
-)
-
-st.subheader("5a. Score distributions across the whole library")
-st.write(
-    "Genre-cohesion (§6) asks whether a facet's neighbors share a label. That's not the whole "
-    "story -- a facet can beat the random baseline on label-sharing while still producing a nearly "
-    "flat score landscape underneath, where the \"best\" match isn't meaningfully better than the "
-    "10th. This samples real queries per facet and compares the actual top-1 match score against a "
-    "random-pair baseline, both drawn from the live index -- not simulated."
-)
-
-
-@st.cache_data(show_spinner="Sampling retrieval scores...")
-def _score_distribution(_song_repo, _embedding_repo, facet_name, index_size, sample_size=200):
-    result = top1_score_distribution(_song_repo, _embedding_repo, facet_name=facet_name, sample_size=sample_size)
-    return result.n_queries, result.top1_scores, result.random_pair_scores
-
-
-score_dist_cols = st.columns(3)
-for i, facet_name in enumerate(FACET_ORDER):
-    n_queries, top1_scores, random_scores = _score_distribution(
-        song_repo, embedding_repo, facet_name, embedding_repo.index_size(facet_name)
-    )
-    with score_dist_cols[i % 3]:
-        if n_queries == 0:
-            st.caption(f"{facet_name.capitalize()}: no embedded segments yet.")
-            continue
-        dist_fig = go.Figure()
-        dist_fig.add_trace(go.Histogram(x=top1_scores, name="top-1 match", opacity=0.7, nbinsx=20))
-        dist_fig.add_trace(go.Histogram(x=random_scores, name="random pair", opacity=0.7, nbinsx=20))
-        dist_fig.update_layout(
-            height=240, margin=dict(l=10, r=10, t=30, b=10), barmode="overlay",
-            title=f"{facet_name.capitalize()} (n={n_queries})", showlegend=(i == 0),
-            legend=dict(orientation="h", y=-0.15),
-        )
-        st.plotly_chart(dist_fig, width="stretch", key=f"score_dist_{facet_name}")
-
-st.caption(
-    "Every facet's top-1 distribution sits clearly to the right of its random-pair distribution -- "
-    "real signal, not noise. But look closely at **Harmony**: its random-pair scores already cluster "
-    "up near 0.85-0.95, so even a \"real\" top-1 match only pulls a little further right -- the "
-    "12-dim chroma embedding space itself has very little natural spread, which is the mechanistic "
-    "reason harmony scored weakest on genre-cohesion too. **Sound, Vocal, Drums, Bass, and "
-    "Instrumental** all show a much wider gap between the two distributions -- a clearly discriminative "
-    "space, even where genre-cohesion alone made a facet look mediocre. Separately (not visible in "
-    "these histograms): the gap between the top-1 and 2nd-best score is small for every facet "
-    "(typically <0.01) -- with ~14,600 segments and no more than a few hundred per genre, there's "
-    "usually a long plateau of near-tied candidates rather than one sharply-best match."
-)
-
-st.subheader("5b. Curated examples")
+st.subheader("6c. Curated examples")
 st.write(
     "A few real matches, picked from the live index, with a plain-language explanation generated by "
     "the same LLM explanation layer used throughout the app (not written by hand). Play both clips "
-    "below each one to hear the match for yourself:"
+    "below each one to hear the match for yourself -- Overview's naive-vs-real comparison already "
+    "makes the core audio-vs-metadata case with its own playable demo; these are additional, "
+    "facet-by-facet examples across all six facets, not a repeat of that comparison:"
 )
 
 for facet in FACET_ORDER:
@@ -790,22 +872,22 @@ for facet in FACET_ORDER:
 st.divider()
 
 # ---------------------------------------------------------------------------
-# 6. Model improvement case studies
+# 7. Case studies
 # ---------------------------------------------------------------------------
-st.header("6. Model improvement case studies")
+st.header("7. Case studies")
 st.write(
     "The **Results** page's genre-cohesion numbers established real weaknesses per facet, not "
     "just aggregate scores. This section documents concrete attempts to fix or explain them -- "
     "each follows the same discipline: state a hypothesis, test it against the real library, "
-    "report the honest result, whether or not it fully worked. §4b's axis-interpretability check "
+    "report the honest result, whether or not it fully worked. §6b's axis-interpretability check "
     "(correlate first, qualitative-listen only where correlation doesn't resolve it) already "
     "followed this same pattern -- it belongs to this same family of case studies, just located "
     "earlier in the narrative."
 )
 
-st.subheader("6a. Vocal-facet cross-check: hypothesis, failure, redesign, validation")
+st.subheader("7a. Vocal-facet cross-check: hypothesis, failure, redesign, validation")
 st.write(
-    "§3b noted the vocal facet's honest limitation: Demucs' \"vocal\" stem can carry real energy "
+    "§3 noted the vocal facet's honest limitation: Demucs' \"vocal\" stem can carry real energy "
     "from non-vocal content (confirmed case: \"3rd Chair\", a cello/violin piece, scored 0.58 "
     "stem-to-mix energy ratio -- well above the energy gate's 0.05 threshold -- despite having no "
     "real vocals). **Hypothesis:** a pretrained AudioSet tagger (AST) could independently check "
@@ -873,7 +955,7 @@ st.info(
     icon="⏳",
 )
 
-st.subheader("6b. Sound recognition as a general capability")
+st.subheader("7b. Sound recognition as a general capability")
 st.write(
     "Separate from the vocal-gate application above: the same pretrained AST/AudioSet model is a "
     "real, standalone capability -- given any clip, it tags what it hears against 527 general audio "
@@ -888,14 +970,14 @@ st.caption(
     "(Cello, Bowed string instrument, Violin) with no model fine-tuning on this library at all. "
     "That specificity is what makes instrument/texture tagging a plausible future capability (e.g. "
     "tag-based search in Ask the DJ), not yet built. **Worth being precise about scope, though:** "
-    "6a's human spot-check found the singing/speech keyword-threshold specifically unreliable -- "
+    "7a's human spot-check found the singing/speech keyword-threshold specifically unreliable -- "
     "that's a narrower claim than \"AST tagging doesn't work.\" The broad instrument/texture tags "
     "shown above weren't the part that failed."
 )
 
-st.subheader("6c. Harmony whitening: fixing the score geometry vs. fixing the task")
+st.subheader("7c. Harmony whitening: fixing the score geometry vs. fixing the task")
 st.write(
-    "§5a found harmony's random-pair baseline sitting at 0.85-0.95 cosine similarity -- the raw "
+    "§3a found harmony's random-pair baseline sitting at 0.85-0.95 cosine similarity -- the raw "
     "24-dim chroma-derived space (12 pitch classes × mean + std) has very little natural spread, so "
     "real differences barely register once L2-normalized. **Hypothesis:** whitening each dimension "
     "to zero mean / unit variance across the corpus before re-normalizing should spread the space "
@@ -930,13 +1012,13 @@ st.caption(
     "and Ask the DJ, even without a genre-cohesion lift."
 )
 
-st.subheader("6d. Song-level aggregation: pooling segments before ranking")
+st.subheader("7d. Song-level aggregation: pooling segments before ranking")
 st.write(
-    "§5a's other finding: every facet's top-1-vs-top-2 margin is small (typically <0.01) -- with "
-    "~14,600 segments and often only a few hundred per genre, there's usually a long plateau of "
-    "near-tied single-segment candidates. **Hypothesis:** mean-pooling a song's segments into one "
-    "vector before ranking (the same aggregation Taste Map/Explore already use for visualization) "
-    "should smooth that segment-level noise into a sharper song-level signal."
+    f"§3a's other finding: every facet's top-1-vs-top-2 margin is small (typically <0.01) -- with "
+    f"{song_repo.count_segments()} segments and often only a few hundred per genre, there's usually "
+    "a long plateau of near-tied single-segment candidates. **Hypothesis:** mean-pooling a song's "
+    "segments into one vector before ranking (the same aggregation Taste Map/Explore already use for "
+    "visualization) should smooth that segment-level noise into a sharper song-level signal."
 )
 song_level_df = pd.DataFrame(SONG_LEVEL_COMPARISON)
 margin_fig = go.Figure(data=[
@@ -974,11 +1056,11 @@ st.info(
     icon="✅",
 )
 
-st.subheader("6e. Does segment misalignment explain the vocal-gate errors? A structural cross-check")
+st.subheader("7e. Does segment misalignment explain the vocal-gate errors? A structural cross-check")
 st.write(
-    "6a's segments are cut at fixed clock intervals (every ~2.5s, 5s windows), regardless of what's "
+    "7a's segments are cut at fixed clock intervals (every ~2.5s, 5s windows), regardless of what's "
     "actually happening musically -- a boundary can fall mid-vocal-line or anywhere arbitrary. "
-    "**Hypothesis:** that misalignment could explain some of 6a's confusing results. Checked directly "
+    "**Hypothesis:** that misalignment could explain some of 7a's confusing results. Checked directly "
     "against the Structure facet's already-computed novelty detection for the same 10 blind-listened "
     "segments -- no new audio processing, a pure correlation check against data that already existed."
 )
@@ -1026,13 +1108,50 @@ st.info(
 st.divider()
 
 # ---------------------------------------------------------------------------
-# 7. Next: Results
+# 8. Calibration / XAB methodology
 # ---------------------------------------------------------------------------
-st.header("7. Next: Results")
+st.header("8. Calibration / XAB methodology")
+st.write(
+    "A genre-cohesion lift is necessary but not sufficient -- it doesn't say whether a match "
+    "*feels* right to an actual listener. This section describes **how** human similarity "
+    "judgments are being collected; the regression's actual findings (once enough ratings exist) "
+    "are reported in **Results**, not here -- the same split every other section on this page "
+    "already follows between methodology and outcome."
+)
+st.write(
+    "**Format: XAB, not a raw 1-5 scale.** A rater hears one reference clip (X) and two candidates "
+    "(A/B), then picks which candidate sounds more like the reference -- a forced binary "
+    "discrimination, not an absolute similarity rating. This directly follows Vohra & Akama "
+    "(2026)'s ABX-preference-based validation methodology (see §3): a forced choice is a more "
+    "rigorous, less subjective task than an absolute scale, and it's what their source-separated-"
+    "facet approach was actually validated against."
+)
+st.write(
+    "**Sampling isn't naive random pairs.** A random candidate pair skews almost entirely to "
+    "\"obviously dissimilar,\" which teaches a regression little -- there's no real discrimination "
+    "being made. Instead, each triplet's two candidates are drawn from two of three similarity bands "
+    "off the reference's own real retrieval results -- **high** (the reference's real top-1 match), "
+    "**medium** (around rank 10), and **random** (a random cross-song segment) -- rotating through "
+    "all three pairwise band combinations across the generated set, so a rater is always making a "
+    "genuine, non-trivial call rather than an obvious one."
+)
+st.write(
+    "Currently calibrating the **Sound** facet specifically (not all six at once), targeting 350 "
+    "triplets, generated with a fixed seed for reproducibility. Once enough ratings exist, they "
+    "feed a regression producing per-facet blend weights -- interpretable, instrument-wise "
+    "contributions to perceived similarity, the same outcome Vohra & Akama's methodology produces."
+)
+
+st.divider()
+
+# ---------------------------------------------------------------------------
+# 9. Next: Results
+# ---------------------------------------------------------------------------
+st.header("9. Next: Results")
 st.write(
     "That's the methodology -- how the library was analyzed and iterated on, including the "
     "honest failures along the way. **Results** picks up next with the quantitative evaluation "
     "numbers those case studies were measured against, before the **App Walkthrough** takes you "
     "into the live interactive pages themselves."
 )
-st.page_link("pages/1_Results.py", label="**Continue to Results →**", icon="\U0001F4CA")
+st.page_link("pages/2_Results.py", label="**Continue to Results →**", icon="\U0001F4CA")

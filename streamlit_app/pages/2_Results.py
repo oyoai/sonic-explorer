@@ -48,7 +48,7 @@ st.write(
     "including the honest failures along the way. This page reports the outcome: the "
     "quantitative evaluation numbers those improvements were measured against."
 )
-st.page_link("pages/0_Methodology.py", label="← Back to Methodology", icon="\U0001F52C")
+st.page_link("pages/1_Methodology.py", label="← Back to Methodology", icon="\U0001F52C")
 
 show_logo()
 show_data_source_banner()
@@ -95,7 +95,7 @@ st.info(
     "modest: Vocal/Drums/Instrumental all moved a couple points, and interestingly the *random-pair "
     "baseline* moved too (11.7% -> 12.5-13.9% for the four stem facets) -- removing near-silent noise "
     "from the index changed what a \"random\" pair typically looks like, not just what a \"good\" match "
-    "looks like. Harmony's number here is also its pre-whitening baseline; see Methodology §6c for "
+    "looks like. Harmony's number here is also its pre-whitening baseline; see Methodology §7c for "
     "the whitening experiment's own before/after measurement.",
     icon="✅",
 )
@@ -153,4 +153,4 @@ st.warning(
 st.divider()
 
 st.write("Next: **App Walkthrough** picks up from here, with the live interactive pages themselves.")
-st.page_link("pages/2_App_Walkthrough.py", label="**Continue to the App Walkthrough →**", icon="\U0001F9ED")
+st.page_link("pages/3_App_Walkthrough.py", label="**Continue to the App Walkthrough →**", icon="\U0001F9ED")

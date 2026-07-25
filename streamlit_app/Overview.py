@@ -23,12 +23,13 @@ from overview_page import OVERVIEW_PAGE
 # ---------------------------------------------------------------------------
 pg = st.navigation([
     OVERVIEW_PAGE,
-    st.Page("pages/0_Methodology.py", title="Methodology"),
-    st.Page("pages/1_Results.py", title="Results"),
-    st.Page("pages/2_App_Walkthrough.py", title="App Walkthrough"),
-    st.Page("pages/3_Song_XRay.py", title="Song X-Ray", visibility="hidden"),
-    st.Page("pages/4_Moment_Matcher.py", title="Moment Matcher", visibility="hidden"),
-    st.Page("pages/5_Ask_The_DJ.py", title="Ask the DJ", visibility="hidden"),
-    st.Page("pages/6_Explore.py", title="Explore"),
+    st.Page("pages/0_Approach.py", title="Approach"),
+    st.Page("pages/1_Methodology.py", title="Methodology"),
+    st.Page("pages/2_Results.py", title="Results"),
+    st.Page("pages/3_App_Walkthrough.py", title="App Walkthrough"),
+    st.Page("pages/4_Song_XRay.py", title="Song X-Ray", visibility="hidden"),
+    st.Page("pages/5_Moment_Matcher.py", title="Moment Matcher", visibility="hidden"),
+    st.Page("pages/6_Ask_The_DJ.py", title="Ask the DJ", visibility="hidden"),
+    st.Page("pages/7_Explore.py", title="Explore"),
 ])
 pg.run()

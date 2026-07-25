@@ -123,6 +123,14 @@ class SongRepository:
         rows = self.conn.execute(query, params).fetchall()
         return [self._song_from_row(row) for row in rows]
 
+    def count_segments(self) -> int:
+        """Total segments across the whole library -- used by Approach's
+        segmentation step and Methodology's Segmentation section, both of
+        which must report the real count for whichever library is actually
+        loaded (full local set or the deployed subset), not a number copied
+        from one and shown against the other."""
+        return self.conn.execute("SELECT COUNT(*) FROM segments").fetchone()[0]
+
     def add_segments(self, song_id: int, segments: list[Segment]) -> list[int]:
         """Idempotent on (song_id, start_sec, end_sec) -- safe to re-run."""
         ids = []

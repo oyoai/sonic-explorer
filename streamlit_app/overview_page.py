@@ -20,60 +20,17 @@ the empty-script_path issue entirely. That requires the exact same
 StreamlitPage instance (or at least one with a matching url_path) to be
 importable from any page that wants to link back to Overview -- hence
 OVERVIEW_PAGE living here, in a leaf module both Overview.py (for
-st.navigation()) and pages/0_Methodology.py (for the back-link) import from,
+st.navigation()) and pages/1_Methodology.py (for the back-link) import from,
 rather than inside Overview.py itself where importing it back would be
 circular."""
 
-import json
-
-import pandas as pd
 import streamlit as st
 
-from components.plotting import library_waffle_grid, network_graph_figure
+from comparison_data import build_naive_vs_real_graphs, get_demo_pairs
+from components.plotting import network_graph_figure
 from resources import LOGO_PATH, get_repositories, show_data_source_banner, show_logo
-from sonic_explorer.analysis.network_graph import SongMetadata, build_metadata_similarity_graph, build_similarity_graph
-from sonic_explorer.analysis.taste_map import mean_pool_song_vectors
-
-
-def _song_metadata(song) -> SongMetadata:
-    """genres_all/track_tags are JSON-encoded lists (see
-    scripts/enrich_fma_metadata.py); None on any song enrichment hasn't
-    touched yet, treated the same as "recovered but empty" -- both mean
-    "no signal here," not an error."""
-    genres_all = frozenset(json.loads(song.genres_all)) if song.genres_all else frozenset()
-    tags = frozenset(json.loads(song.track_tags)) if song.track_tags else frozenset()
-    return SongMetadata(genre_top=song.genre_top, genres_all=genres_all, album_id=song.album_id, tags=tags)
-
-
-@st.cache_data
-def _build_naive_vs_real_graphs(_song_repo, _embedding_repo, cache_key: int):
-    """Same songs, two similarity rules: a combined non-audio metadata score
-    (naive) vs. audio-embedding cosine similarity (this project) -- built
-    from the same vector set so the comparison isolates the rule, not which
-    songs are shown. The naive side combines genre, genre hierarchy, album,
-    and free-text tags (see build_metadata_similarity_graph) rather than
-    genre alone, so the audio graph is compared against the strongest
-    reasonable non-audio baseline, not a strawman. cache_key (song count)
-    invalidates the cache when the library changes, since
-    _song_repo/_embedding_repo are excluded from Streamlit's cache hashing by
-    the leading underscore, same convention as Explore's build_explore_graph."""
-    songs_by_id = {s.id: s for s in _song_repo.list_songs()}
-    vectors = mean_pool_song_vectors(_song_repo, _embedding_repo)
-
-    real_result = build_similarity_graph(vectors)
-    naive_result = build_metadata_similarity_graph({sid: _song_metadata(songs_by_id[sid]) for sid in vectors})
-
-    def _nodes_df(result):
-        return pd.DataFrame([
-            {
-                "song_id": n.song_id, "x": n.x, "y": n.y, "cluster": n.cluster,
-                "title": songs_by_id[n.song_id].title, "artist": songs_by_id[n.song_id].artist,
-                "genre": songs_by_id[n.song_id].genre_top,
-            }
-            for n in result.nodes
-        ])
-
-    return _nodes_df(naive_result), naive_result.edges, _nodes_df(real_result), real_result.edges
+from sonic_explorer.analysis.network_graph import cross_genre_edge_fraction
+from sonic_explorer.config import audio_path_for
 
 
 def render_overview() -> None:
@@ -83,8 +40,17 @@ def render_overview() -> None:
         st.image(str(LOGO_PATH), width=420)
     else:
         st.title("Sonic Explorer")
-    st.write(
-        "Explore your music library by how it actually sounds — not tags or genre labels."
+
+    # Header wording is explicitly not locked yet (restructure plan lists
+    # "Unearth" / "Unearth Music" / "Unearth the Sound" as options) -- using
+    # the plan's own first-listed form as a placeholder, trivially swappable
+    # once the final wording is picked.
+    st.header("Unearth")
+    st.info(
+        "**Placeholder.** The pitch line for this header hasn't been drafted yet -- left "
+        "intentionally open rather than forced, per the current restructure plan, until more of "
+        "the page/project narrative exists to draft it against.",
+        icon="\U0001F6A7",
     )
 
     show_logo()
@@ -92,65 +58,51 @@ def render_overview() -> None:
 
     song_repo, embedding_repo, _ = get_repositories()
     all_songs = song_repo.list_songs()
-
-    if all_songs:
-        genre_counts: dict[str, int] = {}
-        for s in all_songs:
-            genre_counts[s.genre_top] = genre_counts.get(s.genre_top, 0) + 1
-
-        st.caption(f"{len(all_songs)} songs across {len(genre_counts)} genres — one square per song")
-        songs_df = pd.DataFrame([{"title": s.title, "genre": s.genre_top} for s in all_songs])
-        st.plotly_chart(
-            library_waffle_grid(songs_df, genre_counts), width="stretch", key="overview_waffle_grid"
-        )
+    songs_by_id = {s.id: s for s in all_songs}
 
     st.divider()
 
     # -----------------------------------------------------------------------
-    # 1. Project introduction
+    # 1. Problem
     # -----------------------------------------------------------------------
-    st.header("1. What this is")
+    st.header("1. Problem")
     st.write(
-        "Most music discovery tools lean on metadata: genre tags, artist graphs, playlist "
-        "co-occurrence. That's useful, but it means two songs get called \"similar\" because of "
-        "who made them or how a label described them — not because of what they actually sound "
-        "like. It also means two songs that sound remarkably alike but sit in different genre "
-        "buckets never get connected."
-    )
-    st.write(
-        "Sonic Explorer starts from the opposite direction: analyze the audio directly. Every "
-        "song is broken into several independent **facets** — overall sound/timbre, harmony, "
-        "isolated vocals, drums, bass, backing instrumentation, and structural shape — using "
-        "pretrained audio embedding models and signal-processing techniques, with genre labels "
-        "never entering the similarity computation itself. Genre is kept around only afterward, "
-        "as an evaluation yardstick: do a facet's nearest neighbors share a genre more often "
-        "than chance would predict? That's a check on whether the audio-based approach is "
-        "finding real signal — not the mechanism generating the matches."
-    )
-    st.write(
-        "From those facets, the app builds several ways to explore a library: per-song "
-        "\"DNA\" and visual fingerprints, a 2D map of the whole collection, moment-to-moment "
-        "matching on any facet, a conversational front-end over all of it, and free-form "
-        "exploration. **Explore is the hub** for all of this -- Song X-Ray, Moment Matcher, and "
-        "Ask the DJ are reached by interacting with it (selecting a song, then a moment), not "
-        "separate destinations. The rest of this page sets up the problem before the next pages "
-        "walk through how it was actually built and how well it works."
+        "**First-draft copy -- needs your real specifics, not left as-is.** Something like: "
+        "every so often a song hits exactly right -- not just \"good,\" but *this specific "
+        "thing* about how it sounds. The obvious next move is finding more like it. That's "
+        "where it falls apart. Search engines want a genre or an artist name. Streaming "
+        "recommendations lean on what other people who liked this also liked -- a popularity "
+        "signal, not a sound one. Even asking an AI chatbot gets an answer built from what's "
+        "written *about* music -- reviews, tags, genre history -- not from what's actually in "
+        "the recording. Every option points back to the same shallow signals: genre, metadata, "
+        "who-else-liked-this. None of them ever actually listened to the song that started it."
     )
 
-    st.subheader("1.1 The naive approach — and why it falls short")
+    st.divider()
+
+    # -----------------------------------------------------------------------
+    # 2. Existing solutions
+    # -----------------------------------------------------------------------
+    st.header("2. Existing solutions")
     st.write(
-        "A fair comparison needs the strongest non-audio baseline reasonably available, not a "
-        "strawman — so the naive graph below combines every relevant catalog signal this "
-        "library has: genre tag, FMA's fuller genre-hierarchy overlap, shared album, and "
-        "free-text tags. No audio is analyzed anywhere in it. Below are the same songs, laid "
-        "out two ways: **left**, an edge is drawn from that combined metadata score; **right**, "
-        "an edge is drawn if two songs' audio embeddings are actually close. Same songs, same "
-        "number of edges per song — the only thing that changes between the two graphs is what "
-        "counts as \"similar.\""
+        "To be fair to those tools: comparing against a genre-tag strawman would be an easy "
+        "win. So the \"naive\" side of this comparison is the strongest non-audio baseline "
+        "reasonably achievable from this library's real metadata -- genre tag, FMA's fuller "
+        "genre-hierarchy overlap, shared album, and free-text tags, combined -- not genre alone. "
+        "Popularity signals (listens/favorites) were considered and left out: on this "
+        "genre-balanced library they're too sparse and low-signal to add anything real, and "
+        "padding the baseline with a noisy signal wouldn't make this a fairer comparison, just a "
+        "murkier one."
+    )
+    st.write(
+        "Below are the same songs, laid out two ways: **left**, an edge is drawn from that "
+        "combined metadata score; **right**, an edge is drawn if two songs' audio embeddings "
+        "are actually close. Same songs, same number of edges per song — the only thing that "
+        "changes between the two graphs is what counts as \"similar.\""
     )
 
     if all_songs:
-        naive_nodes, naive_edges, real_nodes, real_edges = _build_naive_vs_real_graphs(
+        naive_nodes, naive_edges, real_nodes, real_edges, vectors, genre_by_song = build_naive_vs_real_graphs(
             song_repo, embedding_repo, len(all_songs)
         )
         if not real_nodes.empty:
@@ -168,59 +120,89 @@ def render_overview() -> None:
                 st.plotly_chart(
                     network_graph_figure(real_nodes, real_edges), width="stretch", key="overview_real_graph"
                 )
-            st.caption(
-                "The naive graph can and does cross genres occasionally — a shared album or tag is "
-                "real signal, not a coincidence — but it's still blind to anything only audible in "
-                "the audio itself. The audio graph's cross-genre edges are the connections no amount "
-                "of catalog metadata could have found."
+
+            naive_cross_pct = cross_genre_edge_fraction(naive_edges, genre_by_song)
+            real_cross_pct = cross_genre_edge_fraction(real_edges, genre_by_song)
+            st.warning(
+                f"**Read the shapes above carefully:** the naive graph's clean, single-color "
+                f"islands are not evidence it \"worked\" — its edges are *defined* as \"shares a "
+                f"metadata signal,\" so a same-genre-looking graph is guaranteed by construction, "
+                f"not earned. Only **{naive_cross_pct:.0%}** of its edges cross a genre boundary "
+                f"(the album/tag signals occasionally do this), versus **{real_cross_pct:.0%}** of "
+                f"the audio graph's edges — and every one of those audio cross-genre edges is a "
+                f"connection no amount of catalog metadata could have found. The real graph's "
+                f"color-bleed is the finding here, not noise.",
+                icon="⚠️",
             )
+
+            st.markdown("**Hear it, don't just read it:**")
+            naive_pair, real_pair = get_demo_pairs(song_repo, embedding_repo, len(all_songs))
+            demo_cols = st.columns(2)
+            with demo_cols[0]:
+                if naive_pair is not None:
+                    a, b = songs_by_id[naive_pair.song_id_a], songs_by_id[naive_pair.song_id_b]
+                    st.caption(
+                        f"**Naive calls these \"similar\":** both tagged **{a.genre_top}** — but "
+                        f"their real audio similarity is only {naive_pair.audio_similarity:.2f}, "
+                        f"near the bottom of this library. Judge for yourself:"
+                    )
+                    st.write(f"\"{a.title}\" — {a.artist}")
+                    st.audio(str(audio_path_for(a)))
+                    st.write(f"\"{b.title}\" — {b.artist}")
+                    st.audio(str(audio_path_for(b)))
+                else:
+                    st.info("Not enough naive-graph edges yet to pick a demo pair.", icon="\U0001F6A7")
+            with demo_cols[1]:
+                if real_pair is not None:
+                    a, b = songs_by_id[real_pair.song_id_a], songs_by_id[real_pair.song_id_b]
+                    st.caption(
+                        f"**Audio calls these \"similar\":** **{a.genre_top}** and **{b.genre_top}** "
+                        f"— different genres, no shared metadata needed — at a real similarity of "
+                        f"{real_pair.audio_similarity:.2f}. Listen for yourself:"
+                    )
+                    st.write(f"\"{a.title}\" — {a.artist}")
+                    st.audio(str(audio_path_for(a)))
+                    st.write(f"\"{b.title}\" — {b.artist}")
+                    st.audio(str(audio_path_for(b)))
+                else:
+                    st.info("Not enough cross-genre audio edges yet to pick a demo pair.", icon="\U0001F6A7")
         else:
             st.info("No embedded songs available yet to build this comparison.", icon="\U0001F6A7")
     else:
         st.info("No songs available yet to build this comparison.", icon="\U0001F6A7")
 
-    st.subheader("1.2 Related work")
-    st.caption(
-        "This project's approach was developed independently, before any literature search "
-        "happened. A subsequent search found it aligns with several current research "
-        "directions -- convergent, not derivative."
+    st.divider()
+
+    # -----------------------------------------------------------------------
+    # 3. Proposed solution
+    # -----------------------------------------------------------------------
+    st.header("3. Proposed solution")
+    st.write(
+        "Sonic Explorer starts from the opposite direction: analyze the audio directly. Every "
+        "song is broken into several independent **facets** — overall sound/timbre, harmony, "
+        "isolated vocals, drums, bass, backing instrumentation, and structural shape — using "
+        "pretrained audio embedding models and signal-processing techniques, with genre labels "
+        "never entering the similarity computation itself. Genre is kept around only afterward, "
+        "as an evaluation yardstick: do a facet's nearest neighbors share a genre more often "
+        "than chance would predict? That's a check on whether the audio-based approach is "
+        "finding real signal — not the mechanism generating the matches."
     )
-    st.markdown(
-        "- **Tovstogan, Serra & Bogdanov (2022), \"Visualization of deep audio embeddings for "
-        "music exploration and rediscovery\"** (SMC 2022) -- the closest academic precedent to "
-        "this project's Explore/Taste Map: a web interface visualizing personal music "
-        "collections via audio embeddings and 2D projections. This project differs by adding "
-        "moment-level (not just song-level) matching, several independently-computed facets "
-        "with LLM explanations per match, and a conversational agent layer.\n"
-        "- **Vohra & Akama (2026), \"Interpretable and Perceptually-Aligned Music Similarity with "
-        "Pretrained Embeddings\"** -- directly parallels this project's stem-separated facets "
-        "and calibration-to-blend-weights plan: source separation (their work; Demucs here too) "
-        "plus linear optimization against human ABX preference judgments, yielding interpretable, "
-        "instrument-wise contributions to perceived similarity.\n"
-        "- **VidTune (CHI 2026)** -- uses CLAP + t-SNE for a \"Music Map,\" and explicitly frames "
-        "its layout as an approximate similarity space rather than individually interpretable "
-        "axes -- directly relevant precedent for this project's own PCA/ICA axis-interpretability "
-        "findings (Methodology §4b), whatever they turn out to show for a given projection."
-    )
-    st.warning(
-        "**Verification status:** these three citations were checked (title, authors, venue, "
-        "and that the described finding is actually what the paper says) via web search against "
-        "the papers' own listings and, for Vohra & Akama, the arXiv abstract directly -- not a "
-        "full read of each paper. A fourth candidate citation (a commercial tool, initially "
-        "described as clustering catalogs by acoustic similarity via CLAP + UMAP/t-SNE) was "
-        "checked the same way and **dropped**: the company is real, but its own site makes no "
-        "mention of any such product, and the technical description couldn't be confirmed "
-        "against an actual source. Treat this section as checked-but-not-final until read in full.",
-        icon="\U0001F6A7",
+    st.write(
+        "From those facets, the app builds several ways to explore a library: per-song "
+        "\"DNA\" and visual fingerprints, a 2D map of the whole collection, moment-to-moment "
+        "matching on any facet, a conversational front-end over all of it, and free-form "
+        "exploration. **Explore is the hub** for all of this -- Song X-Ray, Moment Matcher, and "
+        "Ask the DJ are reached by interacting with it (selecting a song, then a moment), not "
+        "separate destinations."
     )
 
     st.divider()
 
     st.write(
-        "Next: **Methodology** walks through how the library was actually analyzed and "
-        "improved, with real evidence at each step."
+        "Next: **Approach** walks through how this actually works, step by step, before "
+        "Methodology dives into the technical depth and evidence."
     )
-    st.page_link("pages/0_Methodology.py", label="**Continue to Methodology →**", icon="\U0001F52C")
+    st.page_link("pages/0_Approach.py", label="**See how it works →**", icon="\U0001F9E9")
 
 
 OVERVIEW_PAGE = st.Page(render_overview, title="Overview", url_path="", default=True)

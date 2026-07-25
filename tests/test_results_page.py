@@ -14,7 +14,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "streamlit_app"))
 
 def _run_results() -> AppTest:
     at = AppTest.from_file("streamlit_app/Overview.py", default_timeout=120)
-    at.switch_page("pages/1_Results.py")
+    at.switch_page("pages/2_Results.py")
     at.run()
     return at
 

@@ -29,14 +29,14 @@ DEPLOY_DATA_DIR = PROJECT_ROOT / "deploy_data"
 # Songs whose exact identity matters to hardcoded evidence in Methodology's
 # 5b (real precomputed similarity scores + LLM-generated explanations tied
 # to these specific pairs -- see NN_EXAMPLES in
-# streamlit_app/pages/0_Methodology.py). Unlike that page's 3a/3b examples
+# streamlit_app/pages/1_Methodology.py). Unlike that page's 3a/3b examples
 # (made dataset-size-agnostic instead, since any song works equally well
 # there), 5b's examples can't be dynamically substituted without regenerating
 # real explanations, so they're force-included here regardless of the random
 # stratified sample -- otherwise the deployed subset silently drops the
 # audio player for whichever of these the random draw missed (confirmed:
 # 23 of 24 were missing before this existed). Kept as a plain literal list
-# rather than imported from 0_Methodology.py, which isn't import-safe (its
+# rather than imported from 1_Methodology.py, which isn't import-safe (its
 # module-level code calls Streamlit commands that need a real script run) --
 # if NN_EXAMPLES changes there, update this list too.
 REQUIRED_EXAMPLE_TITLES = [

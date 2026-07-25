@@ -17,7 +17,7 @@ from resources import get_repositories, show_data_source_banner, show_logo
 st.set_page_config(page_title="Song X-Ray", page_icon="\U0001F50D")
 st.title("Song X-Ray")
 st.caption("A song's structural anatomy -- matching colors below mean similar-sounding sections.")
-st.page_link("pages/6_Explore.py", label="← Back to Explore", icon="\U0001F310")
+st.page_link("pages/7_Explore.py", label="← Back to Explore", icon="\U0001F310")
 
 show_logo()
 show_data_source_banner()
@@ -165,7 +165,7 @@ else:
             # than assuming they line up.
             nearest = min(retrieval_segments, key=lambda seg: abs(seg.start_sec - seg_start))
             st.session_state["mm_context"] = {"song_id": song.id, "segment_id": nearest.id}
-            st.switch_page("pages/4_Moment_Matcher.py")
+            st.switch_page("pages/5_Moment_Matcher.py")
     else:
         st.caption("Click a colored block above to loop just that section.")
 

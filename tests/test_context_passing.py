@@ -38,7 +38,7 @@ def test_explore_open_xray_button_carries_the_selected_song():
     song, _ = _some_song_with_segments()
 
     at = AppTest.from_file("streamlit_app/Overview.py", default_timeout=120)
-    at.switch_page("pages/6_Explore.py")
+    at.switch_page("pages/7_Explore.py")
     at.session_state["explore_selected_song_id"] = song.id
     at.run()
 
@@ -57,7 +57,7 @@ def test_song_xray_context_is_consumed_once_not_reapplied():
     song, _ = _some_song_with_segments()
 
     at = AppTest.from_file("streamlit_app/Overview.py", default_timeout=120)
-    at.switch_page("pages/3_Song_XRay.py")
+    at.switch_page("pages/4_Song_XRay.py")
     at.session_state["xray_context_song_id"] = song.id
     at.run()
 
@@ -78,7 +78,7 @@ def test_moment_matcher_context_defaults_song_and_moment():
     expected_moment_index = next(i for i, seg in enumerate(segments) if seg.id == target_segment.id)
 
     at = AppTest.from_file("streamlit_app/Overview.py", default_timeout=120)
-    at.switch_page("pages/4_Moment_Matcher.py")
+    at.switch_page("pages/5_Moment_Matcher.py")
     at.session_state["mm_context"] = {"song_id": song.id, "segment_id": target_segment.id}
     at.run()
 
@@ -95,13 +95,13 @@ def test_moment_matcher_with_no_context_still_renders_cleanly():
     pre-existing "doesn't crash" behavior, kept as a regression guard now
     that a context path also exists."""
     at = AppTest.from_file("streamlit_app/Overview.py", default_timeout=120)
-    at.switch_page("pages/4_Moment_Matcher.py")
+    at.switch_page("pages/5_Moment_Matcher.py")
     at.run()
     assert not at.exception
 
 
 def test_ask_the_dj_links_back_to_explore():
     at = AppTest.from_file("streamlit_app/Overview.py", default_timeout=120)
-    at.switch_page("pages/5_Ask_The_DJ.py")
+    at.switch_page("pages/6_Ask_The_DJ.py")
     at.run()
     assert not at.exception

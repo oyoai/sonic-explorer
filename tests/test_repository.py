@@ -319,6 +319,24 @@ def test_add_segments_is_idempotent(song_repo):
     assert len(song_repo.get_segments(song_id)) == 1
 
 
+def test_count_segments_empty_library(song_repo):
+    assert song_repo.count_segments() == 0
+
+
+def test_count_segments_across_multiple_songs(song_repo):
+    song_a = song_repo.add_song(make_song(track_id=1))
+    song_b = song_repo.add_song(make_song(track_id=2))
+    song_repo.add_segments(song_a, [
+        Segment(song_id=song_a, start_sec=0.0, end_sec=5.0, segment_index=0),
+        Segment(song_id=song_a, start_sec=2.5, end_sec=7.5, segment_index=1),
+    ])
+    song_repo.add_segments(song_b, [
+        Segment(song_id=song_b, start_sec=0.0, end_sec=5.0, segment_index=0),
+    ])
+
+    assert song_repo.count_segments() == 3
+
+
 def test_embedding_status_defaults_to_pending(embedding_repo, song_repo):
     song_id = song_repo.add_song(make_song())
     [seg_id] = song_repo.add_segments(

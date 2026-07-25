@@ -2,10 +2,15 @@ import numpy as np
 import pytest
 
 from sonic_explorer.analysis.network_graph import (
+    GraphEdge,
     SongMetadata,
     build_blended_similarity_graph,
     build_metadata_similarity_graph,
     build_similarity_graph,
+    cosine_similarity_between,
+    cross_genre_edge_fraction,
+    pick_naive_mismatch_pair,
+    pick_real_cross_genre_pair,
 )
 
 
@@ -277,3 +282,80 @@ def test_build_metadata_similarity_graph_all_nodes_present():
     result = build_metadata_similarity_graph(metadata, k_neighbors=2)
 
     assert {n.song_id for n in result.nodes} == set(metadata.keys())
+
+
+def test_cross_genre_edge_fraction_no_edges_is_zero_not_undefined():
+    assert cross_genre_edge_fraction([], {}) == 0.0
+
+
+def test_cross_genre_edge_fraction_all_same_genre():
+    genre_by_song = {1: "Rock", 2: "Rock", 3: "Rock"}
+    edges = [GraphEdge(1, 2, 1.0), GraphEdge(2, 3, 1.0)]
+    assert cross_genre_edge_fraction(edges, genre_by_song) == 0.0
+
+
+def test_cross_genre_edge_fraction_mixed():
+    genre_by_song = {1: "Rock", 2: "Jazz", 3: "Rock", 4: "Rock"}
+    edges = [GraphEdge(1, 2, 1.0), GraphEdge(3, 4, 1.0)]  # one cross-genre, one not
+    assert cross_genre_edge_fraction(edges, genre_by_song) == 0.5
+
+
+def test_cosine_similarity_between_identical_vectors_is_one():
+    v = np.array([1.0, 2.0, 3.0])
+    assert cosine_similarity_between(v, v) == pytest.approx(1.0)
+
+
+def test_cosine_similarity_between_orthogonal_vectors_is_zero():
+    assert cosine_similarity_between(np.array([1.0, 0.0]), np.array([0.0, 1.0])) == pytest.approx(0.0)
+
+
+def test_cosine_similarity_between_zero_vector_is_zero_not_nan():
+    assert cosine_similarity_between(np.array([0.0, 0.0]), np.array([1.0, 1.0])) == 0.0
+
+
+def test_pick_naive_mismatch_pair_picks_lowest_real_similarity_edge():
+    vectors = {
+        1: np.array([1.0, 0.0]),
+        2: np.array([1.0, 0.0]),  # identical to 1 -- high real similarity
+        3: np.array([0.0, 1.0]),  # orthogonal to 1 -- low real similarity
+    }
+    naive_edges = [GraphEdge(1, 2, 1.0), GraphEdge(1, 3, 1.0)]  # both "naively similar" (equal naive weight)
+
+    pair = pick_naive_mismatch_pair(naive_edges, vectors)
+
+    assert {pair.song_id_a, pair.song_id_b} == {1, 3}
+    assert pair.audio_similarity == pytest.approx(0.0)
+
+
+def test_pick_naive_mismatch_pair_no_edges_returns_none():
+    assert pick_naive_mismatch_pair([], {1: np.array([1.0])}) is None
+
+
+def test_pick_naive_mismatch_pair_skips_edges_missing_vectors():
+    vectors = {1: np.array([1.0, 0.0]), 2: np.array([0.0, 1.0])}
+    naive_edges = [GraphEdge(1, 99, 1.0), GraphEdge(1, 2, 1.0)]  # song 99 has no vector
+
+    pair = pick_naive_mismatch_pair(naive_edges, vectors)
+
+    assert {pair.song_id_a, pair.song_id_b} == {1, 2}
+
+
+def test_pick_real_cross_genre_pair_picks_strongest_cross_genre_edge():
+    genre_by_song = {1: "Rock", 2: "Jazz", 3: "Rock", 4: "Rock"}
+    real_edges = [
+        GraphEdge(1, 2, 0.6),  # cross-genre, weaker
+        GraphEdge(1, 4, 0.9),  # same-genre, stronger -- must be excluded
+        GraphEdge(2, 3, 0.8),  # cross-genre, stronger
+    ]
+
+    pair = pick_real_cross_genre_pair(real_edges, genre_by_song)
+
+    assert {pair.song_id_a, pair.song_id_b} == {2, 3}
+    assert pair.audio_similarity == pytest.approx(0.8)
+
+
+def test_pick_real_cross_genre_pair_no_cross_genre_edges_returns_none():
+    genre_by_song = {1: "Rock", 2: "Rock"}
+    real_edges = [GraphEdge(1, 2, 0.9)]
+
+    assert pick_real_cross_genre_pair(real_edges, genre_by_song) is None

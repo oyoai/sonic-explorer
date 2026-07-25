@@ -275,3 +275,68 @@ def build_blended_similarity_graph(
     cluster_matrix = np.concatenate(normalized_blocks, axis=1)
 
     return _graph_from_similarity(song_ids, blended_sims, cluster_matrix, k_neighbors, n_clusters, random_state)
+
+
+# ---------------------------------------------------------------------------
+# Naive-vs-real comparison analysis (Overview section 2 / Approach step 1):
+# quantifying and demonstrating *why* the naive metadata graph's clean,
+# single-color clusters aren't evidence of quality. A metadata-only edge rule
+# structurally cannot connect two different genres unless the metadata itself
+# crosses genres (shared album/tag) -- that's a tautology of the edge
+# definition, not a finding. cross_genre_edge_fraction() makes this
+# measurable; pick_naive_mismatch_pair()/pick_real_cross_genre_pair() surface
+# a single concrete, real, audibly-checkable example of each side rather than
+# an abstract percentage alone.
+# ---------------------------------------------------------------------------
+
+
+def cross_genre_edge_fraction(edges: list[GraphEdge], genre_by_song: dict[int, str]) -> float:
+    """Fraction of edges connecting two different genres. 0.0 on no edges --
+    "nothing to measure" is not the same claim as "perfectly cohesive"."""
+    if not edges:
+        return 0.0
+    cross = sum(1 for e in edges if genre_by_song[e.song_id_a] != genre_by_song[e.song_id_b])
+    return cross / len(edges)
+
+
+def cosine_similarity_between(vec_a: np.ndarray, vec_b: np.ndarray) -> float:
+    norm_a, norm_b = np.linalg.norm(vec_a), np.linalg.norm(vec_b)
+    if norm_a == 0 or norm_b == 0:
+        return 0.0
+    return float(np.dot(vec_a, vec_b) / (norm_a * norm_b))
+
+
+@dataclass
+class DemoPair:
+    song_id_a: int
+    song_id_b: int
+    audio_similarity: float  # real cosine similarity between the two songs' audio vectors
+
+
+def pick_naive_mismatch_pair(naive_edges: list[GraphEdge], vectors: dict[int, np.ndarray]) -> DemoPair | None:
+    """Among the naive graph's own edges (two songs linked purely by shared
+    metadata), the one whose real audio embeddings are LEAST alike -- the
+    clearest live-computable demonstration that a metadata-only edge doesn't
+    guarantee the two songs actually sound alike. Picked by real similarity,
+    not hardcoded, so this can never go stale against a smaller deployed
+    library the way a fixed pair name would (see streamlit_app/pages/
+    1_Methodology.py's earlier fix for exactly that failure mode)."""
+    candidates = [e for e in naive_edges if e.song_id_a in vectors and e.song_id_b in vectors]
+    if not candidates:
+        return None
+    worst = min(candidates, key=lambda e: cosine_similarity_between(vectors[e.song_id_a], vectors[e.song_id_b]))
+    return DemoPair(
+        worst.song_id_a, worst.song_id_b,
+        cosine_similarity_between(vectors[worst.song_id_a], vectors[worst.song_id_b]),
+    )
+
+
+def pick_real_cross_genre_pair(real_edges: list[GraphEdge], genre_by_song: dict[int, str]) -> DemoPair | None:
+    """Among the real audio graph's own edges, the strongest (highest-
+    similarity) one that crosses a genre boundary -- the clearest available
+    demonstration that real audio similarity doesn't respect genre lines."""
+    candidates = [e for e in real_edges if genre_by_song[e.song_id_a] != genre_by_song[e.song_id_b]]
+    if not candidates:
+        return None
+    best = max(candidates, key=lambda e: e.weight)
+    return DemoPair(best.song_id_a, best.song_id_b, best.weight)

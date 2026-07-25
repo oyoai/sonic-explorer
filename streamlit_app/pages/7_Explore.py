@@ -82,7 +82,7 @@ if not st.session_state.explore_info_dismissed:
                 st.rerun()
 
 st.page_link(
-    "pages/5_Ask_The_DJ.py",
+    "pages/6_Ask_The_DJ.py",
     label="\U0001F399️ **Ask the DJ** — describe what you want in plain language instead of clicking around",
     icon=None,
 )
@@ -315,7 +315,7 @@ else:
     with action_cols[1]:
         if st.button("\U0001F50D Open full Song X-Ray →", key="open_xray_btn"):
             st.session_state["xray_context_song_id"] = song.id
-            st.switch_page("pages/3_Song_XRay.py")
+            st.switch_page("pages/4_Song_XRay.py")
 
     queue_mode = st.selectbox(
         "Up next", options=["random", "loop", "closest_match"], format_func=lambda m: QUEUE_MODE_LABELS[m],

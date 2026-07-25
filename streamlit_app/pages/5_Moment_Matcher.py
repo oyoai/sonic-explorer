@@ -31,7 +31,7 @@ FINAL_K = 6
 st.set_page_config(page_title="Moment Matcher", page_icon="\U0001F3AF")
 st.title("Moment Matcher")
 st.caption("Pick a moment in a song and find sonically similar moments elsewhere in the library.")
-st.page_link("pages/6_Explore.py", label="← Back to Explore", icon="\U0001F310")
+st.page_link("pages/7_Explore.py", label="← Back to Explore", icon="\U0001F310")
 
 show_logo()
 show_data_source_banner()

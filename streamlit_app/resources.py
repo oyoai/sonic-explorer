@@ -7,7 +7,7 @@ from pathlib import Path
 import streamlit as st
 
 from sonic_explorer.analysis.song_dna import AXES, fit_normalizer
-from sonic_explorer.config import ARTIFACTS_DIR, DB_PATH, DEV_DATA_MARKER
+from sonic_explorer.config import ARTIFACTS_DIR, DATA_DIR, DB_PATH, DEV_DATA_MARKER
 from sonic_explorer.facets.registry import default_registry
 from sonic_explorer.llm.agent import MusicAgent
 from sonic_explorer.llm.explain import ExplanationClient
@@ -124,6 +124,17 @@ def get_agent() -> MusicAgent | None:
 
 def is_dev_data() -> bool:
     return DEV_DATA_MARKER.exists()
+
+
+def is_deploy_subset() -> bool:
+    """True when sonic_explorer.config resolved to deploy_data/ (the small,
+    committed, stratified sample Streamlit Cloud actually runs against)
+    rather than data/ (the full, gitignored local library) -- distinct from
+    is_dev_data(), which only flags synthetic placeholder audio. Any page
+    whose copy asserts something about the *shape* of the loaded library
+    (genre distribution, segment counts, etc.) needs this, not is_dev_data(),
+    since both the full library and the deploy subset are real data."""
+    return DATA_DIR.name == "deploy_data"
 
 
 def show_data_source_banner() -> None:

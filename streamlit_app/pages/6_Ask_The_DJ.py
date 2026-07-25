@@ -16,7 +16,7 @@ st.caption(
     "(Moment Matcher's matching, the Taste Map's mood profiles), just reached by describing what "
     "you want in plain language instead of clicking through the controls yourself."
 )
-st.page_link("pages/6_Explore.py", label="← Back to Explore", icon="\U0001F310")
+st.page_link("pages/7_Explore.py", label="← Back to Explore", icon="\U0001F310")
 
 show_logo()
 show_data_source_banner()
