@@ -24,13 +24,18 @@ st.navigation()) and pages/1_Methodology.py (for the back-link) import from,
 rather than inside Overview.py itself where importing it back would be
 circular."""
 
+from pathlib import Path
+
 import streamlit as st
 
-from comparison_data import build_naive_vs_real_graphs
+from comparison_data import build_metadata_vs_real_graphs
 from components.plotting import concept_bubble_diagram, network_graph_figure
 from resources import LOGO_PATH, get_repositories, nav_button, show_data_source_banner, show_logo
 from sonic_explorer.analysis.network_graph import cross_genre_edge_fraction
-from sonic_explorer.config import audio_path_for
+
+# Real screenshot, not a mock-up -- drop the actual file here once available
+# and it replaces the placeholder box automatically, no code change needed.
+SPOTIFY_SCREENSHOT_PATH = Path(__file__).resolve().parent / "static" / "spotify_recommendations_screenshot.png"
 
 
 def render_overview() -> None:
@@ -56,10 +61,9 @@ def render_overview() -> None:
 
     song_repo, embedding_repo, _ = get_repositories()
     all_songs = song_repo.list_songs()
-    songs_by_id = {s.id: s for s in all_songs}
 
-    naive_nodes, naive_edges, real_nodes, real_edges, vectors, genre_by_song = (
-        build_naive_vs_real_graphs(song_repo, embedding_repo, len(all_songs)) if all_songs
+    metadata_nodes, metadata_edges, real_nodes, real_edges, vectors, genre_by_song = (
+        build_metadata_vs_real_graphs(song_repo, embedding_repo, len(all_songs)) if all_songs
         else (None, [], None, [], {}, {})
     )
 
@@ -81,25 +85,6 @@ def render_overview() -> None:
         "who-else-liked-this. None of them ever actually listened to the song that started it."
     )
 
-    naive_neighbors_by_song: dict[int, list[int]] = {}
-    for e in naive_edges:
-        naive_neighbors_by_song.setdefault(e.song_id_a, []).append(e.song_id_b)
-        naive_neighbors_by_song.setdefault(e.song_id_b, []).append(e.song_id_a)
-    example_song = next((s for s in all_songs if naive_neighbors_by_song.get(s.id)), None)
-
-    if example_song is not None:
-        st.write("Here's what that actually looks like in practice:")
-        example_cols = st.columns(2)
-        with example_cols[0]:
-            st.caption("**You loved this song:**")
-            st.write(f"\"{example_song.title}\" — {example_song.artist} ({example_song.genre_top})")
-            st.audio(str(audio_path_for(example_song)))
-        with example_cols[1]:
-            st.caption("**A typical existing system recommends:**")
-            for nid in naive_neighbors_by_song[example_song.id]:
-                n = songs_by_id[nid]
-                st.write(f"\"{n.title}\" — {n.artist} ({n.genre_top})")
-
     st.divider()
 
     # -----------------------------------------------------------------------
@@ -109,8 +94,21 @@ def render_overview() -> None:
     st.write(
         "Before proposing anything: how do existing recommendation systems actually work, and "
         "is there really room for an audio-based approach to do better? Two dominant paradigms "
-        "cover most of what's out there today:"
+        "cover most of what's out there today. Here's what that actually looks like in practice:"
     )
+
+    if SPOTIFY_SCREENSHOT_PATH.exists():
+        st.image(
+            str(SPOTIFY_SCREENSHOT_PATH),
+            caption="A real screenshot of Spotify's actual recommendations for a real song.",
+        )
+    else:
+        st.info(
+            "**Placeholder.** A real screenshot of Spotify's actual \"Recommended\"/\"Fans also "
+            "like\" UI for a real song goes here -- concrete evidence of what existing systems do "
+            "today, not a mock-up. Drop the image at "
+            "`streamlit_app/static/spotify_recommendations_screenshot.png` once available."
+        )
 
     concept_cols = st.columns(2)
     with concept_cols[0]:
@@ -130,6 +128,11 @@ def render_overview() -> None:
             ),
             width="stretch", key="concept_collaborative",
         )
+        st.caption(
+            "**Honest gap:** this library has no user-level listen/favorite/interaction data at "
+            "all -- collaborative filtering is described here for a complete picture of the "
+            "landscape, not something this project can build or compare against directly."
+        )
 
     st.write(
         "Our approach goes further — past similarity metrics entirely, into what the audio "
@@ -137,7 +140,7 @@ def render_overview() -> None:
         "this project works through, not something to assert here."
     )
 
-    if all_songs and naive_nodes is not None and not naive_nodes.empty:
+    if all_songs and metadata_nodes is not None and not metadata_nodes.empty:
         st.write(
             "To be fair to those two paradigms: comparing against a genre-tag strawman would be "
             "an easy win. So the version tested here is the strongest non-audio baseline "
@@ -147,23 +150,24 @@ def render_overview() -> None:
             "is now real, computed data, not an illustration:"
         )
         st.caption(
-            "**Combined metadata baseline — genre + genre hierarchy + album + tags.** Catalog "
-            "metadata only, nothing heard."
+            "**Metadata baseline — genre + genre hierarchy + album + tags.** Catalog metadata "
+            "only, nothing heard."
         )
         st.plotly_chart(
-            network_graph_figure(naive_nodes, naive_edges), width="stretch", key="overview_naive_graph"
+            network_graph_figure(metadata_nodes, metadata_edges), width="stretch",
+            key="overview_metadata_graph", config={"staticPlot": True},
         )
 
-        naive_cross_pct = cross_genre_edge_fraction(naive_edges, genre_by_song)
+        metadata_cross_pct = cross_genre_edge_fraction(metadata_edges, genre_by_song)
         real_cross_pct = cross_genre_edge_fraction(real_edges, genre_by_song)
         st.warning(
             f"**Read this carefully before concluding anything from the shape above:** its "
             f"clean, single-color islands are not evidence this approach \"worked\" -- its edges "
             f"are *defined* as \"shares a metadata signal,\" so a same-genre-looking graph is "
-            f"guaranteed by construction, not earned. Only **{naive_cross_pct:.0%}** of its edges "
-            f"cross a genre boundary (the album/tag signals occasionally do this). For context, "
-            f"the real audio-based graph -- covered later, once the mechanism actually makes "
-            f"sense -- crosses genre boundaries **{real_cross_pct:.0%}** of the time."
+            f"guaranteed by construction, not earned. Only **{metadata_cross_pct:.0%}** of its "
+            f"edges cross a genre boundary (the album/tag signals occasionally do this). For "
+            f"context, the real audio-based graph -- covered later, once the mechanism actually "
+            f"makes sense -- crosses genre boundaries **{real_cross_pct:.0%}** of the time."
         )
     else:
         st.info("No songs available yet to build this comparison.")
@@ -174,23 +178,19 @@ def render_overview() -> None:
     # 3. Proposed solution
     # -----------------------------------------------------------------------
     st.header("3. Proposed solution")
-    st.write(
-        "Sonic Explorer starts from the opposite direction: analyze the audio directly. Every "
-        "song is broken into several independent **facets** — overall sound/timbre, harmony, "
-        "isolated vocals, drums, bass, backing instrumentation, and structural shape — using "
-        "pretrained audio embedding models and signal-processing techniques, with genre labels "
-        "never entering the similarity computation itself. Genre is kept around only afterward, "
-        "as an evaluation yardstick: do a facet's nearest neighbors share a genre more often "
-        "than chance would predict? That's a check on whether the audio-based approach is "
-        "finding real signal — not the mechanism generating the matches."
+    st.write("Sonic Explorer starts from the opposite direction: analyze the audio directly.")
+    st.plotly_chart(
+        concept_bubble_diagram(
+            "One song,<br>six independent<br>measurements",
+            ["Sound", "Harmony", "Vocal", "Drums", "Bass", "Instrumental"],
+        ),
+        width="stretch", key="concept_facets",
     )
-    st.write(
-        "From those facets, the app builds several ways to explore a library: per-song "
-        "\"DNA\" and visual fingerprints, a 2D map of the whole collection, moment-to-moment "
-        "matching on any facet, a conversational front-end over all of it, and free-form "
-        "exploration. **Explore is the hub** for all of this -- Song X-Ray, Moment Matcher, and "
-        "Ask the DJ are reached by interacting with it (selecting a song, then a moment), not "
-        "separate destinations."
+    st.caption(
+        "Genre labels never enter this computation -- they're only checked afterward, as an "
+        "evaluation yardstick, not the mechanism generating the matches. **Explore is the hub** "
+        "for everything downstream of this: Song X-Ray, Moment Matcher, and Ask the DJ are all "
+        "reached by interacting with it, not separate destinations."
     )
 
     st.divider()

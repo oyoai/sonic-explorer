@@ -35,7 +35,7 @@ def test_methodology_page_has_all_nine_sections():
         "1. The dataset", "2. Segmentation", "3. The six similarity facets",
         "4. Structure / Abstractivity", "5. Per-song artifacts",
         "6. The 2D map and axis interpretability", "7. Case studies",
-        "8. Calibration / XAB methodology", "9. Next: Results",
+        "8. Calibration / XAB methodology", "9. Next: Engineering",
     ]:
         assert expected in header_texts
 

@@ -69,8 +69,9 @@ def concept_bubble_diagram(center_label: str, satellite_labels: list[str]) -> go
     signals that feed it, connected by thin lines. Illustrative only, not
     real computed data (unlike every other chart in this app) -- Overview
     uses this to sketch how existing recommendation paradigms conceptually
-    work, before presenting the real naive-vs-audio network graph as actual
-    evidence a few paragraphs later."""
+    work and to illustrate the facet-based approach, before the real
+    metadata-vs-audio network graph (further down the same page) and the
+    real audio-based graph (Results) take over as actual evidence."""
     n = len(satellite_labels)
     angles = [2 * math.pi * i / n - math.pi / 2 for i in range(n)]
     sat_x = [math.cos(a) for a in angles]

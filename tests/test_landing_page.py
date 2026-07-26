@@ -4,8 +4,14 @@ Existing solutions / Proposed solution, no more Related Work section (moved
 inline into Methodology), no more waffle grid (moved to Methodology's
 dataset section), a new closing link to the Approach page. The real
 audio-embeddings graph and the audio-playback demo moved to Results --
-Overview raises the question visually (bubble diagrams + the naive graph
-alone), Results is where the evidence for an answer belongs."""
+Overview raises the question visually (bubble diagrams + the static
+metadata-baseline graph alone), Results is where the evidence for an answer
+belongs.
+
+Problem stays focused purely on the personal-story framing (no embedded
+concrete system example); the concrete "what an existing system actually
+does" example (a real Spotify screenshot, with an honest placeholder until
+one is supplied) lives in Existing solutions instead."""
 
 import sys
 from pathlib import Path
@@ -63,57 +69,102 @@ def test_landing_page_no_longer_has_related_work_section():
     assert "VidTune" not in markdown_texts
 
 
-def test_landing_page_has_concrete_recommendation_example_in_problem_section():
-    """Section 1 must show a real, computed illustration -- a real song plus
-    what a typical existing (metadata-based) system would recommend for it
-    -- not just describe the problem in the abstract."""
+def test_landing_page_problem_section_has_no_embedded_concrete_example():
+    """Problem must stay focused on the personal-story frustration, without a
+    concrete system example (real song + real recommendation) embedded in
+    it -- that example belongs in Existing solutions, not Problem."""
     at = _run_landing()
-    caption_texts = " ".join(c.value for c in at.caption)
-    assert "you loved this song" in caption_texts.lower()
-    assert "a typical existing system recommends" in caption_texts.lower()
-    assert len(at.get("audio")) >= 1
+    write_texts = " ".join(m.value for m in at.markdown)
+    assert "you loved this song" not in write_texts.lower()
+    assert "a typical existing system recommends" not in write_texts.lower()
+
+
+def test_landing_page_existing_solutions_has_a_real_spotify_screenshot_or_honest_placeholder():
+    """A real screenshot of Spotify's actual recommendation UI is the
+    concrete "what existing systems do" evidence -- not a fabricated mock-up.
+    Until the real file is supplied, an explicit placeholder must say so
+    rather than silently omitting the example."""
+    at = _run_landing()
+    info_texts = " ".join(i.value for i in at.info)
+    has_real_screenshot = bool(at.get("imgs"))
+    has_honest_placeholder = "placeholder" in info_texts.lower() and "spotify" in info_texts.lower()
+    assert has_real_screenshot or has_honest_placeholder
 
 
 def test_landing_page_has_both_concept_bubble_diagrams():
     """Section 2 opens with two illustrative (not real-data) diagrams --
-    metadata-based matching and collaborative filtering -- before the real
-    naive-metadata network graph a few paragraphs later."""
+    metadata-based matching and collaborative filtering -- before the real,
+    static metadata-baseline network graph further down."""
     at = _run_landing()
     caption_texts = " ".join(c.value for c in at.caption)
     assert "metadata-based matching" in caption_texts.lower()
     assert "collaborative filtering" in caption_texts.lower()
 
 
+def test_landing_page_discloses_missing_user_data_for_collaborative_filtering():
+    """Collaborative filtering is presented as one of the two dominant
+    existing paradigms, but this library has no user-level listen/favorite
+    data to build or compare against it -- must be disclosed explicitly, not
+    left looking like an oversight."""
+    at = _run_landing()
+    caption_texts = " ".join(c.value for c in at.caption)
+    assert "honest gap" in caption_texts.lower()
+    assert "user-level" in caption_texts.lower()
+
+
 def test_landing_page_existing_solutions_is_framed_as_exploratory_not_declarative():
     """Restructure decision: section 2 raises an open question (does audio
-    actually help?) rather than asserting the naive baseline was "solved" or
-    that the proposed approach already won."""
+    actually help?) rather than asserting the metadata baseline was "solved"
+    or that the proposed approach already won."""
     at = _run_landing()
     markdown_texts = " ".join(m.value for m in at.markdown)
     assert "open question" in markdown_texts.lower()
 
 
-def test_landing_page_naive_graph_shown_alone_not_side_by_side_with_real_graph():
+def test_landing_page_metadata_graph_is_static_not_interactive():
+    """Overview's 'quick gist' purpose doesn't need an interactive Plotly
+    widget -- staticPlot disables hover/zoom/pan/click. Interactivity lives
+    in Results/Explore instead, where deeper engagement is expected."""
+    at = _run_landing()
+    configs = [c.proto.config for c in at.get("plotly_chart")]
+    assert any('"staticPlot": true' in cfg for cfg in configs)
+
+
+def test_landing_page_no_naive_graph_shown_alone_not_side_by_side_with_real_graph():
     """Restructure decision: the real audio-embeddings graph and the audio
     demo moved to Results (evidence belongs there, once the mechanism has
-    been explained) -- Overview shows only the naive/combined-metadata graph."""
+    been explained) -- Overview shows only the metadata-baseline graph, and
+    never the "naive"/old wording."""
     at = _run_landing()
     caption_texts = " ".join(c.value for c in at.caption)
-    assert "combined metadata baseline" in caption_texts.lower()
-    assert "naive calls these" not in caption_texts.lower()
+    markdown_texts = " ".join(m.value for m in at.markdown)
+    assert "metadata baseline" in caption_texts.lower()
+    assert "naive" not in caption_texts.lower()
+    assert "naive" not in markdown_texts.lower()
+    assert "metadata baseline calls these" not in caption_texts.lower()
     assert "audio calls these" not in caption_texts.lower()
-    assert len(at.get("audio")) <= 1  # only §1's single concrete example, no demo pairs
+    assert len(at.get("audio")) == 0  # no demo-pair audio on Overview -- that's Results' job
 
 
 def test_landing_page_has_tautology_callout_with_real_stats():
-    """The naive graph's clean clusters are a structural artifact of its
+    """The metadata graph's clean clusters are a structural artifact of its
     edge definition, not evidence of quality -- must be called out
     explicitly with real, computed cross-genre-edge percentages, not left
-    to silently imply the naive approach "worked better."."""
+    to silently imply the metadata baseline "worked better."."""
     at = _run_landing()
     warning_texts = " ".join(w.value for w in at.warning)
     assert "not evidence" in warning_texts.lower() or "guaranteed by construction" in warning_texts.lower()
     assert "%" in warning_texts
+
+
+def test_landing_page_proposed_solution_is_visual_not_a_wordy_paragraph():
+    """Section 3 illustrates the facet-based approach with a diagram rather
+    than explaining it purely in prose -- kept visual-first, consistent with
+    Overview's 'lightweight and highly visual' framing."""
+    at = _run_landing()
+    caption_texts = " ".join(c.value for c in at.caption)
+    assert "genre labels never enter this computation" in caption_texts.lower()
+    assert len(at.get("plotly_chart")) == 4  # metadata + collaborative concept diagrams, the real graph, facets
 
 
 def test_landing_page_links_to_approach_next():

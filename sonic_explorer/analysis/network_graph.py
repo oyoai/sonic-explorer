@@ -11,8 +11,8 @@ Explore (global) and My Library both call build_similarity_graph() with a
 different song_vectors dict (all songs vs. only saved ones) -- one
 implementation, filtered by what's passed in, not a second code path.
 
-build_metadata_similarity_graph() is the naive baseline for Overview section
-1.1 -- deliberately the *strongest* defensible non-audio baseline, not a
+build_metadata_similarity_graph() is the metadata baseline for Overview
+section 2 -- deliberately the *strongest* defensible non-audio baseline, not a
 genre-only strawman: it weighted-averages four independently-computed [0, 1]
 similarity signals (genre_top match, FMA's fuller genres_all overlap, same-
 album membership, free-text tag overlap), none of which involve listening to
@@ -181,7 +181,7 @@ def _exact_match_similarity_matrix(values: list) -> np.ndarray:
 
 # The real winner of a genuine comparison against 3 other variants (equal
 # weight, genre-weighted, a learned logistic-regression combination) on real
-# genre-cohesion@10 -- see notebooks/04_naive_baseline_eda.ipynb for the full
+# genre-cohesion@10 -- see notebooks/04_metadata_baseline_eda.ipynb for the full
 # EDA and evaluation. Genre-cohesion@10 itself turned out to saturate near
 # 100% for every variant that weights genre_top nonzero (same-genre songs
 # vastly outnumber k=10, so they fill the neighbor list regardless of exact
@@ -204,7 +204,7 @@ def compute_metadata_similarity_components(
     -- genre_top match, genres_all overlap, same-album membership, tag
     overlap -- before any weighting/combination. Split out from
     build_metadata_similarity_graph so a caller comparing several weighting
-    schemes (see notebooks/04_naive_baseline_eda.ipynb) computes these once
+    schemes (see notebooks/04_metadata_baseline_eda.ipynb) computes these once
     and reuses them across every variant, rather than recomputing all four
     from scratch per weighting choice. Returns ({}) for the component dict
     when there are fewer than 2 songs -- nothing to compare."""
@@ -272,7 +272,7 @@ def build_metadata_similarity_graph(
     album=2, tags=2, the real winner of a genuine comparison against 3 other
     variants (equal weight, genre-weighted, a learned logistic-regression
     combination) on real genre-cohesion@10 and cross_genre_edge_fraction --
-    see notebooks/04_naive_baseline_eda.ipynb for the full EDA and
+    see notebooks/04_metadata_baseline_eda.ipynb for the full EDA and
     evaluation. It's the strongest defensible non-audio baseline actually
     found, not whatever combination was quickest to write. A signal that's
     empty across the whole library (e.g. no song has recovered tag data)
@@ -344,13 +344,13 @@ def build_blended_similarity_graph(
 
 
 # ---------------------------------------------------------------------------
-# Naive-vs-real comparison analysis (Overview section 2 / Approach step 1):
-# quantifying and demonstrating *why* the naive metadata graph's clean,
+# Metadata-vs-real comparison analysis (Overview section 2 / Approach step 1):
+# quantifying and demonstrating *why* the metadata graph's clean,
 # single-color clusters aren't evidence of quality. A metadata-only edge rule
 # structurally cannot connect two different genres unless the metadata itself
 # crosses genres (shared album/tag) -- that's a tautology of the edge
 # definition, not a finding. cross_genre_edge_fraction() makes this
-# measurable; pick_naive_mismatch_pair()/pick_real_cross_genre_pair() surface
+# measurable; pick_metadata_mismatch_pair()/pick_real_cross_genre_pair() surface
 # a single concrete, real, audibly-checkable example of each side rather than
 # an abstract percentage alone.
 # ---------------------------------------------------------------------------
@@ -379,15 +379,15 @@ class DemoPair:
     audio_similarity: float  # real cosine similarity between the two songs' audio vectors
 
 
-def pick_naive_mismatch_pair(naive_edges: list[GraphEdge], vectors: dict[int, np.ndarray]) -> DemoPair | None:
-    """Among the naive graph's own edges (two songs linked purely by shared
+def pick_metadata_mismatch_pair(metadata_edges: list[GraphEdge], vectors: dict[int, np.ndarray]) -> DemoPair | None:
+    """Among the metadata graph's own edges (two songs linked purely by shared
     metadata), the one whose real audio embeddings are LEAST alike -- the
     clearest live-computable demonstration that a metadata-only edge doesn't
     guarantee the two songs actually sound alike. Picked by real similarity,
     not hardcoded, so this can never go stale against a smaller deployed
     library the way a fixed pair name would (see streamlit_app/pages/
     1_Methodology.py's earlier fix for exactly that failure mode)."""
-    candidates = [e for e in naive_edges if e.song_id_a in vectors and e.song_id_b in vectors]
+    candidates = [e for e in metadata_edges if e.song_id_a in vectors and e.song_id_b in vectors]
     if not candidates:
         return None
     worst = min(candidates, key=lambda e: cosine_similarity_between(vectors[e.song_id_a], vectors[e.song_id_b]))

@@ -1,6 +1,6 @@
-"""Shared, cached "naive metadata baseline vs. real audio similarity"
-comparison data -- used by Overview (the naive graph + tautology callout,
-which needs both sides' cross-genre-edge stats even though only the naive
+"""Shared, cached "metadata baseline vs. real audio similarity" comparison
+data -- used by Overview (the metadata graph + tautology callout, which
+needs both sides' cross-genre-edge stats even though only the metadata
 graph is shown there), Results (the real graph + the audio-playback demo --
 moved here from Overview: Overview raises the question, Results is where
 the evidence for an answer belongs, once Approach/Methodology have explained
@@ -16,8 +16,12 @@ Demo-pair selection is deliberately dynamic (computed live from whatever
 library is loaded), not two hardcoded song titles -- picking fixed titles
 was exactly the bug class fixed in pages/1_Methodology.py earlier this
 project (examples that don't exist in the smaller deployed subset). See
-analysis/network_graph.py's pick_naive_mismatch_pair()/
-pick_real_cross_genre_pair() for the actual selection rule."""
+analysis/network_graph.py's pick_metadata_mismatch_pair()/
+pick_real_cross_genre_pair() for the actual selection rule.
+
+Named "metadata baseline," not "naive approach" -- the earlier name read as
+dismissive and undercut the point of building the strongest defensible
+non-audio baseline instead of a strawman."""
 
 import json
 
@@ -29,7 +33,7 @@ from sonic_explorer.analysis.network_graph import (
     SongMetadata,
     build_metadata_similarity_graph,
     build_similarity_graph,
-    pick_naive_mismatch_pair,
+    pick_metadata_mismatch_pair,
     pick_real_cross_genre_pair,
 )
 from sonic_explorer.analysis.taste_map import mean_pool_song_vectors
@@ -46,11 +50,11 @@ def _song_metadata(song) -> SongMetadata:
 
 
 @st.cache_data
-def build_naive_vs_real_graphs(_song_repo, _embedding_repo, cache_key: int):
+def build_metadata_vs_real_graphs(_song_repo, _embedding_repo, cache_key: int):
     """Same songs, two similarity rules: a combined non-audio metadata score
-    (naive) vs. audio-embedding cosine similarity (this project) -- built
-    from the same vector set so the comparison isolates the rule, not which
-    songs are shown. Also returns the raw vectors and a genre lookup so
+    vs. audio-embedding cosine similarity (this project) -- built from the
+    same vector set so the comparison isolates the rule, not which songs are
+    shown. Also returns the raw vectors and a genre lookup so
     get_demo_pairs() can derive its picks from this exact same cached
     computation rather than redoing mean_pool_song_vectors (not itself
     Streamlit-cached) a second time. cache_key (song count) invalidates the
@@ -61,7 +65,7 @@ def build_naive_vs_real_graphs(_song_repo, _embedding_repo, cache_key: int):
     vectors = mean_pool_song_vectors(_song_repo, _embedding_repo)
 
     real_result = build_similarity_graph(vectors)
-    naive_result = build_metadata_similarity_graph({sid: _song_metadata(songs_by_id[sid]) for sid in vectors})
+    metadata_result = build_metadata_similarity_graph({sid: _song_metadata(songs_by_id[sid]) for sid in vectors})
 
     def _nodes_df(result):
         return pd.DataFrame([
@@ -74,17 +78,21 @@ def build_naive_vs_real_graphs(_song_repo, _embedding_repo, cache_key: int):
         ])
 
     genre_by_song = {sid: songs_by_id[sid].genre_top for sid in vectors}
-    return _nodes_df(naive_result), naive_result.edges, _nodes_df(real_result), real_result.edges, vectors, genre_by_song
+    return (
+        _nodes_df(metadata_result), metadata_result.edges,
+        _nodes_df(real_result), real_result.edges,
+        vectors, genre_by_song,
+    )
 
 
 def get_demo_pairs(_song_repo, _embedding_repo, cache_key: int) -> tuple[DemoPair | None, DemoPair | None]:
-    """(naive_mismatch_pair, real_cross_genre_pair) -- either may be None if
-    there aren't enough songs/edges to compute one yet. Calling
-    build_naive_vs_real_graphs again here is cheap: identical arguments hit
-    Streamlit's existing cache entry rather than recomputing anything."""
-    _, naive_edges, _, real_edges, vectors, genre_by_song = build_naive_vs_real_graphs(
+    """(metadata_mismatch_pair, real_cross_genre_pair) -- either may be None
+    if there aren't enough songs/edges to compute one yet. Calling
+    build_metadata_vs_real_graphs again here is cheap: identical arguments
+    hit Streamlit's existing cache entry rather than recomputing anything."""
+    _, metadata_edges, _, real_edges, vectors, genre_by_song = build_metadata_vs_real_graphs(
         _song_repo, _embedding_repo, cache_key
     )
-    naive_pair = pick_naive_mismatch_pair(naive_edges, vectors)
+    metadata_pair = pick_metadata_mismatch_pair(metadata_edges, vectors)
     real_pair = pick_real_cross_genre_pair(real_edges, genre_by_song)
-    return naive_pair, real_pair
+    return metadata_pair, real_pair

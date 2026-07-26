@@ -151,19 +151,19 @@ def metadata_genre_cohesion_at_k(
     k: int = 10,
     sample_size: int | None = None,
     seed: int = 42,
-    label: str = "naive_metadata",
+    label: str = "metadata_baseline",
 ) -> GenreCohesionResult:
     """Same metric, same conventions (k/sample_size/seed, same-song
     exclusion, random-baseline-from-other-songs, mean-of-per-query-hit-rate
     aggregation) as song_level_genre_cohesion_at_k, adapted to run directly
-    over a dense similarity matrix -- e.g. a naive metadata baseline's
+    over a dense similarity matrix -- e.g. the metadata baseline's
     combined_sims from analysis/network_graph.py's
     compute_metadata_similarity_components()/combine_metadata_similarities()
-    -- instead of a FAISS index. This is what lets a metadata-only
+    -- instead of a FAISS index. This is what lets the metadata-only
     baseline's genre-cohesion@k be reported on the exact same scale as every
     audio facet's, evaluated the identical way (see
-    notebooks/04_naive_baseline_eda.ipynb, which uses this to compare
-    several combination strategies for the naive baseline)."""
+    notebooks/04_metadata_baseline_eda.ipynb, which uses this to compare
+    several combination strategies for the baseline)."""
     rng = np.random.default_rng(seed)
     n = len(song_ids)
     if n < 2:

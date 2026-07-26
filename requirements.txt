@@ -1,10 +1,11 @@
 # Streamlit Community Cloud reads this at repo root. -e . installs sonic_explorer
 # itself (making it importable) plus pulls in exactly pyproject.toml's base
 # dependencies -- single source of truth, no version drift between local dev and
-# deployment. The colab-only extras (torch, transformers, accelerate, demucs) are
-# NOT needed here: the deployed app never runs CLAP inference, source separation,
-# or structure computation itself -- it only reads precomputed artifacts. librosa/
-# soundfile moved into the base dependencies (see pyproject.toml's comment): the
-# Approach page's waveform-preview step does load real audio at runtime, unlike
-# everything else the deployed app does.
+# deployment. The colab-only extras (torchaudio, transformers, accelerate, demucs)
+# are NOT needed here: the deployed app never runs CLAP inference, source
+# separation, or structure computation itself -- it only reads precomputed
+# artifacts. librosa/soundfile/torch moved into the base dependencies (see
+# pyproject.toml's comments): the Approach page's waveform-preview step loads
+# real audio at runtime, and the Engineering page's live CNN picker runs real
+# torch inference, both unlike everything else the deployed app does.
 -e .

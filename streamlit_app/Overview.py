@@ -20,11 +20,19 @@ from overview_page import OVERVIEW_PAGE
 # overview_page.py) rather than this file's own path -- see that module's
 # docstring for why any page that wants to link back to it must import and
 # pass that same StreamlitPage object, not a "Overview.py" string.
+#
+# pages/8_Engineering.py sits here, between Methodology and Results, even
+# though its filename number doesn't match -- st.navigation()'s list order
+# controls sidebar order, not the filename prefix, so giving Engineering the
+# next free number (8) avoided renumbering every file from 2_Results.py
+# onward (and every nav_button()/switch_page() string that references them)
+# just to keep the numeric prefixes contiguous.
 # ---------------------------------------------------------------------------
 pg = st.navigation([
     OVERVIEW_PAGE,
     st.Page("pages/0_Approach.py", title="Approach"),
     st.Page("pages/1_Methodology.py", title="Methodology"),
+    st.Page("pages/8_Engineering.py", title="Engineering"),
     st.Page("pages/2_Results.py", title="Results"),
     st.Page("pages/3_App_Walkthrough.py", title="App Walkthrough"),
     st.Page("pages/4_Song_XRay.py", title="Song X-Ray", visibility="hidden"),

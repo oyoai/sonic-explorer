@@ -46,7 +46,7 @@ class Song:
     # FMA metadata recovered by scripts/enrich_fma_metadata.py -- NOT set by
     # the main ingestion pipeline (scripts/acquire_fma.py trims these away at
     # first parse, see its docstring), so None on any song that hasn't been
-    # through the enrichment pass. Used by the naive (non-audio) similarity
+    # through the enrichment pass. Used by the metadata (non-audio) similarity
     # baseline on Overview -- see analysis/network_graph.build_metadata_similarity_graph.
     genres_all: str | None = None  # JSON-encoded list[int] of FMA sub-genre IDs
     album_id: int | None = None

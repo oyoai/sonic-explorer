@@ -12,7 +12,7 @@ from sonic_explorer.analysis.network_graph import (
     compute_metadata_similarity_components,
     cosine_similarity_between,
     cross_genre_edge_fraction,
-    pick_naive_mismatch_pair,
+    pick_metadata_mismatch_pair,
     pick_real_cross_genre_pair,
 )
 
@@ -316,29 +316,29 @@ def test_cosine_similarity_between_zero_vector_is_zero_not_nan():
     assert cosine_similarity_between(np.array([0.0, 0.0]), np.array([1.0, 1.0])) == 0.0
 
 
-def test_pick_naive_mismatch_pair_picks_lowest_real_similarity_edge():
+def test_pick_metadata_mismatch_pair_picks_lowest_real_similarity_edge():
     vectors = {
         1: np.array([1.0, 0.0]),
         2: np.array([1.0, 0.0]),  # identical to 1 -- high real similarity
         3: np.array([0.0, 1.0]),  # orthogonal to 1 -- low real similarity
     }
-    naive_edges = [GraphEdge(1, 2, 1.0), GraphEdge(1, 3, 1.0)]  # both "naively similar" (equal naive weight)
+    metadata_edges = [GraphEdge(1, 2, 1.0), GraphEdge(1, 3, 1.0)]  # both "metadata-similar" (equal weight)
 
-    pair = pick_naive_mismatch_pair(naive_edges, vectors)
+    pair = pick_metadata_mismatch_pair(metadata_edges, vectors)
 
     assert {pair.song_id_a, pair.song_id_b} == {1, 3}
     assert pair.audio_similarity == pytest.approx(0.0)
 
 
-def test_pick_naive_mismatch_pair_no_edges_returns_none():
-    assert pick_naive_mismatch_pair([], {1: np.array([1.0])}) is None
+def test_pick_metadata_mismatch_pair_no_edges_returns_none():
+    assert pick_metadata_mismatch_pair([], {1: np.array([1.0])}) is None
 
 
-def test_pick_naive_mismatch_pair_skips_edges_missing_vectors():
+def test_pick_metadata_mismatch_pair_skips_edges_missing_vectors():
     vectors = {1: np.array([1.0, 0.0]), 2: np.array([0.0, 1.0])}
-    naive_edges = [GraphEdge(1, 99, 1.0), GraphEdge(1, 2, 1.0)]  # song 99 has no vector
+    metadata_edges = [GraphEdge(1, 99, 1.0), GraphEdge(1, 2, 1.0)]  # song 99 has no vector
 
-    pair = pick_naive_mismatch_pair(naive_edges, vectors)
+    pair = pick_metadata_mismatch_pair(metadata_edges, vectors)
 
     assert {pair.song_id_a, pair.song_id_b} == {1, 2}
 
@@ -391,7 +391,7 @@ def test_compute_metadata_similarity_components_fewer_than_two_songs_returns_emp
 def test_combine_metadata_similarities_default_matches_default_metadata_weights():
     """Regression guard: the default must stay in sync with
     DEFAULT_METADATA_WEIGHTS -- the real, evaluated combination
-    (notebooks/04_naive_baseline_eda.ipynb), not silently drift back to an
+    (notebooks/04_metadata_baseline_eda.ipynb), not silently drift back to an
     arbitrary equal-weight guess."""
     components = {
         "genre": np.array([[0.0, 1.0], [1.0, 0.0]]),
@@ -408,7 +408,7 @@ def test_combine_metadata_similarities_default_matches_default_metadata_weights(
 
 def test_default_metadata_weights_is_not_equal_weighting():
     """DEFAULT_METADATA_WEIGHTS was chosen by a real evaluation (see
-    notebooks/04_naive_baseline_eda.ipynb) that found equal weighting is
+    notebooks/04_metadata_baseline_eda.ipynb) that found equal weighting is
     tied on genre-cohesion@10 with a tags/album-weighted variant, but the
     tags/album-weighted variant produces ~20x more genuine cross-genre
     edges -- this guards against silently reverting to the untested

@@ -28,7 +28,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 import numpy as np
 import streamlit as st
 
-from comparison_data import build_naive_vs_real_graphs, get_demo_pairs
+from comparison_data import build_metadata_vs_real_graphs, get_demo_pairs
 from components.plotting import network_graph_figure, waveform_figure
 from resources import get_explanation_client, get_repositories, nav_button, show_data_source_banner, show_logo
 from sonic_explorer.analysis.waveform_preview import waveform_envelope
@@ -54,10 +54,10 @@ if not all_songs:
     st.info("No songs available yet to build this walkthrough.")
     st.stop()
 
-naive_nodes, naive_edges, real_nodes, real_edges, vectors, genre_by_song = build_naive_vs_real_graphs(
+metadata_nodes, metadata_edges, real_nodes, real_edges, vectors, genre_by_song = build_metadata_vs_real_graphs(
     song_repo, embedding_repo, len(all_songs)
 )
-naive_pair, real_pair = get_demo_pairs(song_repo, embedding_repo, len(all_songs))
+metadata_pair, real_pair = get_demo_pairs(song_repo, embedding_repo, len(all_songs))
 
 st.divider()
 
@@ -70,21 +70,21 @@ st.write(
     "both for yourself in Results, once there's been a chance to explain why they turned out this way:"
 )
 
-if naive_pair is not None and real_pair is not None:
-    a1, b1 = songs_by_id[naive_pair.song_id_a], songs_by_id[naive_pair.song_id_b]
+if metadata_pair is not None and real_pair is not None:
+    a1, b1 = songs_by_id[metadata_pair.song_id_a], songs_by_id[metadata_pair.song_id_b]
     a2, b2 = songs_by_id[real_pair.song_id_a], songs_by_id[real_pair.song_id_b]
 
-    st.caption(f"**Same genre tag ({a1.genre_top}), sound different** -- similarity {naive_pair.audio_similarity:.2f}")
+    st.caption(f"**Same genre tag ({a1.genre_top}), sound different** -- similarity {metadata_pair.audio_similarity:.2f}")
     row1 = st.columns(2)
     with row1[0]:
         st.plotly_chart(
             waveform_figure(waveform_envelope(audio_path_for(a1)), title=a1.title, color="rgb(239,85,59)"),
-            width="stretch", key="step1_naive_a",
+            width="stretch", key="step1_metadata_a",
         )
     with row1[1]:
         st.plotly_chart(
             waveform_figure(waveform_envelope(audio_path_for(b1)), title=b1.title, color="rgb(239,85,59)"),
-            width="stretch", key="step1_naive_b",
+            width="stretch", key="step1_metadata_b",
         )
 
     st.caption(

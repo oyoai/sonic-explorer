@@ -4,7 +4,13 @@ import numpy as np
 import pytest
 
 from sonic_explorer.analysis.song_dna import AXES, fit_normalizer
-from sonic_explorer.llm.agent import DEFAULT_MAX_TOOL_ITERATIONS, FALLBACK_REPLY, SYSTEM_PROMPT, MusicAgent
+from sonic_explorer.llm.agent import (
+    DEFAULT_MAX_TOOL_ITERATIONS,
+    FALLBACK_REPLY,
+    SYSTEM_PROMPT,
+    MusicAgent,
+    extract_mentioned_song_ids,
+)
 from sonic_explorer.llm.agent_tools import AGENT_TOOLS
 from sonic_explorer.models import Segment, Song
 from sonic_explorer.repository.db import init_db
@@ -220,3 +226,85 @@ def test_send_message_preserves_history_across_calls(agent_deps):
 
     assert reply2 == "Second reply"
     assert len(history2) == 4  # two full turns accumulated
+
+
+def test_extract_mentioned_song_ids_from_single_result_tool(agent_deps):
+    """get_song_profile returns one dict, not a "matches" list -- must still
+    be picked up."""
+    responses = [
+        FakeResponse(
+            [FakeToolUseBlock(id="t1", name="get_song_profile", input={"song_title": "Song A"})],
+            stop_reason="tool_use",
+        ),
+        FakeResponse([FakeTextBlock("Song A is a mid-tempo rock track.")], stop_reason="end_turn"),
+    ]
+    agent, client = make_agent(agent_deps, responses)
+
+    _, history = agent.send_message([], "tell me about Song A")
+
+    assert extract_mentioned_song_ids(history, 0) == [1]  # Song A's real id from agent_deps' fixture
+
+
+def test_extract_mentioned_song_ids_from_matches_list_deduplicated_in_order(agent_deps):
+    def fake_tool_result(matches):
+        return json.dumps({"matches": matches})
+
+    new_history = [
+        {"role": "user", "content": "find similar songs"},
+        {"role": "assistant", "content": []},
+        {
+            "role": "user",
+            "content": [
+                {
+                    "type": "tool_result", "tool_use_id": "t1",
+                    "content": fake_tool_result([{"song_id": 3, "title": "C"}, {"song_id": 1, "title": "A"}]),
+                },
+                {
+                    "type": "tool_result", "tool_use_id": "t2",
+                    "content": fake_tool_result([{"song_id": 1, "title": "A"}, {"song_id": 2, "title": "B"}]),
+                },
+            ],
+        },
+    ]
+
+    assert extract_mentioned_song_ids(new_history, 0) == [3, 1, 2]
+
+
+def test_extract_mentioned_song_ids_only_looks_at_the_current_turn():
+    old_turn = [
+        {"role": "user", "content": "first"},
+        {
+            "role": "user",
+            "content": [{"type": "tool_result", "tool_use_id": "t0",
+                         "content": json.dumps({"matches": [{"song_id": 99, "title": "Old"}]})}],
+        },
+    ]
+    new_turn = [
+        {"role": "user", "content": "second"},
+        {
+            "role": "user",
+            "content": [{"type": "tool_result", "tool_use_id": "t1",
+                         "content": json.dumps({"matches": [{"song_id": 5, "title": "New"}]})}],
+        },
+    ]
+    full_history = old_turn + new_turn
+
+    assert extract_mentioned_song_ids(full_history, len(old_turn)) == [5]
+
+
+def test_extract_mentioned_song_ids_ignores_error_results():
+    history = [
+        {
+            "role": "user",
+            "content": [{"type": "tool_result", "tool_use_id": "t1",
+                         "content": json.dumps({"error": "No song found"})}],
+        },
+    ]
+    assert extract_mentioned_song_ids(history, 0) == []
+
+
+def test_extract_mentioned_song_ids_handles_plain_text_content():
+    """Most messages have plain-string content (user/assistant turns), not a
+    list of blocks -- must skip these without raising."""
+    history = [{"role": "user", "content": "just text, no tool results"}]
+    assert extract_mentioned_song_ids(history, 0) == []

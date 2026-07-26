@@ -148,3 +148,35 @@ class MusicAgent:
             messages.append({"role": "user", "content": tool_results})
 
         return FALLBACK_REPLY, messages
+
+
+def extract_mentioned_song_ids(new_history: list[dict], turn_start_index: int) -> list[int]:
+    """Song IDs a turn's tool calls actually returned (new_history[turn_start_index:],
+    i.e. everything send_message() appended this call) -- real, structured
+    data the tool executors already computed (see agent_tools.py's tool_*
+    functions, each of which now includes song_id), not a guess parsed from
+    the reply's free text. Used to render inline audio players for whichever
+    specific songs a turn's tool results actually named, in first-mentioned
+    order, deduplicated."""
+    song_ids: list[int] = []
+    seen: set[int] = set()
+    for message in new_history[turn_start_index:]:
+        content = message.get("content")
+        if not isinstance(content, list):
+            continue
+        for block in content:
+            if not isinstance(block, dict) or block.get("type") != "tool_result":
+                continue
+            try:
+                result = json.loads(block["content"])
+            except (json.JSONDecodeError, TypeError, KeyError):
+                continue
+            if not isinstance(result, dict):
+                continue
+            candidates = result["matches"] if isinstance(result.get("matches"), list) else [result]
+            for candidate in candidates:
+                song_id = candidate.get("song_id") if isinstance(candidate, dict) else None
+                if isinstance(song_id, int) and song_id not in seen:
+                    seen.add(song_id)
+                    song_ids.append(song_id)
+    return song_ids

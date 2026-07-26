@@ -23,11 +23,16 @@ dependencies = [
     # so no system-level ffmpeg/apt package is needed on Streamlit Cloud.
     "librosa",
     "soundfile",
+    # Also NOT just a colab/dev extra anymore -- the Engineering page's live
+    # CNN genre-classifier picker (analysis/genre_cnn.py's SmallGenreCNN)
+    # loads real trained weights and runs real inference in the deployed
+    # app itself. Permanently increases deployed install size/boot time --
+    # an explicit, accepted trade-off for a live rather than static demo.
+    "torch",
 ]
 
 [project.optional-dependencies]
 colab = [
-    "torch",
     "torchaudio",
     "transformers",
     "accelerate",

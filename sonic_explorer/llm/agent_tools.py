@@ -135,6 +135,7 @@ def tool_get_song_profile(song_repo, dna_normalizer, song_title: str) -> dict:
         return {"error": f"{song.title} has no computed DNA yet."}
     norm = dna_normalizer.normalize(raw)
     return {
+        "song_id": song.id,
         "title": song.title,
         "artist": song.artist,
         "genre": song.genre_top,
@@ -158,6 +159,7 @@ def tool_search_similar_songs(song_repo, embedding_repo, retrieval_service, song
     return {
         "matches": [
             {
+                "song_id": m.song.id,
                 "title": m.song.title,
                 "artist": m.song.artist,
                 "genre": m.song.genre_top,
@@ -191,6 +193,7 @@ def tool_search_by_mood_profile(
     return {
         "matches": [
             {
+                "song_id": m.song_id,
                 "title": songs_by_id[m.song_id].title,
                 "artist": songs_by_id[m.song_id].artist,
                 "genre": songs_by_id[m.song_id].genre_top,
@@ -228,6 +231,7 @@ def tool_search_by_sound_content(song_repo, query: str, k: int = 5) -> dict:
     return {
         "matches": [
             {
+                "song_id": song.id,
                 "title": song.title,
                 "artist": song.artist,
                 "genre": song.genre_top,
