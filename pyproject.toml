@@ -13,6 +13,16 @@ dependencies = [
     "pandas",
     "anthropic",
     "networkx",
+    # librosa/soundfile: NOT just a colab/dev extra anymore -- Approach's
+    # waveform-preview step (analysis/waveform_preview.py) loads real audio
+    # at runtime in the deployed app itself, unlike the rest of the base
+    # dependencies, which only ever read precomputed artifacts. soundfile's
+    # pip wheel bundles its own libsndfile with MP3 decode support built in
+    # (verified: soundfile 0.14.0 / libsndfile 1.2.2 report "MP3" in
+    # available_formats() and successfully decode a real deploy_data clip),
+    # so no system-level ffmpeg/apt package is needed on Streamlit Cloud.
+    "librosa",
+    "soundfile",
 ]
 
 [project.optional-dependencies]
@@ -21,14 +31,10 @@ colab = [
     "torchaudio",
     "transformers",
     "accelerate",
-    "librosa",
-    "soundfile",
     "demucs",
 ]
 dev = [
     "pytest",
-    "librosa",
-    "soundfile",
     "ruff",
 ]
 
