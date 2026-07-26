@@ -18,6 +18,7 @@ from resources import (
     get_explanation_client,
     get_rerank_client,
     get_repositories,
+    nav_button,
     show_data_source_banner,
     show_logo,
 )
@@ -28,10 +29,10 @@ MAX_DNA_DISTANCE = math.sqrt(len(AXES))  # every axis lives in [0,1], so this is
 RERANK_POOL_SIZE = 15  # stage-1 cosine-similarity over-fetch, reranked down to FINAL_K by the LLM
 FINAL_K = 6
 
-st.set_page_config(page_title="Moment Matcher", page_icon="\U0001F3AF")
+st.set_page_config(page_title="Moment Matcher")
 st.title("Moment Matcher")
 st.caption("Pick a moment in a song and find sonically similar moments elsewhere in the library.")
-st.page_link("pages/7_Explore.py", label="← Back to Explore", icon="\U0001F310")
+nav_button("← Back to Explore", "pages/7_Explore.py", key="nav_mm_to_explore")
 
 show_logo()
 show_data_source_banner()
@@ -234,7 +235,7 @@ if mode == "existing_song":
 
                 explanation = explanation_for_match(llm_client, song, query_segment, match)
                 if explanation:
-                    st.markdown(f"\U0001F4AC *{explanation}*")
+                    st.markdown(f"*{explanation}*")
 
                 match_raw = {axis: getattr(match.song, axis) for axis in AXES}
                 if query_has_dna and all(v is not None for v in match_raw.values()):

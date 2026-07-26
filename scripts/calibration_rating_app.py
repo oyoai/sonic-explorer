@@ -38,7 +38,7 @@ from sonic_explorer.repository.song_repository import SongRepository
 RATER_NAME = "offi"  # single-rater project -- see spec section 1's "no real auth needed" precedent
 N_TRIPLETS = 350
 
-st.set_page_config(page_title="Calibration Rating", page_icon="\U0001F3B7")
+st.set_page_config(page_title="Calibration Rating")
 st.title("Calibration Rating")
 st.caption(
     "Blind XAB judgment -- no titles, no artist names, no algorithm score. Which of Clip A or "

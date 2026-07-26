@@ -5,18 +5,18 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 import streamlit as st
 
-from resources import get_agent, get_repositories, show_data_source_banner, show_logo
+from resources import get_agent, get_repositories, nav_button, show_data_source_banner, show_logo
 
 MAX_MESSAGES_PER_SESSION = 30  # simple abuse/cost guardrail for the public deployment (spec section 11)
 
-st.set_page_config(page_title="Ask the DJ", page_icon="\U0001F399️")
+st.set_page_config(page_title="Ask the DJ")
 st.title("Ask the DJ")
 st.caption(
     "A conversational companion to **Explore** -- the same library, the same underlying search "
     "(Moment Matcher's matching, the Taste Map's mood profiles), just reached by describing what "
     "you want in plain language instead of clicking through the controls yourself."
 )
-st.page_link("pages/7_Explore.py", label="← Back to Explore", icon="\U0001F310")
+nav_button("← Back to Explore", "pages/7_Explore.py", key="nav_dj_to_explore")
 
 show_logo()
 show_data_source_banner()

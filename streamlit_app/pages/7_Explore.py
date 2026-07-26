@@ -21,7 +21,7 @@ from components.plotting import (
     fingerprint_thumbnail,
     network_graph_figure,
 )
-from resources import get_repositories, show_data_source_banner, show_logo
+from resources import get_repositories, nav_button, show_data_source_banner, show_logo
 
 FACET_REGISTRY = default_registry()
 QUEUE_MODE_LABELS = {"random": "Random", "loop": "Loop", "closest_match": "Closest match"}
@@ -47,7 +47,7 @@ def _compute_up_next(song_repo, embedding_repo, retrieval_service, current_song,
     return matches[0].song.id if matches else None
 
 
-st.set_page_config(page_title="Sonic Explorer", page_icon="\U0001F310", layout="wide")
+st.set_page_config(page_title="Sonic Explorer", layout="wide")
 
 song_repo, embedding_repo, retrieval_service = get_repositories()
 all_songs = song_repo.list_songs()
@@ -81,10 +81,9 @@ if not st.session_state.explore_info_dismissed:
                 st.session_state.explore_info_dismissed = True
                 st.rerun()
 
-st.page_link(
-    "pages/6_Ask_The_DJ.py",
-    label="\U0001F399️ **Ask the DJ** — describe what you want in plain language instead of clicking around",
-    icon=None,
+nav_button(
+    "Ask the DJ — describe what you want in plain language instead of clicking around",
+    "pages/6_Ask_The_DJ.py", key="nav_explore_to_dj",
 )
 
 view_mode = st.radio(
@@ -299,21 +298,21 @@ else:
     st.subheader(song.title)
     st.caption(f"{song.artist} · {song.genre_top}")
     if song.description:
-        st.caption(f"\U0001F3B6 *{song.description}*")
+        st.caption(f"*{song.description}*")
     st.audio(str(audio_path_for(song)))
 
     action_cols = st.columns([1, 1])
     with action_cols[0]:
         if song.is_saved:
-            if st.button("★ Remove from My Library", key="unsave_btn"):
+            if st.button("Remove from My Library", key="unsave_btn"):
                 song_repo.unsave_song(song.id)
                 st.rerun()
         else:
-            if st.button("☆ Save to My Library", key="save_btn"):
+            if st.button("Save to My Library", key="save_btn"):
                 song_repo.save_song(song.id)
                 st.rerun()
     with action_cols[1]:
-        if st.button("\U0001F50D Open full Song X-Ray →", key="open_xray_btn"):
+        if st.button("Open full Song X-Ray →", key="open_xray_btn"):
             st.session_state["xray_context_song_id"] = song.id
             st.switch_page("pages/4_Song_XRay.py")
 
@@ -338,7 +337,7 @@ else:
     if up_next_id is not None:
         up_next_song = song_repo.get_song(up_next_id)
         st.caption(f"Up next: {up_next_song.title} — {up_next_song.artist}")
-        if st.button("▶ Play next", key="play_next_btn"):
+        if st.button("Play next", key="play_next_btn"):
             st.session_state.explore_selected_song_id = up_next_id
             st.rerun()
     else:
@@ -354,7 +353,7 @@ else:
             facet_name: any(embedding_repo.status(seg.id, facet_name) == "done" for seg in song.segments)
             for facet_name in FACET_REGISTRY.names()
         }
-        facet_text = ", ".join(f"{name.capitalize()} {'✓' if ok else '—'}" for name, ok in availability.items())
+        facet_text = ", ".join(f"{name.capitalize()} {'Yes' if ok else 'No'}" for name, ok in availability.items())
         st.markdown(f"- Facets: {facet_text}")
 
         try:

@@ -26,6 +26,7 @@ from resources import (
     build_normalized_dna_by_song,
     get_repositories,
     is_deploy_subset,
+    nav_button,
     show_data_source_banner,
     show_logo,
 )
@@ -211,7 +212,7 @@ UNEXPLAINED_ERROR_DNA_COMPARISON = [
 REST_OF_SAMPLE_STRUCTURAL_CONFIDENCE_RANGE = (0.1889, 0.2593)
 REST_OF_SAMPLE_RHYTHMIC_DENSITY_RANGE = (2.97, 4.74)
 
-st.set_page_config(page_title="Sonic Explorer", page_icon="\U0001F3A7", layout="wide")
+st.set_page_config(page_title="Sonic Explorer", layout="wide")
 
 song_repo, embedding_repo, retrieval_service = get_repositories()
 all_songs = song_repo.list_songs()
@@ -248,7 +249,7 @@ st.write(
     "How the library was actually analyzed and improved, with real evidence at each step -- not "
     "just asserted."
 )
-st.page_link("pages/0_Approach.py", label="← Back to Approach", icon="\U0001F9E9")
+nav_button("← Back to Approach", "pages/0_Approach.py", key="nav_methodology_to_approach")
 
 show_logo()
 show_data_source_banner()
@@ -867,7 +868,7 @@ for facet in FACET_ORDER:
                 st.caption(f"Match: \"{ex['match']['title']}\" — {ex['match']['artist']} ({ex['match']['genre']})")
                 if match_song is not None:
                     st.audio(str(audio_path_for(match_song)))
-            st.caption(f"\U0001F4AC *{ex['explanation']}*")
+            st.caption(f"*{ex['explanation']}*")
 
 st.divider()
 
@@ -937,8 +938,7 @@ st.error(
     "Fixing the false negatives means lowering the threshold below ~0.017; fixing the false positive "
     "means raising it above ~0.023. Those requirements contradict each other -- there's no threshold "
     "that satisfies both. This isn't a calibration problem: the underlying keyword-max score doesn't "
-    "reliably track real vocal presence, at least not with this scoring method.",
-    icon="🛑",
+    "reliably track real vocal presence, at least not with this scoring method."
 )
 st.info(
     "**Honest final status:** NOT applied to the live vocal facet, and not recommended to be, at "
@@ -951,8 +951,7 @@ st.info(
     "\"instrumental stretch within a vocal song\" and \"Demucs bleed\" problems remain open, honestly "
     "unresolved limitations. A different technique -- a dedicated singing-voice-detection model, or "
     "pitch/periodicity analysis directly on the isolated stem rather than a general-purpose 527-class "
-    "tagger on the mix -- might do better, but that's a new, untried investigation, not this one.",
-    icon="⏳",
+    "tagger on the mix -- might do better, but that's a new, untried investigation, not this one."
 )
 
 st.subheader("7b. Sound recognition as a general capability")
@@ -1052,8 +1051,7 @@ st.caption(
 st.info(
     "**Status:** implemented and validated (`sonic_explorer/retrieval/song_level_index.py`) as a "
     "real, working alternative retrieval mode -- not yet wired into Moment Matcher's UI as a "
-    "selectable option. A natural, low-risk follow-up given the validated improvement.",
-    icon="✅",
+    "selectable option. A natural, low-risk follow-up given the validated improvement."
 )
 
 st.subheader("7e. Does segment misalignment explain the vocal-gate errors? A structural cross-check")
@@ -1101,8 +1099,7 @@ st.info(
     "structurally-aware segmentation would plausibly fix cases like \"Facing the Sea\" without "
     "touching cases like \"Requiem\" or \"Thursday & Snow.\" Given that scope, not worth a full "
     "segmentation redesign right now -- documented honestly as a real, bounded finding rather than "
-    "either oversold or dismissed.",
-    icon="🔍",
+    "either oversold or dismissed."
 )
 
 st.divider()
@@ -1154,4 +1151,4 @@ st.write(
     "numbers those case studies were measured against, before the **App Walkthrough** takes you "
     "into the live interactive pages themselves."
 )
-st.page_link("pages/2_Results.py", label="**Continue to Results →**", icon="\U0001F4CA")
+nav_button("Continue to Results →", "pages/2_Results.py", key="nav_methodology_to_results")

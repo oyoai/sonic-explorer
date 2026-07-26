@@ -14,7 +14,7 @@ import pandas as pd
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "streamlit_app"))
 
-from components.plotting import extract_selected_song_id, library_waffle_grid, network_graph_figure
+from components.plotting import concept_bubble_diagram, extract_selected_song_id, library_waffle_grid, network_graph_figure
 
 
 def test_network_graph_figure_customdata_round_trips_song_ids():
@@ -80,3 +80,29 @@ def test_library_waffle_grid_empty_library_does_not_raise():
     songs_df = pd.DataFrame(columns=["title", "genre"])
     fig = library_waffle_grid(songs_df, {})
     assert len(fig.data) == 0
+
+
+def test_concept_bubble_diagram_has_one_satellite_marker_per_label():
+    fig = concept_bubble_diagram("Center", ["Album", "Artist", "Tags", "Genre", "Year"])
+
+    satellite_trace = fig.data[1]  # data[0] is the connecting-lines trace
+    assert list(satellite_trace.text) == ["Album", "Artist", "Tags", "Genre", "Year"]
+
+
+def test_concept_bubble_diagram_center_bubble_is_separate_trace():
+    fig = concept_bubble_diagram("Center label", ["A", "B", "C"])
+
+    center_trace = fig.data[2]
+    assert list(center_trace.text) == ["Center label"]
+    assert list(center_trace.x) == [0]
+    assert list(center_trace.y) == [0]
+
+
+def test_concept_bubble_diagram_satellites_are_evenly_spaced_around_center():
+    import numpy as np
+
+    fig = concept_bubble_diagram("Center", ["A", "B", "C", "D"])
+    satellite_trace = fig.data[1]
+
+    distances = np.hypot(satellite_trace.x, satellite_trace.y)
+    assert np.allclose(distances, 1.0)

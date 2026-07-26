@@ -26,31 +26,29 @@ circular."""
 
 import streamlit as st
 
-from comparison_data import build_naive_vs_real_graphs, get_demo_pairs
-from components.plotting import network_graph_figure
-from resources import LOGO_PATH, get_repositories, show_data_source_banner, show_logo
+from comparison_data import build_naive_vs_real_graphs
+from components.plotting import concept_bubble_diagram, network_graph_figure
+from resources import LOGO_PATH, get_repositories, nav_button, show_data_source_banner, show_logo
 from sonic_explorer.analysis.network_graph import cross_genre_edge_fraction
 from sonic_explorer.config import audio_path_for
 
 
 def render_overview() -> None:
-    st.set_page_config(page_title="Sonic Explorer", page_icon="\U0001F3A7", layout="wide")
+    st.set_page_config(page_title="Sonic Explorer", layout="wide")
 
     if LOGO_PATH.exists():
         st.image(str(LOGO_PATH), width=420)
     else:
         st.title("Sonic Explorer")
 
-    # Header wording is explicitly not locked yet (restructure plan lists
-    # "Unearth" / "Unearth Music" / "Unearth the Sound" as options) -- using
-    # the plan's own first-listed form as a placeholder, trivially swappable
-    # once the final wording is picked.
-    st.header("Unearth")
+    # Header wording is explicitly not locked yet -- "or similar" per the
+    # current restructure plan, this is a close variant kept the same
+    # digging-beneath-the-surface metaphor, made a bit more explanatory.
+    st.header("Unearth your style")
     st.info(
         "**Placeholder.** The pitch line for this header hasn't been drafted yet -- left "
-        "intentionally open rather than forced, per the current restructure plan, until more of "
-        "the page/project narrative exists to draft it against.",
-        icon="\U0001F6A7",
+        "intentionally open rather than forced, until more of the page/project narrative "
+        "exists to draft it against."
     )
 
     show_logo()
@@ -59,6 +57,11 @@ def render_overview() -> None:
     song_repo, embedding_repo, _ = get_repositories()
     all_songs = song_repo.list_songs()
     songs_by_id = {s.id: s for s in all_songs}
+
+    naive_nodes, naive_edges, real_nodes, real_edges, vectors, genre_by_song = (
+        build_naive_vs_real_graphs(song_repo, embedding_repo, len(all_songs)) if all_songs
+        else (None, [], None, [], {}, {})
+    )
 
     st.divider()
 
@@ -78,6 +81,25 @@ def render_overview() -> None:
         "who-else-liked-this. None of them ever actually listened to the song that started it."
     )
 
+    naive_neighbors_by_song: dict[int, list[int]] = {}
+    for e in naive_edges:
+        naive_neighbors_by_song.setdefault(e.song_id_a, []).append(e.song_id_b)
+        naive_neighbors_by_song.setdefault(e.song_id_b, []).append(e.song_id_a)
+    example_song = next((s for s in all_songs if naive_neighbors_by_song.get(s.id)), None)
+
+    if example_song is not None:
+        st.write("Here's what that actually looks like in practice:")
+        example_cols = st.columns(2)
+        with example_cols[0]:
+            st.caption("**You loved this song:**")
+            st.write(f"\"{example_song.title}\" — {example_song.artist} ({example_song.genre_top})")
+            st.audio(str(audio_path_for(example_song)))
+        with example_cols[1]:
+            st.caption("**A typical existing system recommends:**")
+            for nid in naive_neighbors_by_song[example_song.id]:
+                n = songs_by_id[nid]
+                st.write(f"\"{n.title}\" — {n.artist} ({n.genre_top})")
+
     st.divider()
 
     # -----------------------------------------------------------------------
@@ -85,91 +107,66 @@ def render_overview() -> None:
     # -----------------------------------------------------------------------
     st.header("2. Existing solutions")
     st.write(
-        "To be fair to those tools: comparing against a genre-tag strawman would be an easy "
-        "win. So the \"naive\" side of this comparison is the strongest non-audio baseline "
-        "reasonably achievable from this library's real metadata -- genre tag, FMA's fuller "
-        "genre-hierarchy overlap, shared album, and free-text tags, combined -- not genre alone. "
-        "Popularity signals (listens/favorites) were considered and left out: on this "
-        "genre-balanced library they're too sparse and low-signal to add anything real, and "
-        "padding the baseline with a noisy signal wouldn't make this a fairer comparison, just a "
-        "murkier one."
-    )
-    st.write(
-        "Below are the same songs, laid out two ways: **left**, an edge is drawn from that "
-        "combined metadata score; **right**, an edge is drawn if two songs' audio embeddings "
-        "are actually close. Same songs, same number of edges per song — the only thing that "
-        "changes between the two graphs is what counts as \"similar.\""
+        "Before proposing anything: how do existing recommendation systems actually work, and "
+        "is there really room for an audio-based approach to do better? Two dominant paradigms "
+        "cover most of what's out there today:"
     )
 
-    if all_songs:
-        naive_nodes, naive_edges, real_nodes, real_edges, vectors, genre_by_song = build_naive_vs_real_graphs(
-            song_repo, embedding_repo, len(all_songs)
+    concept_cols = st.columns(2)
+    with concept_cols[0]:
+        st.caption("**Metadata-based matching**")
+        st.plotly_chart(
+            concept_bubble_diagram(
+                "Songs similar<br>to this song...", ["Album", "Artist", "Tags", "Genre", "Year"]
+            ),
+            width="stretch", key="concept_metadata",
         )
-        if not real_nodes.empty:
-            col_naive, col_real = st.columns(2)
-            with col_naive:
-                st.caption(
-                    "**Naive — genre + genre hierarchy + album + tags.** Catalog metadata only, "
-                    "nothing heard."
-                )
-                st.plotly_chart(
-                    network_graph_figure(naive_nodes, naive_edges), width="stretch", key="overview_naive_graph"
-                )
-            with col_real:
-                st.caption("**This project — audio embeddings.** Edges come from what the audio sounds like.")
-                st.plotly_chart(
-                    network_graph_figure(real_nodes, real_edges), width="stretch", key="overview_real_graph"
-                )
+    with concept_cols[1]:
+        st.caption("**Collaborative filtering**")
+        st.plotly_chart(
+            concept_bubble_diagram(
+                "People who liked<br>this also liked...",
+                ["Other listeners", "Play history", "Ratings", "Purchases"],
+            ),
+            width="stretch", key="concept_collaborative",
+        )
 
-            naive_cross_pct = cross_genre_edge_fraction(naive_edges, genre_by_song)
-            real_cross_pct = cross_genre_edge_fraction(real_edges, genre_by_song)
-            st.warning(
-                f"**Read the shapes above carefully:** the naive graph's clean, single-color "
-                f"islands are not evidence it \"worked\" — its edges are *defined* as \"shares a "
-                f"metadata signal,\" so a same-genre-looking graph is guaranteed by construction, "
-                f"not earned. Only **{naive_cross_pct:.0%}** of its edges cross a genre boundary "
-                f"(the album/tag signals occasionally do this), versus **{real_cross_pct:.0%}** of "
-                f"the audio graph's edges — and every one of those audio cross-genre edges is a "
-                f"connection no amount of catalog metadata could have found. The real graph's "
-                f"color-bleed is the finding here, not noise.",
-                icon="⚠️",
-            )
+    st.write(
+        "Our approach goes further — past similarity metrics entirely, into what the audio "
+        "actually contains. Whether that's actually *better* is the open question the rest of "
+        "this project works through, not something to assert here."
+    )
 
-            st.markdown("**Hear it, don't just read it:**")
-            naive_pair, real_pair = get_demo_pairs(song_repo, embedding_repo, len(all_songs))
-            demo_cols = st.columns(2)
-            with demo_cols[0]:
-                if naive_pair is not None:
-                    a, b = songs_by_id[naive_pair.song_id_a], songs_by_id[naive_pair.song_id_b]
-                    st.caption(
-                        f"**Naive calls these \"similar\":** both tagged **{a.genre_top}** — but "
-                        f"their real audio similarity is only {naive_pair.audio_similarity:.2f}, "
-                        f"near the bottom of this library. Judge for yourself:"
-                    )
-                    st.write(f"\"{a.title}\" — {a.artist}")
-                    st.audio(str(audio_path_for(a)))
-                    st.write(f"\"{b.title}\" — {b.artist}")
-                    st.audio(str(audio_path_for(b)))
-                else:
-                    st.info("Not enough naive-graph edges yet to pick a demo pair.", icon="\U0001F6A7")
-            with demo_cols[1]:
-                if real_pair is not None:
-                    a, b = songs_by_id[real_pair.song_id_a], songs_by_id[real_pair.song_id_b]
-                    st.caption(
-                        f"**Audio calls these \"similar\":** **{a.genre_top}** and **{b.genre_top}** "
-                        f"— different genres, no shared metadata needed — at a real similarity of "
-                        f"{real_pair.audio_similarity:.2f}. Listen for yourself:"
-                    )
-                    st.write(f"\"{a.title}\" — {a.artist}")
-                    st.audio(str(audio_path_for(a)))
-                    st.write(f"\"{b.title}\" — {b.artist}")
-                    st.audio(str(audio_path_for(b)))
-                else:
-                    st.info("Not enough cross-genre audio edges yet to pick a demo pair.", icon="\U0001F6A7")
-        else:
-            st.info("No embedded songs available yet to build this comparison.", icon="\U0001F6A7")
+    if all_songs and naive_nodes is not None and not naive_nodes.empty:
+        st.write(
+            "To be fair to those two paradigms: comparing against a genre-tag strawman would be "
+            "an easy win. So the version tested here is the strongest non-audio baseline "
+            "reasonably achievable from this library's real metadata -- genre tag, FMA's fuller "
+            "genre-hierarchy overlap, shared album, and free-text tags, combined -- not genre "
+            "alone. This is the same kind of graph as the two diagrams above, except every edge "
+            "is now real, computed data, not an illustration:"
+        )
+        st.caption(
+            "**Combined metadata baseline — genre + genre hierarchy + album + tags.** Catalog "
+            "metadata only, nothing heard."
+        )
+        st.plotly_chart(
+            network_graph_figure(naive_nodes, naive_edges), width="stretch", key="overview_naive_graph"
+        )
+
+        naive_cross_pct = cross_genre_edge_fraction(naive_edges, genre_by_song)
+        real_cross_pct = cross_genre_edge_fraction(real_edges, genre_by_song)
+        st.warning(
+            f"**Read this carefully before concluding anything from the shape above:** its "
+            f"clean, single-color islands are not evidence this approach \"worked\" -- its edges "
+            f"are *defined* as \"shares a metadata signal,\" so a same-genre-looking graph is "
+            f"guaranteed by construction, not earned. Only **{naive_cross_pct:.0%}** of its edges "
+            f"cross a genre boundary (the album/tag signals occasionally do this). For context, "
+            f"the real audio-based graph -- covered later, once the mechanism actually makes "
+            f"sense -- crosses genre boundaries **{real_cross_pct:.0%}** of the time."
+        )
     else:
-        st.info("No songs available yet to build this comparison.", icon="\U0001F6A7")
+        st.info("No songs available yet to build this comparison.")
 
     st.divider()
 
@@ -202,7 +199,7 @@ def render_overview() -> None:
         "Next: **Approach** walks through how this actually works, step by step, before "
         "Methodology dives into the technical depth and evidence."
     )
-    st.page_link("pages/0_Approach.py", label="**See how it works →**", icon="\U0001F9E9")
+    nav_button("See how it works →", "pages/0_Approach.py", key="nav_overview_to_approach")
 
 
 OVERVIEW_PAGE = st.Page(render_overview, title="Overview", url_path="", default=True)

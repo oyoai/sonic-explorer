@@ -1,7 +1,8 @@
 """AppTest smoke test for the new Approach page -- the bridge page between
 Overview and Methodology. Must go through Overview.py + switch_page rather
 than AppTest.from_file on the page directly, same reasoning as every other
-page test in this app (st.page_link needs the full multipage registry)."""
+page test in this app (nav_button()'s st.switch_page() needs the full
+multipage registry)."""
 
 import sys
 from pathlib import Path
@@ -55,18 +56,21 @@ def test_approach_page_reveal_button_does_not_crash():
     assert not at.exception
 
 
-def test_approach_page_reuses_same_demo_pairs_as_overview():
-    """Restructure decision: Overview's audio demo and Approach's step 1
-    visual contrast must show the same song pair, for continuity across
-    pages -- not two independently-picked examples."""
-    overview = AppTest.from_file("streamlit_app/Overview.py", default_timeout=180)
-    overview.run()
+def test_approach_page_reuses_same_demo_pairs_as_results():
+    """Restructure decision: the audio-playback demo moved from Overview to
+    Results (evidence belongs after the mechanism is explained), but
+    Approach's step 1 visual contrast must still show the same song pair as
+    Results plays audio for, for continuity across pages -- not two
+    independently-picked examples."""
+    results = AppTest.from_file("streamlit_app/Overview.py", default_timeout=180)
+    results.switch_page("pages/2_Results.py")
+    results.run()
     approach = _run_approach()
 
-    overview_titles = {m.value for m in overview.markdown}
+    results_titles = {m.value for m in results.markdown}
     approach_titles = {c.value for c in approach.caption}
 
-    # Every song title mentioned on Approach's step 1 must also appear somewhere on Overview
+    # Every song title mentioned on Approach's step 1 must also appear somewhere on Results
     # (both derive from the same get_demo_pairs() call against the same cache_key).
     import re
 
@@ -74,7 +78,7 @@ def test_approach_page_reuses_same_demo_pairs_as_overview():
     for text in approach_titles:
         quoted_on_approach.update(re.findall(r'"([^"]+)"', text))
 
-    overview_text_blob = " ".join(overview_titles)
+    results_text_blob = " ".join(results_titles)
     assert quoted_on_approach, "expected at least one quoted song title on Approach step 1"
     for title in quoted_on_approach:
-        assert title in overview_text_blob
+        assert title in results_text_blob

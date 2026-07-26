@@ -30,11 +30,11 @@ import streamlit as st
 
 from comparison_data import build_naive_vs_real_graphs, get_demo_pairs
 from components.plotting import network_graph_figure, waveform_figure
-from resources import get_explanation_client, get_repositories, show_data_source_banner, show_logo
+from resources import get_explanation_client, get_repositories, nav_button, show_data_source_banner, show_logo
 from sonic_explorer.analysis.waveform_preview import waveform_envelope
 from sonic_explorer.config import WINDOW_SEC, audio_path_for
 
-st.set_page_config(page_title="Sonic Explorer", page_icon="\U0001F3A7", layout="wide")
+st.set_page_config(page_title="Sonic Explorer", layout="wide")
 show_logo()
 show_data_source_banner()
 
@@ -51,7 +51,7 @@ all_songs = song_repo.list_songs()
 songs_by_id = {s.id: s for s in all_songs}
 
 if not all_songs:
-    st.info("No songs available yet to build this walkthrough.", icon="\U0001F6A7")
+    st.info("No songs available yet to build this walkthrough.")
     st.stop()
 
 naive_nodes, naive_edges, real_nodes, real_edges, vectors, genre_by_song = build_naive_vs_real_graphs(
@@ -65,7 +65,10 @@ st.divider()
 # Step 1: the problem, restated visually
 # ---------------------------------------------------------------------------
 st.header("1. The problem, restated visually")
-st.write("Genre lies. The waveform doesn't. The same two pairs from Overview -- now look at them:")
+st.write(
+    "Genre lies. The waveform doesn't. Below are two real pairs from this library -- you'll hear "
+    "both for yourself in Results, once there's been a chance to explain why they turned out this way:"
+)
 
 if naive_pair is not None and real_pair is not None:
     a1, b1 = songs_by_id[naive_pair.song_id_a], songs_by_id[naive_pair.song_id_b]
@@ -100,7 +103,7 @@ if naive_pair is not None and real_pair is not None:
             width="stretch", key="step1_real_b",
         )
 else:
-    st.info("Not enough graph data yet to show this comparison.", icon="\U0001F6A7")
+    st.info("Not enough graph data yet to show this comparison.")
 
 st.divider()
 
@@ -186,7 +189,7 @@ if embed_song.id in vectors:
         width="stretch", key="step4_vector",
     )
 else:
-    st.info("No embedding available yet for this song.", icon="\U0001F6A7")
+    st.info("No embedding available yet for this song.")
 
 st.divider()
 
@@ -205,7 +208,7 @@ if not real_nodes.empty and real_pair is not None:
         width="stretch", key="step5_retrieval_graph",
     )
 else:
-    st.info("Not enough data yet to show retrieval.", icon="\U0001F6A7")
+    st.info("Not enough data yet to show retrieval.")
 
 st.divider()
 
@@ -232,25 +235,24 @@ def _demo_explanation(song_a_id: int, song_b_id: int) -> str | None:
 
 
 if real_pair is not None:
-    if st.button("▶ Reveal the explanation", key="step6_reveal"):
+    if st.button("Reveal the explanation", key="step6_reveal"):
         explanation = _demo_explanation(real_pair.song_id_a, real_pair.song_id_b)
         if explanation is None:
             st.info(
                 "No API key configured in this environment, so live generation isn't available here "
                 "-- this is exactly the graceful fallback the app uses everywhere an LLM feature "
                 "isn't load-bearing. In a configured environment, this reveals a real generated "
-                "sentence, one character at a time.",
-                icon="\U0001F6A7",
+                "sentence, one character at a time."
             )
         else:
             placeholder = st.empty()
             shown = ""
             for ch in explanation:
                 shown += ch
-                placeholder.markdown(f"\U0001F4AC *{shown}*")
+                placeholder.markdown(f"*{shown}*")
                 time.sleep(0.015)
 else:
-    st.info("Not enough data yet for a live example.", icon="\U0001F6A7")
+    st.info("Not enough data yet for a live example.")
 
 st.divider()
 
@@ -266,9 +268,9 @@ st.write(
 if not real_nodes.empty:
     st.plotly_chart(network_graph_figure(real_nodes, real_edges), width="stretch", key="step7_full_map")
 else:
-    st.info("Not enough data yet to show the full map.", icon="\U0001F6A7")
+    st.info("Not enough data yet to show the full map.")
 
 st.divider()
 
 st.write("Next: **Methodology** walks through each of these steps in depth, with real evidence at every stage.")
-st.page_link("pages/1_Methodology.py", label="**Continue to Methodology →**", icon="\U0001F52C")
+nav_button("Continue to Methodology →", "pages/1_Methodology.py", key="nav_approach_to_methodology")

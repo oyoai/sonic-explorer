@@ -1,12 +1,16 @@
 """Shared, cached "naive metadata baseline vs. real audio similarity"
-comparison data -- used by both Overview (the graph comparison + the audio-
-playback demo) and Approach (step 1's waveform contrast). Both pages show
-the exact same demo pair, by design (a callback across pages, not two
-independently-curated examples), which is why this lives in its own leaf
-module rather than inside overview_page.py: neither page should import this
-from the other, and it isn't really "Overview's" data anymore once Approach
-depends on it too -- same reasoning overview_page.py itself documents for
-why OVERVIEW_PAGE lives in its own module rather than inside Overview.py.
+comparison data -- used by Overview (the naive graph + tautology callout,
+which needs both sides' cross-genre-edge stats even though only the naive
+graph is shown there), Results (the real graph + the audio-playback demo --
+moved here from Overview: Overview raises the question, Results is where
+the evidence for an answer belongs, once Approach/Methodology have explained
+the mechanism), and Approach (step 1's waveform contrast, reusing the exact
+same demo pair Results plays audio for -- a callback across pages, not two
+independently-curated examples). Lives in its own leaf module rather than
+inside overview_page.py since it isn't really "Overview's" data anymore now
+that Results and Approach both depend on it too -- same reasoning
+overview_page.py itself documents for why OVERVIEW_PAGE lives in its own
+module rather than inside Overview.py.
 
 Demo-pair selection is deliberately dynamic (computed live from whatever
 library is loaded), not two hardcoded song titles -- picking fixed titles

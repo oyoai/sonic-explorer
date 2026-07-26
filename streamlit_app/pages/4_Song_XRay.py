@@ -12,12 +12,12 @@ from sonic_explorer.analysis.taste_map import compute_taste_map, mean_pool_song_
 from sonic_explorer.config import audio_path_for
 from sonic_explorer.facets.fingerprint import composite_fingerprint, structure_fingerprint
 from components.plotting import composite_fingerprint_thumbnail, fingerprint_thumbnail
-from resources import get_repositories, show_data_source_banner, show_logo
+from resources import get_repositories, nav_button, show_data_source_banner, show_logo
 
-st.set_page_config(page_title="Song X-Ray", page_icon="\U0001F50D")
+st.set_page_config(page_title="Song X-Ray")
 st.title("Song X-Ray")
 st.caption("A song's structural anatomy -- matching colors below mean similar-sounding sections.")
-st.page_link("pages/7_Explore.py", label="← Back to Explore", icon="\U0001F310")
+nav_button("← Back to Explore", "pages/7_Explore.py", key="nav_xray_to_explore")
 
 show_logo()
 show_data_source_banner()
@@ -47,7 +47,7 @@ song = songs[choice]
 st.subheader(f"{song.title} — {song.artist}")
 st.caption(f"Genre: {song.genre_top}")
 if song.description:
-    st.caption(f"\U0001F3B6 *{song.description}*")
+    st.caption(f"*{song.description}*")
 st.audio(str(audio_path_for(song)))
 
 # Fetched once, used by both the fingerprint row and the timeline chart below.
@@ -158,7 +158,7 @@ else:
         st.audio(str(audio_path_for(song)), start_time=seg_start, end_time=seg_end, loop=True)
 
         retrieval_segments = song_repo.get_segments(song.id)
-        if retrieval_segments and st.button("\U0001F3AF Find similar moments →", key="find_similar_moments_btn"):
+        if retrieval_segments and st.button("Find similar moments →", key="find_similar_moments_btn"):
             # Structure blocks (variable-length, self-similarity-derived) are a
             # different segmentation from the fixed ~5s/2.5s-hop segments
             # Moment Matcher searches over -- map by closest start time rather

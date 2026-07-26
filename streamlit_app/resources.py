@@ -139,4 +139,15 @@ def is_deploy_subset() -> bool:
 
 def show_data_source_banner() -> None:
     if is_dev_data():
-        st.warning("Using synthetic dev data (sine-wave placeholder audio) -- not the real library yet.", icon="\U0001F9EA")
+        st.warning("Using synthetic dev data (sine-wave placeholder audio) -- not the real library yet.")
+
+
+def nav_button(label: str, target_page: str, key: str) -> None:
+    """Real, clickable button that navigates to another page -- st.page_link
+    renders as an underlined link, not a button, which is why every
+    cross-page navigation call in this app goes through this helper instead.
+    st.switch_page() halts script execution and redirects internally (it
+    raises its own control-flow exception), so nothing after this call ever
+    runs once the button's been clicked -- no return value needed."""
+    if st.button(label, key=key):
+        st.switch_page(target_page)

@@ -64,6 +64,50 @@ def composite_fingerprint_thumbnail(composite, title: str = "Composite") -> go.F
     return fig
 
 
+def concept_bubble_diagram(center_label: str, satellite_labels: list[str]) -> go.Figure:
+    """A simple radial diagram -- a center concept bubble surrounded by the
+    signals that feed it, connected by thin lines. Illustrative only, not
+    real computed data (unlike every other chart in this app) -- Overview
+    uses this to sketch how existing recommendation paradigms conceptually
+    work, before presenting the real naive-vs-audio network graph as actual
+    evidence a few paragraphs later."""
+    n = len(satellite_labels)
+    angles = [2 * math.pi * i / n - math.pi / 2 for i in range(n)]
+    sat_x = [math.cos(a) for a in angles]
+    sat_y = [math.sin(a) for a in angles]
+
+    line_x, line_y = [], []
+    for x, y in zip(sat_x, sat_y, strict=False):
+        line_x += [0, x, None]
+        line_y += [0, y, None]
+
+    fig = go.Figure()
+    fig.add_trace(go.Scatter(
+        x=line_x, y=line_y, mode="lines",
+        line=dict(width=1, color="rgba(150,150,150,0.5)"),
+        hoverinfo="skip", showlegend=False,
+    ))
+    fig.add_trace(go.Scatter(
+        x=sat_x, y=sat_y, mode="markers+text",
+        marker=dict(size=64, color="rgba(99,110,250,0.30)", line=dict(width=1.5, color="rgb(99,110,250)")),
+        text=satellite_labels, textposition="middle center", textfont=dict(size=12),
+        hoverinfo="skip", showlegend=False,
+    ))
+    fig.add_trace(go.Scatter(
+        x=[0], y=[0], mode="markers+text",
+        marker=dict(size=120, color="rgba(239,85,59,0.30)", line=dict(width=2, color="rgb(239,85,59)")),
+        text=[center_label], textposition="middle center", textfont=dict(size=13),
+        hoverinfo="skip", showlegend=False,
+    ))
+    fig.update_layout(
+        height=320, margin=dict(l=10, r=10, t=10, b=10),
+        xaxis=dict(visible=False, range=[-1.7, 1.7]),
+        yaxis=dict(visible=False, range=[-1.7, 1.7], scaleanchor="x", scaleratio=1),
+        plot_bgcolor="rgba(0,0,0,0)", showlegend=False,
+    )
+    return fig
+
+
 def waveform_figure(
     envelope, title: str = "", highlight_range: tuple[float, float] | None = None,
     duration_sec: float | None = None, color: str = "rgb(99,110,250)", height: int = 140,
