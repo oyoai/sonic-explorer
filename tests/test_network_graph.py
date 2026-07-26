@@ -2,11 +2,14 @@ import numpy as np
 import pytest
 
 from sonic_explorer.analysis.network_graph import (
+    DEFAULT_METADATA_WEIGHTS,
     GraphEdge,
     SongMetadata,
     build_blended_similarity_graph,
     build_metadata_similarity_graph,
     build_similarity_graph,
+    combine_metadata_similarities,
+    compute_metadata_similarity_components,
     cosine_similarity_between,
     cross_genre_edge_fraction,
     pick_naive_mismatch_pair,
@@ -359,3 +362,102 @@ def test_pick_real_cross_genre_pair_no_cross_genre_edges_returns_none():
     real_edges = [GraphEdge(1, 2, 0.9)]
 
     assert pick_real_cross_genre_pair(real_edges, genre_by_song) is None
+
+
+def test_compute_metadata_similarity_components_returns_four_matrices():
+    metadata = {
+        1: SongMetadata(genre_top="Rock", genres_all=frozenset({10}), album_id=1, tags=frozenset({"chill"})),
+        2: SongMetadata(genre_top="Rock", genres_all=frozenset({10}), album_id=1, tags=frozenset({"chill"})),
+        3: SongMetadata(genre_top="Jazz", genres_all=frozenset({20}), album_id=2, tags=frozenset({"loud"})),
+    }
+
+    song_ids, components = compute_metadata_similarity_components(metadata)
+
+    assert song_ids == [1, 2, 3]
+    assert set(components.keys()) == {"genre", "genres_all", "album", "tags"}
+    for matrix in components.values():
+        assert matrix.shape == (3, 3)
+    # song 1 and 2 share everything -- every component should score them 1.0
+    for name, matrix in components.items():
+        assert matrix[0, 1] == pytest.approx(1.0), f"{name} should be 1.0 for identical songs 1 and 2"
+
+
+def test_compute_metadata_similarity_components_fewer_than_two_songs_returns_empty():
+    song_ids, components = compute_metadata_similarity_components({1: SongMetadata(genre_top="Rock")})
+    assert song_ids == [1]
+    assert components == {}
+
+
+def test_combine_metadata_similarities_default_matches_default_metadata_weights():
+    """Regression guard: the default must stay in sync with
+    DEFAULT_METADATA_WEIGHTS -- the real, evaluated combination
+    (notebooks/04_naive_baseline_eda.ipynb), not silently drift back to an
+    arbitrary equal-weight guess."""
+    components = {
+        "genre": np.array([[0.0, 1.0], [1.0, 0.0]]),
+        "genres_all": np.array([[0.0, 0.3], [0.3, 0.0]]),
+        "album": np.array([[0.0, 1.0], [1.0, 0.0]]),
+        "tags": np.array([[0.0, 1.0], [1.0, 0.0]]),
+    }
+
+    combined = combine_metadata_similarities(components)
+    expected = combine_metadata_similarities(components, weights=DEFAULT_METADATA_WEIGHTS)
+
+    assert combined[0, 1] == pytest.approx(expected[0, 1])
+
+
+def test_default_metadata_weights_is_not_equal_weighting():
+    """DEFAULT_METADATA_WEIGHTS was chosen by a real evaluation (see
+    notebooks/04_naive_baseline_eda.ipynb) that found equal weighting is
+    tied on genre-cohesion@10 with a tags/album-weighted variant, but the
+    tags/album-weighted variant produces ~20x more genuine cross-genre
+    edges -- this guards against silently reverting to the untested
+    equal-weight guess."""
+    values = set(DEFAULT_METADATA_WEIGHTS.values())
+    assert len(values) > 1, "expected an intentionally uneven weighting, not equal weights"
+    assert DEFAULT_METADATA_WEIGHTS["album"] > DEFAULT_METADATA_WEIGHTS["genre"]
+    assert DEFAULT_METADATA_WEIGHTS["tags"] > DEFAULT_METADATA_WEIGHTS["genre"]
+
+
+def test_combine_metadata_similarities_weights_need_not_sum_to_one():
+    """Weights are normalized internally, so intuitive relative weights
+    (not pre-normalized fractions) are safe to pass directly."""
+    components = {
+        "genre": np.array([[0.0, 1.0], [1.0, 0.0]]),
+        "tags": np.array([[0.0, 0.0], [0.0, 0.0]]),
+    }
+
+    combined = combine_metadata_similarities(components, weights={"genre": 3, "tags": 1})
+
+    assert combined[0, 1] == pytest.approx(0.75)  # 3/(3+1)
+
+
+def test_combine_metadata_similarities_missing_weight_defaults_to_zero_contribution():
+    components = {
+        "genre": np.array([[0.0, 1.0], [1.0, 0.0]]),
+        "tags": np.array([[0.0, 1.0], [1.0, 0.0]]),
+    }
+
+    combined = combine_metadata_similarities(components, weights={"genre": 1.0})  # tags omitted
+
+    assert combined[0, 1] == pytest.approx(1.0)  # only genre contributes, tags weighted 0
+
+
+def test_build_metadata_similarity_graph_custom_weights_change_edge_selection():
+    """A non-default weighting must actually change which edges get picked
+    -- confirms build_metadata_similarity_graph really uses the weights
+    argument, not just accepting and ignoring it."""
+    metadata = {
+        1: SongMetadata(genre_top="Rock", album_id=None, tags=frozenset({"a", "b", "c"})),
+        2: SongMetadata(genre_top="Jazz", album_id=None, tags=frozenset({"a", "b", "c"})),  # shares tags, not genre
+        3: SongMetadata(genre_top="Rock", album_id=None, tags=frozenset({"x"})),  # shares genre, not tags
+    }
+
+    genre_heavy = build_metadata_similarity_graph(metadata, k_neighbors=1, weights={"genre": 1.0, "tags": 0.0})
+    tags_heavy = build_metadata_similarity_graph(metadata, k_neighbors=1, weights={"genre": 0.0, "tags": 1.0})
+
+    genre_heavy_pairs = {frozenset((e.song_id_a, e.song_id_b)) for e in genre_heavy.edges}
+    tags_heavy_pairs = {frozenset((e.song_id_a, e.song_id_b)) for e in tags_heavy.edges}
+
+    assert frozenset((1, 3)) in genre_heavy_pairs  # same genre wins when genre is all that's weighted
+    assert frozenset((1, 2)) in tags_heavy_pairs  # same tags wins when tags is all that's weighted

@@ -142,3 +142,61 @@ def song_level_genre_cohesion_at_k(
         observed=float(np.mean(observed_scores)) if observed_scores else 0.0,
         random_baseline=float(np.mean(random_scores)) if random_scores else 0.0,
     )
+
+
+def metadata_genre_cohesion_at_k(
+    song_ids: list[int],
+    combined_sims: np.ndarray,
+    genre_by_song: dict[int, str],
+    k: int = 10,
+    sample_size: int | None = None,
+    seed: int = 42,
+    label: str = "naive_metadata",
+) -> GenreCohesionResult:
+    """Same metric, same conventions (k/sample_size/seed, same-song
+    exclusion, random-baseline-from-other-songs, mean-of-per-query-hit-rate
+    aggregation) as song_level_genre_cohesion_at_k, adapted to run directly
+    over a dense similarity matrix -- e.g. a naive metadata baseline's
+    combined_sims from analysis/network_graph.py's
+    compute_metadata_similarity_components()/combine_metadata_similarities()
+    -- instead of a FAISS index. This is what lets a metadata-only
+    baseline's genre-cohesion@k be reported on the exact same scale as every
+    audio facet's, evaluated the identical way (see
+    notebooks/04_naive_baseline_eda.ipynb, which uses this to compare
+    several combination strategies for the naive baseline)."""
+    rng = np.random.default_rng(seed)
+    n = len(song_ids)
+    if n < 2:
+        return GenreCohesionResult(facet_name=label, k=k, n_queries=0, observed=0.0, random_baseline=0.0)
+
+    if sample_size is not None and sample_size < n:
+        query_indices = rng.choice(n, size=sample_size, replace=False)
+    else:
+        query_indices = np.arange(n)
+
+    all_indices = np.arange(n)
+    k_eff = min(k, n - 1)
+    observed_scores = []
+    random_scores = []
+
+    for qi in query_indices:
+        query_genre = genre_by_song[song_ids[qi]]
+
+        row = combined_sims[qi].copy()
+        row[qi] = -np.inf
+        top_k_idx = np.argpartition(row, -k_eff)[-k_eff:]
+        hits = sum(1 for j in top_k_idx if genre_by_song[song_ids[j]] == query_genre)
+        observed_scores.append(hits / k_eff)
+
+        other_idx = all_indices[all_indices != qi]
+        chosen = rng.choice(other_idx, size=min(k_eff, len(other_idx)), replace=False)
+        random_hits = sum(1 for j in chosen if genre_by_song[song_ids[j]] == query_genre)
+        random_scores.append(random_hits / len(chosen))
+
+    return GenreCohesionResult(
+        facet_name=label,
+        k=k,
+        n_queries=len(query_indices),
+        observed=float(np.mean(observed_scores)) if observed_scores else 0.0,
+        random_baseline=float(np.mean(random_scores)) if random_scores else 0.0,
+    )

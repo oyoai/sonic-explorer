@@ -1,7 +1,11 @@
 import numpy as np
 import pytest
 
-from sonic_explorer.evaluation.genre_cohesion import genre_cohesion_at_k, song_level_genre_cohesion_at_k
+from sonic_explorer.evaluation.genre_cohesion import (
+    genre_cohesion_at_k,
+    metadata_genre_cohesion_at_k,
+    song_level_genre_cohesion_at_k,
+)
 from sonic_explorer.models import Segment, Song
 from sonic_explorer.repository.db import init_db
 from sonic_explorer.repository.embedding_repository import EmbeddingRepository
@@ -106,3 +110,65 @@ def test_song_level_genre_cohesion_handles_no_embedded_segments(repos):
     assert result.n_queries == 0
     assert result.observed == 0.0
     assert result.random_baseline == 0.0
+
+
+def test_metadata_genre_cohesion_perfect_similarity_within_genre_scores_1():
+    """Two perfectly-separated genre blocks (similarity 1.0 within a genre,
+    0.0 across) must score observed=1.0 -- every top-k neighbor shares
+    genre, by construction of the similarity matrix itself."""
+    song_ids = list(range(12))
+    genre_by_song = {sid: ("Rock" if sid < 6 else "Jazz") for sid in song_ids}
+    sims = np.zeros((12, 12))
+    sims[:6, :6] = 1.0
+    sims[6:, 6:] = 1.0
+
+    result = metadata_genre_cohesion_at_k(song_ids, sims, genre_by_song, k=3)
+
+    assert result.n_queries == 12
+    assert result.observed == pytest.approx(1.0)
+    assert result.observed > result.random_baseline
+
+
+def test_metadata_genre_cohesion_excludes_query_song_itself():
+    """A single song has no valid neighbors -- must not crash or count
+    itself as its own nearest neighbor."""
+    song_ids = [1]
+    genre_by_song = {1: "Rock"}
+    sims = np.zeros((1, 1))
+
+    result = metadata_genre_cohesion_at_k(song_ids, sims, genre_by_song, k=3)
+
+    assert result.n_queries == 0
+    assert result.observed == 0.0
+    assert result.random_baseline == 0.0
+
+
+def test_metadata_genre_cohesion_respects_sample_size():
+    song_ids = list(range(20))
+    genre_by_song = {sid: ("Rock" if sid % 2 == 0 else "Jazz") for sid in song_ids}
+    sims = np.random.default_rng(3).uniform(size=(20, 20))
+
+    result = metadata_genre_cohesion_at_k(song_ids, sims, genre_by_song, k=3, sample_size=5, seed=1)
+
+    assert result.n_queries == 5
+
+
+def test_metadata_genre_cohesion_k_larger_than_available_songs_is_clamped():
+    song_ids = list(range(4))
+    genre_by_song = {sid: "Rock" for sid in song_ids}
+    sims = np.ones((4, 4))
+
+    result = metadata_genre_cohesion_at_k(song_ids, sims, genre_by_song, k=50)
+
+    assert result.n_queries == 4
+    assert result.observed == pytest.approx(1.0)
+
+
+def test_metadata_genre_cohesion_label_becomes_facet_name():
+    song_ids = [1, 2]
+    genre_by_song = {1: "Rock", 2: "Jazz"}
+    sims = np.array([[0.0, 0.5], [0.5, 0.0]])
+
+    result = metadata_genre_cohesion_at_k(song_ids, sims, genre_by_song, k=1, label="genre_weighted_variant")
+
+    assert result.facet_name == "genre_weighted_variant"
