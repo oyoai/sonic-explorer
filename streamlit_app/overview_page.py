@@ -1,6 +1,13 @@
 """The Overview/landing page's actual content, plus the StreamlitPage object
 that registers it in Overview.py's st.navigation() call.
 
+Content follows a real content spec (Problem / Existing solutions / Research
+question) authored directly against this project's real data -- notably the
+two real metadata-vs-real similarity pairs in "Existing solutions," which
+used to live on Approach's step 1 and moved here since they're the concrete
+evidence for exactly the point this section makes (shared metadata doesn't
+guarantee shared sound). Approach now starts from segmentation instead.
+
 Why this lives in its own module rather than directly in Overview.py: a page
 registered via a callable (st.Page(render_overview, ...)) gets script_path=""
 in Streamlit's internal page registry -- Streamlit only derives a real
@@ -24,18 +31,19 @@ st.navigation()) and pages/1_Methodology.py (for the back-link) import from,
 rather than inside Overview.py itself where importing it back would be
 circular."""
 
-from pathlib import Path
-
 import streamlit as st
 
-from comparison_data import build_metadata_vs_real_graphs
-from components.plotting import concept_bubble_diagram, network_graph_figure
+from comparison_data import get_demo_pairs
+from components.plotting import concept_bubble_diagram, waveform_figure
 from resources import LOGO_PATH, get_repositories, nav_button, show_data_source_banner, show_logo
-from sonic_explorer.analysis.network_graph import cross_genre_edge_fraction
+from sonic_explorer.analysis.waveform_preview import waveform_envelope
+from sonic_explorer.config import audio_path_for
 
-# Real screenshot, not a mock-up -- drop the actual file here once available
-# and it replaces the placeholder box automatically, no code change needed.
-SPOTIFY_SCREENSHOT_PATH = Path(__file__).resolve().parent / "static" / "spotify_recommendations_screenshot.png"
+
+def _big_quote(text: str) -> None:
+    """A short, large, visually-set-apart line -- used for the two moments
+    on this page meant to land as a single idea, not a paragraph to read."""
+    st.markdown(f"## _{text}_")
 
 
 def render_overview() -> None:
@@ -46,81 +54,55 @@ def render_overview() -> None:
     else:
         st.title("Sonic Explorer")
 
-    # Header wording is explicitly not locked yet -- "or similar" per the
-    # current restructure plan, this is a close variant kept the same
-    # digging-beneath-the-surface metaphor, made a bit more explanatory.
-    st.header("Unearth your style")
-    st.info(
-        "**Placeholder.** The pitch line for this header hasn't been drafted yet -- left "
-        "intentionally open rather than forced, until more of the page/project narrative "
-        "exists to draft it against."
-    )
-
     show_logo()
     show_data_source_banner()
 
     song_repo, embedding_repo, _ = get_repositories()
     all_songs = song_repo.list_songs()
+    songs_by_id = {s.id: s for s in all_songs}
 
-    metadata_nodes, metadata_edges, real_nodes, real_edges, vectors, genre_by_song = (
-        build_metadata_vs_real_graphs(song_repo, embedding_repo, len(all_songs)) if all_songs
-        else (None, [], None, [], {}, {})
+    metadata_pair, real_pair = (
+        get_demo_pairs(song_repo, embedding_repo, len(all_songs)) if all_songs else (None, None)
     )
 
     st.divider()
 
     # -----------------------------------------------------------------------
-    # 1. Problem
+    # Problem
     # -----------------------------------------------------------------------
-    st.header("1. Problem")
+    st.header("Problem")
+    st.caption("The motivation behind this project came from a recurring experience:")
+    _big_quote('"I love this song, find me more like it."')
     st.write(
-        "**First-draft copy -- needs your real specifics, not left as-is.** Something like: "
-        "every so often a song hits exactly right -- not just \"good,\" but *this specific "
-        "thing* about how it sounds. The obvious next move is finding more like it. That's "
-        "where it falls apart. Search engines want a genre or an artist name. Streaming "
-        "recommendations lean on what other people who liked this also liked -- a popularity "
-        "signal, not a sound one. Even asking an AI chatbot gets an answer built from what's "
-        "written *about* music -- reviews, tags, genre history -- not from what's actually in "
-        "the recording. Every option points back to the same shallow signals: genre, metadata, "
-        "who-else-liked-this. None of them ever actually listened to the song that started it."
+        "But the recommendations rarely captured the qualities that made the original song "
+        "appealing to me."
     )
 
     st.divider()
 
     # -----------------------------------------------------------------------
-    # 2. Existing solutions
+    # Existing solutions
     # -----------------------------------------------------------------------
-    st.header("2. Existing solutions")
+    st.header("Existing solutions")
+    st.caption("How do current systems identify related songs?")
     st.write(
-        "Before proposing anything: how do existing recommendation systems actually work, and "
-        "is there really room for an audio-based approach to do better? Two dominant paradigms "
-        "cover most of what's out there today. Here's what that actually looks like in practice:"
+        "Existing music discovery systems generally rely on two sources of information to "
+        "estimate similarity:"
     )
-
-    if SPOTIFY_SCREENSHOT_PATH.exists():
-        st.image(
-            str(SPOTIFY_SCREENSHOT_PATH),
-            caption="A real screenshot of Spotify's actual recommendations for a real song.",
-        )
-    else:
-        st.info(
-            "**Placeholder.** A real screenshot of Spotify's actual \"Recommended\"/\"Fans also "
-            "like\" UI for a real song goes here -- concrete evidence of what existing systems do "
-            "today, not a mock-up. Drop the image at "
-            "`streamlit_app/static/spotify_recommendations_screenshot.png` once available."
-        )
 
     concept_cols = st.columns(2)
     with concept_cols[0]:
-        st.caption("**Metadata-based matching**")
         st.plotly_chart(
             concept_bubble_diagram(
                 "Songs similar<br>to this song...", ["Album", "Artist", "Tags", "Genre", "Year"]
             ),
             width="stretch", key="concept_metadata",
         )
+        st.caption(
+            "**Metadata-based approaches:** similarity determined using explicit song "
+            "attributes: genre, artist, tags, release year/era, album information."
+        )
     with concept_cols[1]:
-        st.caption("**Collaborative filtering**")
         st.plotly_chart(
             concept_bubble_diagram(
                 "People who liked<br>this also liked...",
@@ -129,77 +111,74 @@ def render_overview() -> None:
             width="stretch", key="concept_collaborative",
         )
         st.caption(
+            "**Collaborative filtering:** similarity inferred from listener behavior: "
+            "listening history, ratings/likes, playlists, similar users' preferences."
+        )
+        st.caption(
             "**Honest gap:** this library has no user-level listen/favorite/interaction data at "
             "all -- collaborative filtering is described here for a complete picture of the "
             "landscape, not something this project can build or compare against directly."
         )
 
-    st.write(
-        "Our approach goes further — past similarity metrics entirely, into what the audio "
-        "actually contains. Whether that's actually *better* is the open question the rest of "
-        "this project works through, not something to assert here."
-    )
+    st.write("But shared metadata doesn't guarantee shared sound.")
 
-    if all_songs and metadata_nodes is not None and not metadata_nodes.empty:
-        st.write(
-            "To be fair to those two paradigms: comparing against a genre-tag strawman would be "
-            "an easy win. So the version tested here is the strongest non-audio baseline "
-            "reasonably achievable from this library's real metadata -- genre tag, FMA's fuller "
-            "genre-hierarchy overlap, shared album, and free-text tags, combined via a weighted "
-            "**score fusion** (a hybrid-search technique: several independent similarity signals "
-            "blended into one score, not genre alone). This is the same kind of graph as the two "
-            "diagrams above, except every edge is now real, computed data, not an illustration:"
-        )
+    if metadata_pair is not None and real_pair is not None:
         st.caption(
-            "**Metadata baseline — genre + genre hierarchy + album + tags.** Catalog metadata "
-            "only, nothing heard."
-        )
-        st.plotly_chart(
-            network_graph_figure(metadata_nodes, metadata_edges), width="stretch",
-            key="overview_metadata_graph", config={"staticPlot": True},
+            "Below are two real pairs from this library: two songs tagged with the same genre "
+            "that sound nothing alike, and two songs from different genres that sound "
+            "remarkably similar."
         )
 
-        metadata_cross_pct = cross_genre_edge_fraction(metadata_edges, genre_by_song)
-        real_cross_pct = cross_genre_edge_fraction(real_edges, genre_by_song)
-        st.warning(
-            f"**Read this carefully before concluding anything from the shape above:** its "
-            f"clean, single-color islands are not evidence this approach \"worked\" -- its edges "
-            f"are *defined* as \"shares a metadata signal,\" so a same-genre-looking graph is "
-            f"guaranteed by construction, not earned. Only **{metadata_cross_pct:.0%}** of its "
-            f"edges cross a genre boundary (the album/tag signals occasionally do this). For "
-            f"context, the real audio-based graph -- covered later, once the mechanism actually "
-            f"makes sense -- crosses genre boundaries **{real_cross_pct:.0%}** of the time."
+        a1, b1 = songs_by_id[metadata_pair.song_id_a], songs_by_id[metadata_pair.song_id_b]
+        st.markdown(
+            f"**Same genre tag ({a1.genre_top}), sound different** -- real audio similarity "
+            f"**{metadata_pair.audio_similarity:.2f}**"
         )
+        row1 = st.columns(2)
+        with row1[0]:
+            st.plotly_chart(
+                waveform_figure(waveform_envelope(audio_path_for(a1)), title=a1.title, color="rgb(239,85,59)"),
+                width="stretch", key="overview_pair_metadata_a",
+            )
+            st.audio(str(audio_path_for(a1)))
+        with row1[1]:
+            st.plotly_chart(
+                waveform_figure(waveform_envelope(audio_path_for(b1)), title=b1.title, color="rgb(239,85,59)"),
+                width="stretch", key="overview_pair_metadata_b",
+            )
+            st.audio(str(audio_path_for(b1)))
+
+        a2, b2 = songs_by_id[real_pair.song_id_a], songs_by_id[real_pair.song_id_b]
+        st.markdown(
+            f"**Different genres ({a2.genre_top} / {b2.genre_top}), sound similar** -- real "
+            f"audio similarity **{real_pair.audio_similarity:.2f}**"
+        )
+        row2 = st.columns(2)
+        with row2[0]:
+            st.plotly_chart(
+                waveform_figure(waveform_envelope(audio_path_for(a2)), title=a2.title, color="rgb(99,110,250)"),
+                width="stretch", key="overview_pair_real_a",
+            )
+            st.audio(str(audio_path_for(a2)))
+        with row2[1]:
+            st.plotly_chart(
+                waveform_figure(waveform_envelope(audio_path_for(b2)), title=b2.title, color="rgb(99,110,250)"),
+                width="stretch", key="overview_pair_real_b",
+            )
+            st.audio(str(audio_path_for(b2)))
     else:
-        st.info("No songs available yet to build this comparison.")
+        st.info("Not enough data yet to show these two real pairs.")
 
     st.divider()
 
     # -----------------------------------------------------------------------
-    # 3. Proposed solution
+    # Research question
     # -----------------------------------------------------------------------
-    st.header("3. Proposed solution")
-    st.write("Sonic Explorer starts from the opposite direction: analyze the audio directly.")
-    st.plotly_chart(
-        concept_bubble_diagram(
-            "One song,<br>six independent<br>measurements",
-            ["Sound", "Harmony", "Vocal", "Drums", "Bass", "Instrumental"],
-        ),
-        width="stretch", key="concept_facets",
-    )
-    st.caption(
-        "Genre labels never enter this computation -- they're only checked afterward, as an "
-        "evaluation yardstick, not the mechanism generating the matches. **Explore is the hub** "
-        "for everything downstream of this: Song X-Ray, Moment Matcher, and Ask the DJ are all "
-        "reached by interacting with it, not separate destinations."
-    )
+    st.header("Research question")
+    _big_quote("Can we find songs that are actually similar to one another by sound?")
 
     st.divider()
 
-    st.write(
-        "Next: **Approach** walks through how this actually works, step by step, before "
-        "Methodology dives into the technical depth and evidence."
-    )
     nav_button("See how it works →", "pages/0_Approach.py", key="nav_overview_to_approach")
 
 

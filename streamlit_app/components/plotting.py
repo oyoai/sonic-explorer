@@ -240,6 +240,83 @@ def library_waffle_grid(songs_df, genre_counts: dict[str, int]) -> go.Figure:
     return fig
 
 
+def embedding_strip_figure(vec, n_dims: int = 48, title: str = "") -> go.Figure:
+    """A strip of discrete colored cells, one per embedding dimension --
+    deliberately NOT a connected line the way waveform_figure renders audio.
+    A line plot would visually imply the dimensions have a meaningful order/
+    continuity to trace across, which they don't -- a CLAP embedding's
+    dimensions are independent coordinates in a space, not a signal over
+    time, and discrete cells are the honest way to show that."""
+    preview = np.asarray(vec[:n_dims]).reshape(1, -1)
+    fig = px.imshow(preview, color_continuous_scale="Viridis", aspect="auto")
+    fig.update_layout(
+        height=90, margin=dict(l=10, r=10, t=30 if title else 10, b=10),
+        title=dict(text=title, font=dict(size=13)) if title else None,
+        coloraxis_showscale=False, xaxis=dict(visible=False), yaxis=dict(visible=False),
+    )
+    return fig
+
+
+def close_by_illustration() -> go.Figure:
+    """A small, illustrative "nearest neighbors in embedding space" sketch --
+    NOT the real network graph (that's a later step, and Results/Explore's
+    job once the mechanism has actually been explained). Fixed, hand-placed
+    points, not real songs or real distances: one query point at the
+    center, two genuinely "close" points connected by a line, a few "far"
+    points left unconnected -- illustrating that similarity search just
+    means distance, nothing more, before the real graph makes the same
+    point with actual data."""
+    query = (0.0, 0.0)
+    near = [(0.35, 0.25), (-0.2, 0.4)]
+    far = [(1.3, -0.9), (-1.4, -0.6), (0.9, 1.3)]
+
+    fig = go.Figure()
+    for nx, ny in near:
+        fig.add_trace(go.Scatter(
+            x=[query[0], nx], y=[query[1], ny], mode="lines",
+            line=dict(width=1.5, color="rgba(99,110,250,0.6)"), hoverinfo="skip", showlegend=False,
+        ))
+    fig.add_trace(go.Scatter(
+        x=[p[0] for p in far], y=[p[1] for p in far], mode="markers",
+        marker=dict(size=14, color="rgba(150,150,150,0.5)"), hoverinfo="skip", showlegend=False,
+    ))
+    fig.add_trace(go.Scatter(
+        x=[p[0] for p in near], y=[p[1] for p in near], mode="markers",
+        marker=dict(size=16, color="rgba(99,110,250,0.85)"), hoverinfo="skip", showlegend=False,
+    ))
+    fig.add_trace(go.Scatter(
+        x=[query[0]], y=[query[1]], mode="markers",
+        marker=dict(size=22, color="rgba(239,85,59,0.9)", line=dict(width=2, color="white")),
+        hoverinfo="skip", showlegend=False,
+    ))
+    fig.update_layout(
+        height=240, margin=dict(l=10, r=10, t=10, b=10),
+        xaxis=dict(visible=False, range=[-2, 2]),
+        yaxis=dict(visible=False, range=[-1.5, 1.7], scaleanchor="x", scaleratio=1),
+        plot_bgcolor="rgba(0,0,0,0)", showlegend=False,
+    )
+    return fig
+
+
+def song_dna_bars(axis_labels: list[str], values: list[float], title: str = "") -> go.Figure:
+    """One song's normalized ([0,1] per axis) song-DNA profile as a simple
+    horizontal bar chart -- unlike song_dna_radar_overlay (built for
+    overlaying two songs' shapes against each other), this is for showing a
+    single song's profile on its own, e.g. Approach's step-by-step walkthrough
+    where only one example song is in play at that point."""
+    fig = go.Figure(go.Bar(
+        x=values, y=axis_labels, orientation="h",
+        marker=dict(color="rgb(0,204,150)"), text=[f"{v:.2f}" for v in values], textposition="auto",
+    ))
+    fig.update_layout(
+        height=220, margin=dict(l=10, r=10, t=30 if title else 10, b=10),
+        title=dict(text=title, font=dict(size=13)) if title else None,
+        xaxis=dict(range=[0, 1], title=None), yaxis=dict(autorange="reversed"),
+        showlegend=False, plot_bgcolor="rgba(0,0,0,0)",
+    )
+    return fig
+
+
 def song_dna_radar_overlay(
     axis_labels: list[str],
     values_a: list[float],
