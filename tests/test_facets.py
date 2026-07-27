@@ -6,6 +6,7 @@ from sonic_explorer.facets.harmony import HarmonyFacet
 from sonic_explorer.facets.registry import FacetRegistry, default_registry
 from sonic_explorer.facets.sound import SoundFacet
 from sonic_explorer.facets.stems import BassFacet, DrumsFacet, InstrumentalFacet, VocalFacet
+from sonic_explorer.facets.tags import SoundTagsFacet, tags_to_text
 
 
 class FakeFacet(Facet):
@@ -83,3 +84,30 @@ def test_default_registry_has_stem_facets_without_loading_clap():
         facet = registry.get(name)
         assert isinstance(facet, cls)
         assert facet.dim == 512  # inherits SoundFacet's CLAP dim -- same embedding logic, isolated audio
+
+
+def test_default_registry_has_sound_tags_facet_without_loading_clap():
+    # Constructing SoundTagsFacet must stay lazy too -- same discipline as sound/stems.
+    registry = default_registry()
+    assert "sound_tags" in registry.names()
+    facet = registry.get("sound_tags")
+    assert isinstance(facet, SoundTagsFacet)
+    assert facet.dim == 512  # CLAP's joint text-audio space, same as the Sound facet
+
+
+def test_tags_to_text_joins_labels_highest_confidence_first():
+    tags = [("Cello", 0.259), ("Bowed string instrument", 0.155), ("Violin, fiddle", 0.096)]
+    assert tags_to_text(tags) == "Cello, Bowed string instrument, Violin, fiddle"
+
+
+def test_tags_to_text_handles_empty_list():
+    assert tags_to_text([]) == ""
+
+
+def test_tags_to_text_excludes_generic_umbrella_labels():
+    tags = [("Music", 0.35), ("Cello", 0.15), ("Musical instrument", 0.09), ("Violin, fiddle", 0.07)]
+    assert tags_to_text(tags) == "Cello, Violin, fiddle"
+
+
+def test_tags_to_text_all_generic_returns_empty_string():
+    assert tags_to_text([("Music", 0.5), ("Musical instrument", 0.1)]) == ""

@@ -25,6 +25,7 @@ FACET_DESCRIPTIONS = {
     "drums": "drum and percussion pattern and timbre, isolated from the rest of the mix",
     "bass": "bassline tone and pattern, isolated from the rest of the mix",
     "instrumental": "backing instrumentation with vocals removed",
+    "sound_tags": "detected sounds and instruments (e.g. cello, gong, sirens) -- what's actually in the mix, not overall texture",
 }
 
 DEFAULT_MODEL = "claude-haiku-4-5-20251001"

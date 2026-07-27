@@ -40,9 +40,19 @@ def _ensure_tagger_loaded() -> TaggerFn:
     if _tagger_fn is not None:
         return _tagger_fn
 
+    import torch
     from transformers import pipeline
 
-    classifier = pipeline("audio-classification", model=AST_MODEL_NAME, top_k=15)
+    # Unlike vocal_presence.py's identical-looking loader (deliberately left
+    # CPU-only there -- that one's an already-established, already-run
+    # production path with its own "confirmed via manual spikes, no GPU
+    # needed" precedent), this loader is used by the new per-segment
+    # sound-tags facet batch job, which is CPU-bound enough (~10-11h
+    # sequential on real hardware, see notebooks/11_sound_tags_facet.ipynb)
+    # that using a GPU when the Colab runtime actually has one is a real,
+    # low-risk win, not a correctness change -- same model, same outputs.
+    device = 0 if torch.cuda.is_available() else -1
+    classifier = pipeline("audio-classification", model=AST_MODEL_NAME, top_k=15, device=device)
 
     def _tag(audio: np.ndarray, sr: int) -> list[dict]:
         return classifier(np.asarray(audio, dtype=np.float32), sampling_rate=sr)
