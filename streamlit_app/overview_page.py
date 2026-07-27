@@ -145,9 +145,10 @@ def render_overview() -> None:
             "To be fair to those two paradigms: comparing against a genre-tag strawman would be "
             "an easy win. So the version tested here is the strongest non-audio baseline "
             "reasonably achievable from this library's real metadata -- genre tag, FMA's fuller "
-            "genre-hierarchy overlap, shared album, and free-text tags, combined -- not genre "
-            "alone. This is the same kind of graph as the two diagrams above, except every edge "
-            "is now real, computed data, not an illustration:"
+            "genre-hierarchy overlap, shared album, and free-text tags, combined via a weighted "
+            "**score fusion** (a hybrid-search technique: several independent similarity signals "
+            "blended into one score, not genre alone). This is the same kind of graph as the two "
+            "diagrams above, except every edge is now real, computed data, not an illustration:"
         )
         st.caption(
             "**Metadata baseline — genre + genre hierarchy + album + tags.** Catalog metadata "

@@ -51,6 +51,13 @@ class TasteMapPoint:
 @dataclass
 class TasteMapResult:
     points: list[TasteMapPoint]
+    # (PC1, PC2) explained-variance ratios -- only meaningful for PCA, whose
+    # components are ordered by variance explained. FastICA's components
+    # aren't ordered/scaled that way at all (independence, not variance, is
+    # what it optimizes for), so this is always None for method="ica" rather
+    # than reporting a number that would misleadingly imply the same
+    # diagnostic applies.
+    explained_variance_ratio: tuple[float, float] | None = None
 
 
 def compute_taste_map(
@@ -59,7 +66,9 @@ def compute_taste_map(
     """method: "pca" (variance-maximizing, the Core default) or "ica"
     (statistically independent components, Strong tier -- see module
     docstring). Clustering always runs on the full embedding, not the 2D
-    projection, regardless of method -- projection is for display only."""
+    projection, regardless of method -- projection is for display only:
+    retrieval/similarity search (retrieval/service.py, FAISS) never touches
+    this reduced 2D space either, only the full, un-reduced facet vectors."""
     if method not in ("pca", "ica"):
         raise ValueError(f"Unknown method {method!r}, expected 'pca' or 'ica'")
 
@@ -69,6 +78,7 @@ def compute_taste_map(
 
     matrix = np.stack([song_vectors[sid] for sid in song_ids])
 
+    explained_variance_ratio = None
     if matrix.shape[0] >= 2:
         n_components = min(2, matrix.shape[0], matrix.shape[1])
         if method == "pca":
@@ -78,6 +88,10 @@ def compute_taste_map(
         coords = reducer.fit_transform(matrix)
         if n_components == 1:
             coords = np.column_stack([coords[:, 0], np.zeros(len(song_ids))])
+        if method == "pca":
+            ratios = list(reducer.explained_variance_ratio_)
+            ratios += [0.0] * (2 - len(ratios))  # n_components can be 1 when there are only 2 songs
+            explained_variance_ratio = (ratios[0], ratios[1])
     else:
         coords = np.zeros((len(song_ids), 2))
 
@@ -88,7 +102,7 @@ def compute_taste_map(
         TasteMapPoint(song_id=sid, x=float(coords[i, 0]), y=float(coords[i, 1]), cluster=int(labels[i]))
         for i, sid in enumerate(song_ids)
     ]
-    return TasteMapResult(points=points)
+    return TasteMapResult(points=points, explained_variance_ratio=explained_variance_ratio)
 
 
 @dataclass

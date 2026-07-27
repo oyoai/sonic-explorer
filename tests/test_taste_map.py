@@ -122,6 +122,31 @@ def test_compute_taste_map_unknown_method_raises():
         compute_taste_map({1: np.array([1.0, 2.0])}, method="tsne")
 
 
+def test_compute_taste_map_pca_reports_explained_variance_ratio():
+    rng = np.random.default_rng(0)
+    song_vectors = {i: rng.normal(size=5) for i in range(10)}
+
+    result = compute_taste_map(song_vectors, method="pca")
+
+    assert result.explained_variance_ratio is not None
+    pc1, pc2 = result.explained_variance_ratio
+    assert 0.0 <= pc1 <= 1.0
+    assert 0.0 <= pc2 <= 1.0
+    assert pc1 >= pc2  # PCA orders components by variance explained
+
+
+def test_compute_taste_map_ica_does_not_report_explained_variance_ratio():
+    """FastICA's components aren't ordered/scaled by variance explained --
+    reporting a number here would misleadingly imply the same diagnostic
+    PCA gets, so it must stay None for method="ica"."""
+    rng = np.random.default_rng(0)
+    song_vectors = {i: rng.normal(size=5) for i in range(10)}
+
+    result = compute_taste_map(song_vectors, method="ica")
+
+    assert result.explained_variance_ratio is None
+
+
 def test_correlate_axes_with_features_detects_perfect_correlation():
     x = np.array([1.0, 2.0, 3.0, 4.0, 5.0])
     y = np.array([5.0, 4.0, 3.0, 2.0, 1.0])

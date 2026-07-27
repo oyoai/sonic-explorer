@@ -28,6 +28,31 @@ CNN_RESULTS = {
 # scripts/genre_cnn_results.json's own "classes" field, not guessed.
 CNN_CLASSES = ["Electronic", "Experimental", "Folk", "Hip-Hop", "Instrumental", "International", "Pop", "Rock"]
 
+# Per-genre precision/recall/F1 on the real held-out test split -- overall
+# accuracy alone hides this: the test split is perfectly class-balanced (27
+# songs/genre) so there's no *support* imbalance to report, but there's a
+# real *decision-boundary* imbalance the model learned: it over-predicts
+# Hip-Hop (0.481 precision but 0.926 recall -- it's the model's default
+# guess) while badly under-recalling Pop (0.667 precision but only 0.148
+# recall -- correct when it says Pop, but rarely says it). Recomputed
+# directly from the real cached test-split features (scripts/
+# genre_cnn_features.npz) run through the real saved model
+# (scripts/genre_cnn_model.pt), reproducing scripts/train_genre_cnn.py's
+# exact stratified_split(seed=42) -- not retrained, not estimated. Recomputed
+# overall accuracy matched CNN_RESULTS['test_accuracy'] exactly (0.4722...),
+# confirming this reproduction is faithful to the original run.
+CNN_PER_GENRE_METRICS = [
+    # (genre, precision, recall, f1, support)
+    ("Electronic", 0.303, 0.370, 0.333, 27),
+    ("Experimental", 0.333, 0.333, 0.333, 27),
+    ("Folk", 0.607, 0.630, 0.618, 27),
+    ("Hip-Hop", 0.481, 0.926, 0.633, 27),
+    ("Instrumental", 0.344, 0.407, 0.373, 27),
+    ("International", 0.609, 0.519, 0.560, 27),
+    ("Pop", 0.667, 0.148, 0.242, 27),
+    ("Rock", 0.800, 0.444, 0.571, 27),
+]
+
 CNN_MODEL_PATH = PROJECT_ROOT / "scripts" / "genre_cnn_model.pt"
 
 

@@ -399,6 +399,28 @@ st.write(
     "tab, alongside the genre-cohesion outcome, not duplicated on this page."
 )
 
+st.subheader("3b. Moment Matcher's retrieval: bi-encoder + reranker, a named pattern")
+st.write(
+    "Moment Matcher doesn't stop at a single similarity search. Stage 1 over-fetches a pool of 15 "
+    "candidates by cosine similarity -- an independently-embedded query against independently-"
+    "embedded candidates, i.e. a **bi-encoder** retrieval step, the same role FAISS's exact search "
+    "plays everywhere else in this app. Stage 2 hands that whole pool, plus the query, to an LLM in "
+    "one joint call, which reasons about the query and every candidate *together* and re-sorts the "
+    "pool down to the final 6, best-first. This is the named, taught pattern **two-stage retrieve-"
+    "then-rerank: bi-encoder for initial retrieval, cross-encoder for reranking top results** -- the "
+    "architecture matches recognized methodology here, not an ad hoc design."
+)
+st.warning(
+    "**One real difference worth flagging:** stage 2 here is an LLM given the whole candidate list "
+    "in one prompt, not a trained cross-encoder model (a model fine-tuned specifically to score "
+    "query-candidate pairs jointly). It's a legitimate stand-in for the same *architectural* role "
+    "(joint reasoning over query + candidates, instead of independent per-item scores) -- but it "
+    "hasn't been trained or evaluated as a reranker the way a real cross-encoder would be; its "
+    "output is model judgment, not a calibrated relevance score. Reranking is explicitly a "
+    "fall-back-safe value-add here (see `llm/rerank.py`), not something the rest of the pipeline "
+    "depends on, partly for this reason."
+)
+
 st.divider()
 
 # ---------------------------------------------------------------------------
@@ -683,6 +705,15 @@ st.write(
     "matching, several independently-computed facets with LLM explanations per match, and a "
     "conversational agent layer."
 )
+st.info(
+    "**PCA/ICA is for visualization only.** Retrieval and similarity search everywhere in this app "
+    "(Song X-Ray, Moment Matcher, Explore, Ask the DJ) run FAISS nearest-neighbor search directly "
+    "over the full, un-reduced facet embedding vectors (512-dim for Sound's CLAP embeddings) -- "
+    "never over this 2D projection. The projection below (and K-means clustering) exists purely so "
+    "this page and Explore's \"2D map\" view can be *looked at*; reducing to 2D first and then "
+    "searching in that reduced space would throw away the vast majority of the real similarity "
+    "signal before ever computing a match."
+)
 
 
 @st.cache_data
@@ -690,7 +721,7 @@ def _walkthrough_taste_map_df(_song_repo, _embedding_repo, cache_key):
     song_vectors = mean_pool_song_vectors(_song_repo, _embedding_repo)
     result = compute_taste_map(song_vectors, method="pca")
     songs_by_id = {s.id: s for s in _song_repo.list_songs()}
-    return pd.DataFrame([
+    df = pd.DataFrame([
         {
             "song_id": p.song_id, "x": p.x, "y": p.y, "cluster": str(p.cluster),
             "title": songs_by_id[p.song_id].title, "artist": songs_by_id[p.song_id].artist,
@@ -698,11 +729,23 @@ def _walkthrough_taste_map_df(_song_repo, _embedding_repo, cache_key):
         }
         for p in result.points if p.song_id in songs_by_id
     ])
+    return df, result.explained_variance_ratio
 
 
-taste_df = _walkthrough_taste_map_df(song_repo, embedding_repo, embedding_repo.index_size("sound"))
+taste_df, taste_map_explained_variance = _walkthrough_taste_map_df(
+    song_repo, embedding_repo, embedding_repo.index_size("sound")
+)
 
 if not taste_df.empty:
+    if taste_map_explained_variance is not None:
+        pc1, pc2 = taste_map_explained_variance
+        st.caption(
+            f"**Explained variance: PC1 {pc1:.1%}, PC2 {pc2:.1%}, together {pc1 + pc2:.1%}.** The "
+            f"other {1 - pc1 - pc2:.1%} of the sound embedding's variance isn't shown at all -- this "
+            "map is a real but partial summary of a much higher-dimensional space, not the whole "
+            "picture. A low combined figure doesn't invalidate the projection (clusters can still be "
+            "real and visible), but it's the honest scale of what's being compressed away."
+        )
     map_cols = st.columns(2)
     with map_cols[0]:
         cluster_fig = px.scatter(
@@ -1099,6 +1142,28 @@ st.write(
     "triplets, generated with a fixed seed for reproducibility. Once enough ratings exist, they "
     "feed a regression producing per-facet blend weights -- interpretable, instrument-wise "
     "contributions to perceived similarity, the same outcome Vohra & Akama's methodology produces."
+)
+st.write(
+    "**Named technique: hybrid search / score fusion.** Both the metadata-baseline weighting "
+    "(Overview §2 -- genre, genre hierarchy, album, and tags blended into one score) and this "
+    "facet blend-weight regression are instances of the same taught technique class: **hybrid "
+    "search / score fusion** -- combining several independent similarity signals into one score "
+    "via learned or fixed weights (the weighted-blend family; Reciprocal Rank Fusion is a related, "
+    "rank-based member of the same class). This is recognized methodology being applied here, not "
+    "an invented combination rule."
+)
+st.warning(
+    "**The CLAP fine-tuning go/no-go has a real cost worth stating up front.** Fine-tuning changes "
+    "the embedding *function*, not any vectors already computed with the old one -- every existing "
+    "Sound-facet embedding in the library would need to be re-computed with the fine-tuned model "
+    "(not just a sample) before FAISS, the 2D map, or any retrieval path could actually use it. "
+    "That's a real, non-trivial cost to weigh against whatever correlation improvement the "
+    "regression finds -- not a decision to make on the correlation number alone. One silver lining: "
+    "the taught method for embedding fine-tuning needs contrastive pairs (pull similar-rated pairs "
+    "together, push dissimilar ones apart), and the XAB triplets above already produce close to "
+    "that exact structure (high/medium/random similarity bands per reference) -- so some of the "
+    "expensive \"collect training data\" work may already be underway for a different reason, if "
+    "fine-tuning turns out to be worth it."
 )
 
 st.divider()

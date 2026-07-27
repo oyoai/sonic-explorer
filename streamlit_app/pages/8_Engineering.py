@@ -6,7 +6,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 import plotly.graph_objects as go
 import streamlit as st
 
-from engineering_data import CNN_RESULTS, RED_TEAM_CASES, predict_genre
+from engineering_data import CNN_PER_GENRE_METRICS, CNN_RESULTS, RED_TEAM_CASES, predict_genre
 from resources import get_agent, get_repositories, nav_button, show_data_source_banner, show_logo
 
 CI_WORKFLOW_URL = "https://github.com/oyoai/sonic-explorer/actions/workflows/ci.yml"
@@ -27,6 +27,32 @@ nav_button("← Back to Methodology", "pages/1_Methodology.py", key="nav_enginee
 
 show_logo()
 show_data_source_banner()
+
+st.divider()
+
+# ---------------------------------------------------------------------------
+# 0. Agent architecture: planning pattern + memory
+# ---------------------------------------------------------------------------
+st.header("Agent architecture: planning pattern + memory")
+st.write(
+    "Ask the DJ's loop (`llm/agent.py`'s `MusicAgent.send_message`) is a **ReAct-style tool-calling "
+    "loop**: the model reasons about a request, calls a tool, sees the real result, and either "
+    "calls another tool or replies -- up to 5 rounds per turn (`DEFAULT_MAX_TOOL_ITERATIONS`) "
+    "before falling back to an honest \"couldn't finish that\" reply rather than looping forever. "
+    "This is the native Anthropic tool-use loop (structured `tool_use`/`tool_result` blocks), not a "
+    "hand-authored `Thought:`/`Action:`/`Observation:` text template -- functionally the same "
+    "interleaved reasoning-and-acting pattern ReAct describes, implemented through the API's "
+    "built-in tool-calling rather than a textual scaffold."
+)
+st.write(
+    "**Memory model: session-scoped only, no long-term memory.** `MusicAgent` itself is stateless "
+    "(safe to share across users via `st.cache_resource` -- see `resources.py`); the actual "
+    "conversation history lives in each browser session's `st.session_state.agent_history` and is "
+    "passed in and handed back on every call. That means the DJ remembers earlier turns *within* "
+    "one open session (it can resolve \"that one\" or \"the second song you mentioned\"), but "
+    "nothing persists across a page refresh or between different users -- no long-term memory, no "
+    "user profile, no cross-session recall."
+)
 
 st.divider()
 
@@ -122,6 +148,42 @@ st.caption(
     "non-trivial signal from spectrograms alone, with no pretrained model and no facet "
     "engineering. These summary numbers are a supplement to the live picker below, not a "
     "replacement for it -- try it yourself rather than taking the percentage on faith."
+)
+
+st.write(
+    "**Per-genre precision/recall/F1**, not just overall accuracy -- the test split is perfectly "
+    "class-balanced (27 songs/genre), so there's no support imbalance, but overall accuracy still "
+    "hides a real decision-boundary imbalance the model learned:"
+)
+per_genre_fig = go.Figure()
+per_genre_fig.add_trace(go.Bar(
+    name="Precision", x=[g for g, *_ in CNN_PER_GENRE_METRICS], y=[p for _, p, _, _, _ in CNN_PER_GENRE_METRICS],
+))
+per_genre_fig.add_trace(go.Bar(
+    name="Recall", x=[g for g, *_ in CNN_PER_GENRE_METRICS], y=[r for _, _, r, _, _ in CNN_PER_GENRE_METRICS],
+))
+per_genre_fig.add_trace(go.Bar(
+    name="F1", x=[g for g, *_ in CNN_PER_GENRE_METRICS], y=[f for _, _, _, f, _ in CNN_PER_GENRE_METRICS],
+))
+per_genre_fig.update_layout(
+    height=380, margin=dict(l=10, r=10, t=10, b=10), barmode="group", yaxis_title="score", yaxis_range=[0, 1],
+)
+st.plotly_chart(per_genre_fig, width="stretch", key="cnn_per_genre_chart")
+st.caption(
+    "The model over-predicts **Hip-Hop** (0.481 precision but 0.926 recall -- its default guess "
+    "when unsure) while badly under-recalling **Pop** (0.667 precision but only 0.148 recall -- "
+    "correct when it does say Pop, but rarely says it). Recomputed directly from the real cached "
+    "test-split features and the real saved model weights (not retrained, not estimated) -- "
+    "recomputed overall accuracy matched the summary number above exactly, confirming this "
+    "reproduction is faithful to the original training run."
+)
+st.info(
+    "**Real gap, not fixed here:** this model was trained with a single stratified train/val/test "
+    "split and fixed hyperparameters (Adam, lr=1e-3, batch=16, 20 epochs) -- no cross-validation "
+    "and no hyperparameter search were run. On ~1400 real audio files, a proper k-fold CV or even "
+    "a small grid over learning rate/batch size is feasible on CPU (each full run takes minutes), "
+    "just not done yet -- the single-split number above should be read as a real but "
+    "not-fully-validated estimate, not a rigorously tuned result."
 )
 
 if not all_songs:
