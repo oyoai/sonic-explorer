@@ -113,6 +113,13 @@ def main():
 
     device = "cuda" if torch.cuda.is_available() else "cpu"
     print(f"Training on {device}")
+    # A real gap found while writing notebooks/05_genre_cnn_case_study.ipynb: nothing
+    # seeded torch's own RNG here, so re-running this exact script with the exact same
+    # data/hyperparameters still produced a materially different result (a notebook
+    # reproduction landed at 52.8% test accuracy vs. this run's already-shipped 47.2%
+    # -- see that notebook for the full comparison). SEED already governs the
+    # split/shuffle; this line closes the last source of nondeterminism.
+    torch.manual_seed(SEED)
     model = SmallGenreCNN(n_classes=len(classes)).to(device)
     optimizer = torch.optim.Adam(model.parameters(), lr=LR)
 

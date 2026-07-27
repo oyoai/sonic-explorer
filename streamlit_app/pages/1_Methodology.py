@@ -149,17 +149,30 @@ VOCAL_GATE_HUMAN_SPOTCHECK = [
 
 # 7b: real AST/AudioSet tag output, curated for variety (instrumental with
 # specific-instrument tags, ambient/textural, soundtrack, vocal genres).
+#
+# Refreshed by notebooks/10_ast_capability_case_study.ipynb: the original
+# literals here were captured against the FULL ~30s clip, but the actual
+# production pipeline (scripts/generate_song_descriptions.py, fixed after a
+# real bug -- see Methodology's own commit history) tags a representative
+# MIDDLE-10-SECOND slice instead, matching AST's own 10s training window --
+# and that 10s-slice tagging is what's actually persisted (songs.sound_tags)
+# and what Ask the DJ's search_by_sound_content tool actually searches
+# against today. The numbers below are the real, current, persisted
+# per-song tags (not filtered/cherry-picked beyond dropping the generic
+# umbrella "Music"/"Musical instrument" labels, which carry no real
+# descriptive content) -- confirmed byte-identical to a fresh live AST call
+# on each song's real middle-10s slice.
 AST_CAPABILITY_EXAMPLES = [
     {"title": "3rd Chair", "genre": "Instrumental",
-     "tags": [("Cello", 0.251), ("Bowed string instrument", 0.090), ("Violin, fiddle", 0.066), ("Double bass", 0.036)]},
+     "tags": [("Cello", 0.259), ("Bowed string instrument", 0.155), ("Violin, fiddle", 0.096), ("String section", 0.062)]},
     {"title": "Bridgewater Triangle", "genre": "Instrumental",
-     "tags": [("Gong", 0.523), ("Ambient music", 0.047), ("Timpani", 0.011), ("Singing bowl", 0.006)]},
+     "tags": [("Ambient music", 0.147), ("Gong", 0.060), ("Electronic music", 0.047), ("Synthesizer", 0.022)]},
     {"title": "OST 05 Go Go Go", "genre": "Electronic",
-     "tags": [("Video game music", 0.043), ("Soundtrack music", 0.015), ("Funny music", 0.013), ("Theme music", 0.005)]},
+     "tags": [("Video game music", 0.074), ("Soundtrack music", 0.024), ("Funny music", 0.016)]},
     {"title": "A Friendly Noose", "genre": "Folk",
-     "tags": [("Female singing", 0.083), ("Singing", 0.034), ("Guitar", 0.014), ("Country", 0.014)]},
+     "tags": [("Singing", 0.083), ("Siren", 0.053), ("Female singing", 0.039), ("Emergency vehicle", 0.037)]},
     {"title": "Cipralex (c/ Pulso)", "genre": "Hip-Hop",
-     "tags": [("Mantra", 0.085), ("Chant", 0.036), ("Speech", 0.011), ("Electronic music", 0.014)]},
+     "tags": [("Mantra", 0.065), ("Chant", 0.054), ("Scary music", 0.031), ("Singing", 0.023)]},
 ]
 
 # 7c: harmony whitening before/after (k=10, sample_size=300, seed=42).
@@ -171,13 +184,22 @@ HARMONY_WHITENING_RESULTS = {
 # 7d: segment-level vs. song-level retrieval, all six facets (k=10,
 # sample_size=300, seed=42) -- harmony's numbers here are measured on the
 # already-whitened index (7c ran first).
+#
+# Refreshed by notebooks/07_song_level_aggregation_case_study.ipynb: a live
+# re-run of scripts/compare_song_level_retrieval.py found Sound and Harmony
+# bit-identical to the original numbers (unaffected by the later stem-facet
+# reprocessing pass -- see Results' own note on that pass), but Vocal/Drums/
+# Bass/Instrumental's numbers had drifted from what was originally captured
+# here, since that reprocessing pass changed those four facets' indexed
+# vectors after this comparison was first run and never got re-measured.
+# These are the current, live-verified numbers, not the original ones.
 SONG_LEVEL_COMPARISON = [
     {"facet": "sound", "seg_margin": 0.0080, "song_margin": 0.0185, "seg_cohesion": 55.4, "song_cohesion": 52.5},
     {"facet": "harmony", "seg_margin": 0.0187, "song_margin": 0.0326, "seg_cohesion": 20.1, "song_cohesion": 21.8},
-    {"facet": "vocal", "seg_margin": 0.0093, "song_margin": 0.0147, "seg_cohesion": 34.4, "song_cohesion": 38.3},
-    {"facet": "drums", "seg_margin": 0.0088, "song_margin": 0.0152, "seg_cohesion": 33.5, "song_cohesion": 36.5},
-    {"facet": "bass", "seg_margin": 0.0087, "song_margin": 0.0114, "seg_cohesion": 25.7, "song_cohesion": 29.8},
-    {"facet": "instrumental", "seg_margin": 0.0105, "song_margin": 0.0194, "seg_cohesion": 38.5, "song_cohesion": 44.1},
+    {"facet": "vocal", "seg_margin": 0.0108, "song_margin": 0.0147, "seg_cohesion": 37.1, "song_cohesion": 35.4},
+    {"facet": "drums", "seg_margin": 0.0084, "song_margin": 0.0144, "seg_cohesion": 38.4, "song_cohesion": 36.8},
+    {"facet": "bass", "seg_margin": 0.0071, "song_margin": 0.0115, "seg_cohesion": 23.4, "song_cohesion": 23.6},
+    {"facet": "instrumental", "seg_margin": 0.0114, "song_margin": 0.0195, "seg_cohesion": 39.6, "song_cohesion": 42.6},
 ]
 
 # 7e: does fixed-window segmentation explain 7a's vocal-gate errors? Checked
@@ -978,6 +1000,12 @@ st.caption(
     "that's a narrower claim than \"AST tagging doesn't work.\" The broad instrument/texture tags "
     "shown above weren't the part that failed."
 )
+st.caption(
+    "**Shown as real output, not cherry-picked** -- \"A Friendly Noose\" (an actual folk duet) "
+    "genuinely tags Siren/Emergency vehicle alongside Singing/Female singing, which is a real, odd "
+    "AST call on this specific clip, not something filtered out to make the example look cleaner. "
+    "Worth knowing about a capability shown honestly rather than a highlight reel."
+)
 
 st.subheader("7c. Harmony whitening: fixing the score geometry vs. fixing the task")
 st.write(
@@ -1046,17 +1074,26 @@ cohesion_fig.update_layout(height=320, margin=dict(l=10, r=10, t=30, b=10), barm
 st.plotly_chart(cohesion_fig, width="stretch", key="song_level_cohesion_chart")
 
 st.caption(
-    "Margin improved for **every** facet (1.3x-2.3x sharper). Genre-cohesion improved for **5 of "
-    "6** facets -- Instrumental +5.6pp, Bass +4.1pp, Vocal +3.9pp, Drums +3.0pp, Harmony +1.7pp. "
-    "Sound is the one exception, slightly worse (55.4% → 52.5%) -- plausibly because Sound's "
-    "per-segment specificity was already strong (the highest baseline of any facet), and averaging "
-    "a song's segments blurs together genuinely different sonic moments (a quiet intro vs. a loud "
-    "chorus) precisely where that segment-level precision was doing real work."
+    "**Ranking margin still improves for every facet** (1.4x-2.3x sharper) -- that part of the "
+    "original finding holds exactly. **Genre-cohesion's story has changed since this was first "
+    "measured, though**: only **Instrumental** (+3.0pp) and **Harmony** (+1.7pp) show a real "
+    "improvement now; **Bass** is roughly flat (+0.2pp, within sampling noise); **Sound, Vocal, "
+    "and Drums** all show a real regression (-2.9pp, -1.7pp, -1.6pp respectively). The original "
+    "measurement (5 of 6 facets improved) was captured before the stem-facet reprocessing pass "
+    "(see Results) changed Vocal/Drums/Bass/Instrumental's indexed vectors -- Sound and Harmony "
+    "were unaffected by that pass and their numbers here are unchanged. This drift was only caught "
+    "by re-running the comparison live (`notebooks/07_song_level_aggregation_case_study.ipynb`), "
+    "not by inspection -- exactly the kind of silent staleness a one-time script result can develop "
+    "if nothing re-checks it after a later, unrelated change to the underlying data."
 )
-st.info(
-    "**Status:** implemented and validated (`sonic_explorer/retrieval/song_level_index.py`) as a "
-    "real, working alternative retrieval mode -- not yet wired into Moment Matcher's UI as a "
-    "selectable option. A natural, low-risk follow-up given the validated improvement."
+st.warning(
+    "**A sharper ranking margin no longer implies better task performance for half these facets.** "
+    "\"Whole songs\" mode is live in Moment Matcher's UI today (`pages/5_Moment_Matcher.py`'s "
+    "\"Match against\" toggle) for every facet, including Sound, Vocal, and Drums, where the "
+    "current evidence now shows *worse* genre-cohesion at the song level, not better. This isn't "
+    "acted on here (removing or restricting a live UI option is a product decision, not a "
+    "documentation fix) -- but the honest state is: the validation that originally justified "
+    "offering this mode for those three facets is now out of date."
 )
 
 st.subheader("7e. Does segment misalignment explain the vocal-gate errors? A structural cross-check")

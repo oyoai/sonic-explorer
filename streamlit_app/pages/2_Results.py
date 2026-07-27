@@ -209,29 +209,29 @@ with tab_dj_gallery:
     agent = get_agent()
     if agent is None:
         st.info("Set ANTHROPIC_API_KEY to try these live.")
-    else:
-        gallery_cols = st.columns(2)
-        for i, query in enumerate(DJ_GALLERY_QUERIES):
-            with gallery_cols[i % 2]:
-                if st.button(f"\"{query}\"", key=f"gallery_query_{i}"):
-                    with st.spinner("Asking the DJ..."):
-                        try:
-                            reply, history = agent.send_message([], query)
-                            song_ids = extract_mentioned_song_ids(history, 0)
-                        except Exception:
-                            reply = "Something went wrong on my end -- try again."
-                            song_ids = []
-                    st.session_state.results_dj_gallery[query] = (reply, song_ids)
 
-        for query, (reply, song_ids) in st.session_state.results_dj_gallery.items():
-            st.divider()
-            st.markdown(f"**You asked:** \"{query}\"")
-            st.markdown(reply)
-            for song_id in song_ids:
-                song = songs_by_id.get(song_id)
-                if song is not None:
-                    st.caption(f"\"{song.title}\" — {song.artist}")
-                    st.audio(str(audio_path_for(song)))
+    gallery_cols = st.columns(2)
+    for i, query in enumerate(DJ_GALLERY_QUERIES):
+        with gallery_cols[i % 2]:
+            if st.button(f"\"{query}\"", key=f"gallery_query_{i}", disabled=agent is None):
+                with st.spinner("Asking the DJ..."):
+                    try:
+                        reply, history = agent.send_message([], query)
+                        song_ids = extract_mentioned_song_ids(history, 0)
+                    except Exception:
+                        reply = "Something went wrong on my end -- try again."
+                        song_ids = []
+                st.session_state.results_dj_gallery[query] = (reply, song_ids)
+
+    for query, (reply, song_ids) in st.session_state.results_dj_gallery.items():
+        st.divider()
+        st.markdown(f"**You asked:** \"{query}\"")
+        st.markdown(reply)
+        for song_id in song_ids:
+            song = songs_by_id.get(song_id)
+            if song is not None:
+                st.caption(f"\"{song.title}\" — {song.artist}")
+                st.audio(str(audio_path_for(song)))
 
 # ---------------------------------------------------------------------------
 # Metadata baseline vs. Real approach

@@ -1,10 +1,13 @@
 """Log-mel spectrogram extraction for the genre-CNN baseline (analysis/
 genre_cnn.py) -- split into its own module specifically so it stays
-importable without torch (librosa is already a dev/colab dependency,
-unlike torch which isn't installed in the main CI environment). A CNN
-needs a fixed input shape; clip lengths vary slightly around the nominal
-30s, so this crops/pads rather than assuming every clip is exactly the
-same length."""
+importable without torch. (Historical note: this split mattered most when
+librosa was colab-only and torch wasn't installed in CI at all; both are
+now base dependencies, so the practical CI-safety benefit is smaller than
+when this module was first split out -- but the module boundary itself
+still matches genre_cnn.py's real code-organization split, so it stays.)
+A CNN needs a fixed input shape; clip lengths vary slightly around the
+nominal 30s, so this crops/pads rather than assuming every clip is exactly
+the same length."""
 
 import numpy as np
 

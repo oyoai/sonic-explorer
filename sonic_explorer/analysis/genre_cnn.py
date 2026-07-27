@@ -12,10 +12,15 @@ on ~1000 spectrograms.
 
 torch is a real, module-level runtime dependency here (unlike pipeline/
 vocal_presence.py's lazily-imported tagger, an nn.Module can't be defined
-without it) -- this module is never imported by the deployed app or the
-main test suite (see analysis/mel_features.py for the torch-free half of
-this pipeline), only by scripts/train_genre_cnn.py and its own
-torch-gated tests."""
+without it) -- torch is now a base dependency (pyproject.toml), added for
+the Engineering page's live CNN picker, which imports this module lazily
+(inside engineering_data.py's load_cnn_model(), only when a visitor
+actually clicks "Predict genre"), so this module is no longer torch-only
+in a colab-extras sense. It's still not imported at module scope by any
+deployed page or by test_genre_cnn.py's own tests without
+pytest.importorskip -- that guard is now more a defensive habit than a
+strict necessity, since torch installs in the main CI environment too
+(see analysis/mel_features.py for the torch-free half of this pipeline)."""
 
 from dataclasses import dataclass
 

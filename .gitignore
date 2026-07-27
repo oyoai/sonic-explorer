@@ -23,6 +23,12 @@ data/**/*.index
 # scripts/train_genre_cnn.py on first run, never committed.
 scripts/genre_cnn_features.npz
 
+# notebooks/05_genre_cnn_case_study.ipynb's own reproduction run, kept
+# deliberately separate from the canonical scripts/genre_cnn_model.pt (see
+# that notebook's Conclusion) -- regenerable by re-running the notebook,
+# never committed.
+scripts/genre_cnn_model_notebook_repro.pt
+
 # local env / secrets
 .env
 .streamlit/secrets.toml
