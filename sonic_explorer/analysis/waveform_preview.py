@@ -36,14 +36,34 @@ def extract_window_clip(path, start_sec: float, duration_sec: float, sr: int = 2
     plotting, PREVIEW_SR=4000), this is real audio meant to be listened to,
     so it loads at a normal listening sample rate -- still not the
     analysis-grade CLAP_SR, since nothing here feeds a similarity
-    computation. librosa's offset/duration params load only the needed
-    slice directly, without decoding the whole file first."""
+    computation.
+
+    Deliberately loads the WHOLE file via plain librosa.load(path, sr=sr,
+    mono=True) and slices the resulting array in-memory, rather than
+    librosa's own offset/duration load params -- those force a different
+    internal decode path (soundfile can't seek efficiently within a
+    compressed MP3 stream, so librosa falls back to audioread) than the
+    plain full-file load every other caller on this page already uses
+    successfully. That fallback path broke on a real Streamlit Cloud
+    deploy running Python 3.14 (ImportError inside librosa's own load(),
+    redacted by Streamlit before reaching this repo's logs) -- Python
+    3.13+ removed several stdlib modules audioread's older fallback chain
+    can still reach for on some formats, and this project already carries
+    standard-aifc/standard-sunau as an unpinned, transitively-resolved
+    workaround for exactly that gap (see librosa's own DeprecationWarning
+    in this repo's test output) -- not a guarantee that resolves identically
+    on every fresh Python version. Loading the whole ~30s clip 4x for 4
+    windows costs a few hundred ms, not a real performance concern here."""
     import io
 
     import librosa
     import soundfile as sf
 
-    audio, loaded_sr = librosa.load(str(path), sr=sr, mono=True, offset=start_sec, duration=duration_sec)
+    audio, loaded_sr = librosa.load(str(path), sr=sr, mono=True)
+    start_idx = int(start_sec * loaded_sr)
+    end_idx = int((start_sec + duration_sec) * loaded_sr)
+    clip = audio[start_idx:end_idx]
+
     buf = io.BytesIO()
-    sf.write(buf, audio, loaded_sr, format="WAV")
+    sf.write(buf, clip, loaded_sr, format="WAV")
     return buf.getvalue()
