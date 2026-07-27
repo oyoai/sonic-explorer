@@ -71,7 +71,7 @@ def render_overview() -> None:
     # Problem
     # -----------------------------------------------------------------------
     st.header("Problem")
-    st.caption("The motivation behind this project came from a recurring experience:")
+    st.subheader("The motivation behind this project came from a recurring experience:")
     _big_quote('"I love this song, find me more like it."')
     st.write(
         "But the recommendations rarely captured the qualities that made the original song "
@@ -84,7 +84,7 @@ def render_overview() -> None:
     # Existing solutions
     # -----------------------------------------------------------------------
     st.header("Existing solutions")
-    st.caption("How do current systems identify related songs?")
+    st.subheader("How do current systems identify related songs?")
     st.write(
         "Existing music discovery systems generally rely on two sources of information to "
         "estimate similarity:"
@@ -114,7 +114,7 @@ def render_overview() -> None:
             "**Collaborative filtering:** similarity inferred from listener behavior: "
             "listening history, ratings/likes, playlists, similar users' preferences."
         )
-        st.caption(
+        st.info(
             "**Honest gap:** this library has no user-level listen/favorite/interaction data at "
             "all -- collaborative filtering is described here for a complete picture of the "
             "landscape, not something this project can build or compare against directly."

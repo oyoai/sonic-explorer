@@ -5,12 +5,17 @@ library wherever possible (a real waveform, real playable window clips, a
 real embedding vector, real song DNA, real detected tags) rather than
 abstract UI-box illustrations, so the mechanic is shown, not just described.
 
-The demo song threading through steps 1-5 is picked dynamically (the same
-`real_pair`-derived song `comparison_data.get_demo_pairs()` already computes
-for Overview/Results), not a hardcoded title -- a fixed title could easily
-not exist in a smaller deployed subset (this project has hit that exact bug
-before; see git history), so continuity comes from reusing the same
-already-safe selection, not a new hardcoded pick.
+The demo song threading through steps 1-5 is pinned to "flekkefjord" by Blear
+Moon -- also the real Step 2 stem-audio example (notebooks/03) and the
+sound_tags facet's real crow-detection example (Methodology 7b), so the
+whole walkthrough centers on one song with real content at every step
+instead of assorted ones. A fixed title is normally risky here (could easily
+not exist in a smaller deployed subset -- this project has hit that exact
+bug before; see git history), but this one is safe: it's force-included in
+`scripts/build_deploy_subset.py`'s REQUIRED_EXAMPLE_TITLES, guaranteed
+present in the deployed subset regardless of the random stratified sample.
+Falls back to the old dynamic `real_pair`-derived pick if "flekkefjord" is
+ever missing (e.g. synthetic dev data), rather than crashing.
 
 Step 2 ("seven ways of listening") needs two things this page can't fabricate:
 real isolated stem audio (vocal/drums/bass/instrumental -- never persisted
@@ -81,8 +86,11 @@ metadata_nodes, metadata_edges, real_nodes, real_edges, vectors, genre_by_song =
 )
 metadata_pair, real_pair = get_demo_pairs(song_repo, embedding_repo, len(all_songs))
 
-# Picked dynamically, not a hardcoded title -- see module docstring.
-demo_song = songs_by_id.get(real_pair.song_id_a) if real_pair is not None else all_songs[0]
+# Pinned to "flekkefjord" -- see module docstring for why this one's safe
+# to hardcode. Falls back to the old dynamic pick if it's ever missing.
+demo_song = next((s for s in all_songs if s.title == "flekkefjord"), None) or (
+    songs_by_id.get(real_pair.song_id_a) if real_pair is not None else all_songs[0]
+)
 
 
 @st.cache_data(show_spinner=False)
@@ -167,12 +175,20 @@ has_real_stems = stem_meta_path.exists() and (STEM_EXAMPLE_DIR / "mix.wav").exis
 
 if has_real_stems:
     stem_meta = json.loads(stem_meta_path.read_text(encoding="utf-8"))
-    st.caption(
-        f"Sound and Harmony use \"{demo_song.title}\"'s real audio, same as elsewhere on this "
-        f"page. The four isolated facets below use real separated stems from a different real "
-        f"song -- \"{stem_meta['title']}\" by {stem_meta['artist']} ({stem_meta['genre_top']}) -- "
-        "separation is a one-time, offline step (Colab notebook 03), not something this page runs live."
-    )
+    if stem_meta["title"] == demo_song.title:
+        st.caption(
+            f"Sound and Harmony above, and the four isolated facets below, all use real audio from "
+            f"the same song -- \"{demo_song.title}\" by {demo_song.artist} ({demo_song.genre_top}) -- "
+            "separation is a one-time, offline step (Demucs, notebooks/03), not something this page "
+            "runs live."
+        )
+    else:
+        st.caption(
+            f"Sound and Harmony use \"{demo_song.title}\"'s real audio, same as elsewhere on this "
+            f"page. The four isolated facets below use real separated stems from a different real "
+            f"song -- \"{stem_meta['title']}\" by {stem_meta['artist']} ({stem_meta['genre_top']}) -- "
+            "separation is a one-time, offline step (Colab notebook 03), not something this page runs live."
+        )
     mix_path_for_stems = STEM_EXAMPLE_DIR / "mix.wav"
 else:
     st.info(

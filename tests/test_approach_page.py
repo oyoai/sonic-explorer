@@ -78,14 +78,18 @@ def test_approach_page_step2_sound_tags_facet_reports_real_index_as_live():
     assert "pending" not in success_texts.lower()
 
 
-def test_approach_page_step2_stem_facets_degrade_to_honest_placeholder_when_missing():
-    """Real isolated stem audio doesn't exist in this test environment --
-    the four stem facets must say so plainly, not silently omit themselves
-    or fabricate a substitute."""
+def test_approach_page_step2_stem_facets_use_real_flekkefjord_stems():
+    """Real isolated stem audio for "flekkefjord" (streamlit_app/static/
+    stem_example/, produced locally via the real separate_stems() pipeline)
+    now exists, and it's the same song as the pinned demo_song -- Sound,
+    Harmony, and the four stem facets all use real audio from one song, not
+    the old honest placeholder this showed before extraction."""
     at = _run_approach()
+    caption_texts = " ".join(c.value for c in at.caption)
+    assert "flekkefjord" in caption_texts.lower()
+    assert "same song" in caption_texts.lower()
     info_texts = " ".join(i.value for i in at.info)
-    assert "placeholder" in info_texts.lower()
-    assert "isolated stem audio" in info_texts.lower()
+    assert "placeholder" not in info_texts.lower()
 
 
 def test_approach_page_step3_has_embedding_strip_and_close_by_illustration():
@@ -117,21 +121,15 @@ def test_approach_page_reveal_button_does_not_crash():
     assert not at.exception
 
 
-def test_approach_page_reuses_same_demo_song_as_results_pairs():
-    """The demo song threading through steps 1-5 must be picked dynamically
-    from the same get_demo_pairs() call Results/Overview already use, not a
-    hardcoded title -- a fixed title could easily not exist in a smaller
-    deployed subset (this project has hit that exact bug before)."""
-    results = AppTest.from_file("streamlit_app/Overview.py", default_timeout=180)
-    results.switch_page("pages/2_Results.py")
-    results.run()
-    approach = _run_approach()
-
-    results_text_blob = " ".join(m.value for m in results.markdown)
-    approach_text_blob = " ".join(m.value for m in approach.markdown) + " ".join(c.value for c in approach.caption)
-
-    import re
-
-    quoted_on_approach = set(re.findall(r'"([^"]+)"', approach_text_blob))
-    assert quoted_on_approach, "expected at least one quoted song title on Approach"
-    assert any(title in results_text_blob for title in quoted_on_approach)
+def test_approach_page_demo_song_is_pinned_to_flekkefjord():
+    """The demo song threading through steps 1-5 is deliberately pinned to
+    "flekkefjord" by Blear Moon (not the old dynamic real_pair-derived pick)
+    -- it's also the real Step 2 stem-audio example and the sound_tags
+    facet's real crow-detection example, so the whole walkthrough centers on
+    one song with real content at every step. Safe to pin here (unlike a
+    normal fixed title) because it's force-included in
+    scripts/build_deploy_subset.py's REQUIRED_EXAMPLE_TITLES, so it's
+    guaranteed present in the deployed subset too."""
+    at = _run_approach()
+    body_text = " ".join(m.value for m in at.markdown) + " ".join(c.value for c in at.caption)
+    assert "flekkefjord" in body_text.lower()
