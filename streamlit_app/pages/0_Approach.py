@@ -39,6 +39,7 @@ from resources import (
     nav_button,
     show_data_source_banner,
     show_logo,
+    sticky_header,
 )
 from sonic_explorer.analysis.song_dna import AXES, AXIS_LABELS
 from sonic_explorer.analysis.waveform_preview import waveform_envelope
@@ -57,12 +58,14 @@ st.set_page_config(page_title="Sonic Explorer", layout="wide")
 show_logo()
 show_data_source_banner()
 
-st.title("Approach")
+with sticky_header("approach_header"):
+    st.title("Approach")
 st.write(
-    "Overview made the case for analyzing audio directly instead of trusting tags. Here's how "
-    "that actually works, one step at a time -- real audio and real data at every step, not "
-    "abstract diagrams. **Methodology** walks through each of these in full technical depth "
-    "afterward, with evidence."
+    "This page lays out the framework used to test whether songs can be matched by "
+    "how they actually sound: what it's measured against, how a song gets broken "
+    "down, and how similarity gets computed from there. Real audio and real data at "
+    "every step, not abstract diagrams. **Methodology** covers each of these in full "
+    "technical depth afterward, with evidence."
 )
 
 song_repo, embedding_repo, _ = get_repositories()
@@ -94,7 +97,7 @@ st.divider()
 # ---------------------------------------------------------------------------
 # Baseline
 # ---------------------------------------------------------------------------
-st.header("Baseline")
+st.header("0. Baseline")
 st.write(
     "Before testing whether audio-based similarity works, it's worth being clear about what "
     "it's being compared against."
@@ -216,13 +219,22 @@ with facet_cols[len(facet_defs) % 3]:
         st.caption(f"Detected: {', '.join(label for label, _ in demo_tags)}.")
     else:
         st.caption("Detected sounds/instruments in the mix.")
-st.warning(
-    "**Sound Tags is the 7th facet, added this session.** The tags shown above are real, "
-    "already-computed per-song data (Methodology 7b) -- what's still pending is the per-*segment* "
-    "searchable index that makes this a real similarity facet like the other six, not just LLM "
-    "grounding (see Step 5). That indexing run is in progress now "
-    "(`notebooks/11_sound_tags_facet.ipynb`, ~10.5-11.5h)."
+st.success(
+    "**Sound Tags is the 7th facet.** The per-segment searchable index (real AST tagging on every "
+    "~5s window, embedded via CLAP's text encoder) is now live: `notebooks/11_sound_tags_facet.ipynb` "
+    "finished its full-library run (14,722 segments across all 1,400 songs) and genre-cohesion@10 "
+    "measures 45.7% vs. an 11.8% random baseline -- the second-strongest facet after Sound, and a "
+    "real, validated similarity signal, not just LLM grounding (see Step 5)."
 )
+if not demo_tags:
+    st.caption(
+        "Note: the tag list above and Step 5's expander pull from a separate, older per-*song* "
+        "column (`songs.sound_tags`, Methodology 7b's song-level 10s-clip tagging) that hasn't been "
+        "backfilled across the library yet (`scripts/generate_song_descriptions.py` exists but hasn't "
+        "been run at scale) -- unrelated to the per-segment facet index above, which is real and live "
+        "regardless. That's why this specific demo song shows a generic caption instead of its real "
+        "detected tags."
+    )
 
 st.divider()
 

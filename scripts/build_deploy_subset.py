@@ -52,6 +52,22 @@ REQUIRED_EXAMPLE_TITLES = [
     "Inspiration", "All I Am",
     "Sam's Song", "Spot Rockers",
     "Squinting at the Sun (radio edit)", "Do Easy",
+    # sound_tags facet's two curated NN_EXAMPLES pairs (added alongside the
+    # other six facets' entries -- "something brewing" and "Elektra (You Were
+    # Such Fun)" above are already covered by earlier pairs, reused here too).
+    "Cage (bonus)", "In The Fall",
+    # Demo/example songs actually surfaced by default across Approach
+    # (real_pair's demo_song), Methodology's 5-genre gallery default set, and
+    # Song X-Ray/Explore's landing default -- these are dynamically selected
+    # from the full song list, so without forcing them in here the deployed
+    # 223-song subset would compute a *different* dynamic default than local
+    # dev sees, independent of whether their description/sound_tags columns
+    # are populated. "flekkefjord" additionally doubles as the real Step 2
+    # stem-audio example (notebook 03) and the sound_tags facet's real
+    # crow-detection example.
+    "Ivory", "To Drive the Cold Winter Away", "Cien Volando",
+    "Not the 1s (prod. by Mexicans with Guns)", "Bridgewater Triangle",
+    "Softer Place To Fall", "5am, Wabi Sabi", "flekkefjord",
 ]
 
 

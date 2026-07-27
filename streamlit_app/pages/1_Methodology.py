@@ -44,6 +44,13 @@ from resources import (
 #   RetrievalService + the real ExplanationClient -- see conversation/commit
 #   history, not reproduced as a committed script since it's a one-time
 #   curation pass, not a reusable pipeline step)
+#
+# The two sound_tags entries were added after notebook 11's per-segment AST
+# re-tagging batch finished and the facet's index was synced locally -- same
+# curation method (real cross-genre nearest-neighbor pair from the live
+# index, real ExplanationClient call), one candidate pair skipped for a
+# suspiciously perfect 100% score (likely near-duplicate audio, not a
+# genuinely representative match).
 # ---------------------------------------------------------------------------
 
 NN_EXAMPLES = [
@@ -83,9 +90,15 @@ NN_EXAMPLES = [
     {"facet": "instrumental", "query": {"title": "Squinting at the Sun (radio edit)", "artist": "Lee Rosevere", "genre": "Electronic"},
      "match": {"title": "Do Easy", "artist": "Tasseomancy", "genre": "Pop"}, "score_pct": 85.5,
      "explanation": "Both tracks have nearly identical stripped-down instrumental textures with spacious, airy synth pads underneath the vocal melody."},
+    {"facet": "sound_tags", "query": {"title": "something brewing", "artist": "Coin Locker Kid", "genre": "Hip-Hop"},
+     "match": {"title": "Cage (bonus)", "artist": "Pilesar", "genre": "Pop"}, "score_pct": 83.0,
+     "explanation": "Both moments feature similar sparse, atmospheric instrumentation with prominent high-pitched synth or electronic tones layered over a minimal beat."},
+    {"facet": "sound_tags", "query": {"title": "In The Fall", "artist": "Future Islands", "genre": "Electronic"},
+     "match": {"title": "Elektra (You Were Such Fun)", "artist": "Red Crickets", "genre": "Pop"}, "score_pct": 92.7,
+     "explanation": "Both clips feature a similar blend of synthetic electronic sounds and organic instrumental tones creating an equally distinctive sonic character."},
 ]
 
-FACET_ORDER = ["sound", "harmony", "vocal", "drums", "bass", "instrumental"]
+FACET_ORDER = ["sound", "harmony", "vocal", "drums", "bass", "instrumental", "sound_tags"]
 
 GALLERY_SIZE = 5  # a few genuinely different songs to scroll through, not exhaustive
 
@@ -379,18 +392,20 @@ st.write(
 st.divider()
 
 # ---------------------------------------------------------------------------
-# 3. The six similarity facets
+# 3. The seven similarity facets
 # ---------------------------------------------------------------------------
-st.header("3. The six similarity facets")
+st.header("3. The seven similarity facets")
 st.write(
     "Similarity isn't one thing. Instead of a single blended score, the library is embedded along "
     "several independent facets -- each captures a genuinely different aspect of how a song sounds. "
-    "Four of the six (Vocal, Drums, Bass, Instrumental) run on Demucs-isolated stems rather than the "
+    "Four of the seven (Vocal, Drums, Bass, Instrumental) run on Demucs-isolated stems rather than the "
     "full mix -- the same source-separation-plus-independent-scoring design Vohra & Akama (2026) "
     "validate against real human ABX preference judgments in \"Interpretable and Perceptually-Aligned "
     "Music Similarity with Pretrained Embeddings\" -- directly relevant precedent, since §8's "
     "calibration study plans to turn human preference ratings into per-facet blend weights the same "
-    "way."
+    "way. Sound Tags is different again: a two-stage facet (AST tagging, then CLAP's *text* encoder "
+    "rather than its audio encoder) added after the other six, described in full in notebook "
+    "`11_sound_tags_facet.ipynb`."
 )
 st.markdown("""
 | Facet | What it captures | How it's computed |
@@ -401,6 +416,7 @@ st.markdown("""
 | **Drums** | Isolated drum/percussion pattern and timbre | Demucs source separation + CLAP |
 | **Bass** | Isolated bassline tone and pattern | Demucs source separation + CLAP |
 | **Instrumental** | Backing instrumentation with vocals removed | Demucs source separation + CLAP |
+| **Sound Tags** | Detected sounds and instruments (e.g. cello, gong, sirens) -- what's actually in the mix | AST sound tagging, embedded via CLAP's text encoder |
 """)
 st.caption(
     "**Honest limitation on the four stem-based facets:** Demucs' separation isn't perfect -- an "
@@ -450,7 +466,7 @@ st.divider()
 # ---------------------------------------------------------------------------
 st.header("4. Structure / Abstractivity")
 st.write(
-    "Structure is deliberately different from the other six facets: it's a song-level visualization "
+    "Structure is deliberately different from the other seven facets: it's a song-level visualization "
     "(a self-similarity matrix and the fingerprints derived from it), not a per-segment vector in a "
     "FAISS index. That's why it's excluded from §3's retrieval/evaluation numbers -- genre-cohesion@k "
     "measures nearest-neighbor retrieval, which doesn't apply the same way to something that's "
@@ -870,7 +886,7 @@ st.write(
     "the same LLM explanation layer used throughout the app (not written by hand). Play both clips "
     "below each one to hear the match for yourself -- Results' metadata-vs-real comparison already "
     "makes the core audio-vs-metadata case with its own playable demo; these are additional, "
-    "facet-by-facet examples across all six facets, not a repeat of that comparison:"
+    "facet-by-facet examples across all seven facets, not a repeat of that comparison:"
 )
 
 for facet in FACET_ORDER:

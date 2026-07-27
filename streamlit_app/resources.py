@@ -32,6 +32,56 @@ def show_logo() -> None:
         st.logo(str(LOGO_PATH), size="large")
 
 
+# Streamlit's dark-theme default background -- this app's .streamlit/config.toml
+# only sets base="dark" (no explicit backgroundColor override), so
+# st.get_option("theme.backgroundColor") reads back None (it only reflects an
+# explicit override, not Streamlit's own resolved default). Confirmed directly
+# against this installed Streamlit version's own frontend bundle
+# (static/js/utils.*.js's color palette: gray100 = "#0e1117", the shade the
+# dark theme's page background actually uses) rather than assumed from memory.
+_DEFAULT_DARK_BACKGROUND = "#0e1117"
+
+
+def sticky_header(key: str):
+    """Returns a context manager: wrap a page's title/header content in it
+    (`with sticky_header("approach_header"): st.title(...)`) to pin that
+    content to the top of the scrolling main content area, standard
+    sticky-header behavior -- everything else on the page scrolls beneath
+    it. Separate from the sidebar (st.logo() already stays fixed there
+    natively, no CSS needed) -- this is specifically for main-content
+    titles, which otherwise scroll away like any other element.
+
+    Targets st.container(key=...)'s documented, stable `.st-key-<key>`
+    class -- Streamlit's own supported hook for styling a specific
+    container via CSS, not an internal data-testid or emotion-cache class
+    name that isn't part of the public API and can change on a Streamlit
+    version bump. `key` must be unique per page (reused across pages would
+    make every page's header share one CSS rule harmlessly, but reused
+    within the same page would collide).
+
+    Background color: reads the real configured theme.backgroundColor if
+    this app's config.toml ever sets one explicitly, falling back to the
+    verified current dark-theme default otherwise -- not a hardcoded value
+    with no path to staying correct if the theme changes."""
+    background = st.get_option("theme.backgroundColor") or _DEFAULT_DARK_BACKGROUND
+    st.markdown(
+        f"""
+        <style>
+        .st-key-{key} {{
+            position: sticky;
+            top: 0;
+            z-index: 999;
+            background-color: {background};
+            padding-bottom: 0.75rem;
+            border-bottom: 1px solid rgba(250, 250, 250, 0.1);
+        }}
+        </style>
+        """,
+        unsafe_allow_html=True,
+    )
+    return st.container(key=key)
+
+
 @st.cache_resource
 def get_repositories():
     conn = init_db(DB_PATH)

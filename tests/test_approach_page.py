@@ -28,7 +28,7 @@ def test_approach_page_has_baseline_and_all_five_steps():
     at = _run_approach()
     header_texts = [h.value for h in at.header]
     for expected in [
-        "Baseline",
+        "0. Baseline",
         "1. Slicing the track into windows",
         "2. Seven ways of listening",
         "3. Turning sound into an embedding",
@@ -67,11 +67,15 @@ def test_approach_page_step2_shows_all_seven_facets_with_descriptions():
         assert desc_fragment in caption_texts
 
 
-def test_approach_page_step2_sound_tags_facet_flags_pending_index_honestly():
+def test_approach_page_step2_sound_tags_facet_reports_real_index_as_live():
+    """Notebook 11's per-segment sound_tags index has actually finished and been
+    synced -- this must report it as live with real measured evidence
+    (genre-cohesion numbers), not a stale 'pending/in progress' placeholder."""
     at = _run_approach()
-    warning_texts = " ".join(w.value for w in at.warning)
-    assert "sound tags is the 7th facet" in warning_texts.lower()
-    assert "pending" in warning_texts.lower() or "in progress" in warning_texts.lower()
+    success_texts = " ".join(s.value for s in at.success)
+    assert "sound tags is the 7th facet" in success_texts.lower()
+    assert "45.7%" in success_texts
+    assert "pending" not in success_texts.lower()
 
 
 def test_approach_page_step2_stem_facets_degrade_to_honest_placeholder_when_missing():
