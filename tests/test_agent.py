@@ -210,6 +210,27 @@ def test_system_prompt_instructs_sound_content_tool_usage():
     assert "saxophone" in lowered or "crow" in lowered
 
 
+def test_system_prompt_instructs_genre_style_word_handling():
+    """Regression guard for a real observed failure: asked for a "Spanish
+    vibe," the agent asked three clarifying questions instead of searching --
+    a genre/culture word maps to neither a mood axis nor a literal sound, so
+    it needs its own explicit instruction rather than falling through the
+    cracks between the mood-profile and sound-content guidance above it."""
+    lowered = SYSTEM_PROMPT.lower()
+    assert "genre, cultural, or style descriptor" in lowered
+    assert "search_by_sound_content" in lowered and "search_by_mood_profile" in lowered
+
+
+def test_system_prompt_instructs_zero_result_retry_before_giving_up():
+    """Regression guard for a real observed failure: asked for "yelling
+    sounds," a real zero-result search_by_sound_content call led the agent to
+    report no matches and then offer hypothetical alternative categories back
+    to the user, instead of trying a related term itself first."""
+    lowered = SYSTEM_PROMPT.lower()
+    assert "zero results" in lowered
+    assert "try at least one adjacent" in lowered
+
+
 def test_search_by_sound_content_is_registered_as_a_tool():
     tool_names = {tool["name"] for tool in AGENT_TOOLS}
     assert "search_by_sound_content" in tool_names
