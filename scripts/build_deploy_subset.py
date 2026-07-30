@@ -62,12 +62,22 @@ REQUIRED_EXAMPLE_TITLES = [
     # from the full song list, so without forcing them in here the deployed
     # 223-song subset would compute a *different* dynamic default than local
     # dev sees, independent of whether their description/sound_tags columns
-    # are populated. "flekkefjord" additionally doubles as the real Step 2
-    # stem-audio example (notebook 03) and the sound_tags facet's real
-    # crow-detection example.
+    # are populated.
     "Ivory", "To Drive the Cold Winter Away", "Cien Volando",
     "Not the 1s (prod. by Mexicans with Guns)", "Bridgewater Triangle",
-    "Softer Place To Fall", "5am, Wabi Sabi", "flekkefjord",
+    "Softer Place To Fall", "5am, Wabi Sabi",
+    # "flekkefjord": real crow-sound detection example (Methodology 7b) --
+    # Results' Ask the DJ Gallery's "Any songs with crow sounds?" query is a
+    # live search_by_sound_content call, not a hardcoded reference, but it
+    # needs a real strong match actually present in whatever data the app is
+    # running against to demonstrate anything, hence forced in here too.
+    "flekkefjord",
+    # "Freak of Nature (Time Out Dubb)": Approach's pinned Step 1-5 demo song
+    # -- chosen over flekkefjord specifically for having clearly audible,
+    # distinct vocal/drums/bass stems (flekkefjord's vocal/bass came out
+    # near-silent, fine for a sound-recognition example, not for a walkthrough
+    # that plays each stem separately).
+    "Freak of Nature (Time Out Dubb)",
 ]
 
 
@@ -185,6 +195,23 @@ def main():
 
     for facet_name in FACETS:
         dst_embedding_repo.save_index(facet_name)
+
+    # HARMONY_WHITENER_PATH (sonic_explorer/config.py) is per-ARTIFACTS_DIR,
+    # not part of the FACETS vector-copy loop above -- HarmonyFacet.embed()
+    # loads it fresh from whichever DATA_DIR is active, so without this copy
+    # the deployed app would silently fall back to unwhitened harmony
+    # embeddings for every live query (the index itself would still be
+    # whitened, just no longer matched by fresh embeddings -- see
+    # embedding_whitening.py's module docstring for the exact bug this is).
+    src_whitener = SOURCE_DATA_DIR / "artifacts" / "harmony_whitener.npz"
+    if src_whitener.exists():
+        shutil.copy(src_whitener, DEPLOY_DATA_DIR / "artifacts" / "harmony_whitener.npz")
+        print("Copied harmony_whitener.npz")
+    else:
+        print("WARNING: no harmony_whitener.npz found in source data -- "
+              "deploy_data's harmony facet will serve unwhitened embeddings for fresh queries "
+              "even though its index was built from whitened vectors. Run "
+              "scripts/whiten_harmony_index.py against data/ first.")
 
     print(f"Songs: {len(sampled)}")
     for facet_name in FACETS:
