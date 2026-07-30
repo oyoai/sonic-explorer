@@ -37,7 +37,13 @@ def _some_song_with_segments():
 def test_explore_open_xray_button_carries_the_selected_song():
     song, _ = _some_song_with_segments()
 
-    at = AppTest.from_file("streamlit_app/Overview.py", default_timeout=120)
+    # default_timeout=180, not this file's usual 120 -- this test's own two
+    # full script runs (Explore, then a click into Song X-Ray) stack two
+    # genuinely heavy cold-start pages back to back; Song X-Ray alone
+    # measured at ~53s cold on this machine (full-library taste-map PCA),
+    # same reasoning the rest of this suite already uses 180s for either
+    # page individually. Not a sign of a hang -- real computation, timed.
+    at = AppTest.from_file("streamlit_app/Overview.py", default_timeout=180)
     at.switch_page("pages/7_Explore.py")
     at.session_state["explore_selected_song_id"] = song.id
     at.run()
@@ -56,7 +62,7 @@ def test_song_xray_context_is_consumed_once_not_reapplied():
     unrelated visit would keep reapplying a stale selection."""
     song, _ = _some_song_with_segments()
 
-    at = AppTest.from_file("streamlit_app/Overview.py", default_timeout=120)
+    at = AppTest.from_file("streamlit_app/Overview.py", default_timeout=180)  # Song X-Ray alone: ~53s cold, see above
     at.switch_page("pages/4_Song_XRay.py")
     at.session_state["xray_context_song_id"] = song.id
     at.run()
