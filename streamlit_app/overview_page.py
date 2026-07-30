@@ -35,7 +35,9 @@ import streamlit as st
 
 from comparison_data import get_demo_pairs
 from components.plotting import waveform_figure
-from resources import big_quote, get_repositories, hero_banner, nav_button, show_data_source_banner
+from resources import big_quote, get_repositories, hero_banner, nav_button, render_toc, show_data_source_banner
+
+TOC_SECTIONS = [("Problem", "problem"), ("Existing solutions", "existing-solutions"), ("Research question", "research-question")]
 from sonic_explorer.analysis.waveform_preview import waveform_envelope
 from sonic_explorer.config import audio_path_for
 
@@ -43,6 +45,7 @@ from sonic_explorer.config import audio_path_for
 def render_overview() -> None:
     st.set_page_config(page_title="Sonic Explorer", layout="wide")
     hero_banner("overview")
+    render_toc(TOC_SECTIONS)
     show_data_source_banner()
 
     song_repo, embedding_repo, _ = get_repositories()
@@ -56,7 +59,7 @@ def render_overview() -> None:
     # -----------------------------------------------------------------------
     # Problem
     # -----------------------------------------------------------------------
-    st.header("Problem")
+    st.header("Problem", anchor="problem")
     st.write("The motivation behind this project came from a recurring experience:")
     big_quote('"I love this song, find me more like it."')
     st.write(
@@ -69,7 +72,7 @@ def render_overview() -> None:
     # -----------------------------------------------------------------------
     # Existing solutions
     # -----------------------------------------------------------------------
-    st.header("Existing solutions")
+    st.header("Existing solutions", anchor="existing-solutions")
     st.write(
         "Existing music discovery systems generally rely on two sources of information to "
         "estimate similarity:"
@@ -141,7 +144,7 @@ def render_overview() -> None:
     # -----------------------------------------------------------------------
     # Research question
     # -----------------------------------------------------------------------
-    st.header("Research question")
+    st.header("Research question", anchor="research-question")
     big_quote('"Can we find songs that are actually similar to one another <u>by sound</u>?"')
     st.markdown("<br>", unsafe_allow_html=True)
     st.markdown("<br>", unsafe_allow_html=True)

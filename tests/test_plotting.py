@@ -21,6 +21,7 @@ from components.plotting import (  # noqa: E402
     CHROMA_PITCH_LABELS,
     chord_strip_figure,
     chromagram_figure,
+    composite_fingerprint_image_data_uri,
     composite_fingerprint_thumbnail,
     concept_bubble_diagram,
     extract_selected_song_id,
@@ -115,6 +116,42 @@ def test_fingerprint_image_data_uri_matches_fingerprint_thumbnail_image_pixels()
     np.testing.assert_array_equal(actual_rgb, expected_rgb)
 
 
+def test_composite_fingerprint_image_data_uri_returns_a_valid_png_data_uri():
+    import base64
+    import io
+
+    from PIL import Image
+
+    composite = np.random.rand(8, 8, 3).astype(np.float32)
+
+    uri = composite_fingerprint_image_data_uri(composite)
+
+    assert uri.startswith("data:image/png;base64,")
+    decoded_bytes = base64.b64decode(uri.removeprefix("data:image/png;base64,"))
+    image = Image.open(io.BytesIO(decoded_bytes))
+    assert image.format == "PNG"
+    assert image.size == (8, 8)
+
+
+def test_composite_fingerprint_image_data_uri_flips_vertically():
+    """Same row-0-at-bottom vs. row-0-at-top mismatch fingerprint_thumbnail_
+    image's own flip fixes -- composite is built by stacking structure/
+    sound/harmony fingerprints, which share that same convention."""
+    import base64
+    import io
+
+    from PIL import Image
+
+    composite = np.zeros((4, 4, 3), dtype=np.float32)
+    composite[0, 0] = 1.0  # bright cell in the array's first (bottom, pre-flip) row
+
+    uri = composite_fingerprint_image_data_uri(composite)
+    decoded_bytes = base64.b64decode(uri.removeprefix("data:image/png;base64,"))
+    image = np.array(Image.open(io.BytesIO(decoded_bytes)).convert("RGB"))
+
+    assert image[0, 0].sum() < image[-1, 0].sum()
+
+
 def test_network_graph_figure_customdata_round_trips_song_ids():
     nodes_df = pd.DataFrame([
         {"song_id": 101, "x": 0.0, "y": 0.0, "cluster": 0, "title": "A", "artist": "Artist A", "genre": "Rock"},
@@ -130,16 +167,16 @@ def test_network_graph_figure_customdata_round_trips_song_ids():
 
 
 def test_network_graph_figure_uses_qualitative_palette_not_continuous_colorscale():
-    """Regression guard for a real reported bug: cluster ids are nominal/
-    categorical, not ordered -- coloring them with a sequential colorscale
-    (the old Viridis-on-cluster-id approach) made adjacent cluster numbers
-    look falsely similar and distant ones falsely opposed, reported as
-    "visually messy." Node color must be resolved to explicit qualitative
-    hex/rgb strings, one per node, not a numeric array + a colorscale."""
+    """Regression guard for a real reported bug: coloring nominal/categorical
+    ids with a sequential colorscale (the old Viridis-on-cluster-id approach)
+    made adjacent ids look falsely similar and distant ones falsely opposed,
+    reported as "visually messy." Node color must be resolved to explicit
+    qualitative hex/rgb strings, one per node, not a numeric array + a
+    colorscale -- still true now that color is genre, not cluster."""
     nodes_df = pd.DataFrame([
         {"song_id": 101, "x": 0.0, "y": 0.0, "cluster": 0, "title": "A", "artist": "Artist A", "genre": "Rock"},
-        {"song_id": 202, "x": 1.0, "y": 1.0, "cluster": 1, "title": "B", "artist": "Artist B", "genre": "Jazz"},
-        {"song_id": 303, "x": 2.0, "y": 2.0, "cluster": 0, "title": "C", "artist": "Artist C", "genre": "Pop"},
+        {"song_id": 202, "x": 1.0, "y": 1.0, "cluster": 1, "title": "B", "artist": "Artist B", "genre": "Pop"},
+        {"song_id": 303, "x": 2.0, "y": 2.0, "cluster": 0, "title": "C", "artist": "Artist C", "genre": "Rock"},
     ])
 
     fig = network_graph_figure(nodes_df, edges=[])
@@ -148,8 +185,55 @@ def test_network_graph_figure_uses_qualitative_palette_not_continuous_colorscale
     assert node_trace.marker.colorscale is None
     colors = list(node_trace.marker.color)
     assert all(isinstance(c, str) for c in colors)
-    assert colors[0] == colors[2]  # same cluster (0) -> same color
-    assert colors[0] != colors[1]  # different cluster (0 vs 1) -> different color
+    assert colors[0] == colors[2]  # same genre (Rock) -> same color
+    assert colors[0] != colors[1]  # different genre (Rock vs Pop) -> different color
+
+
+def test_network_graph_figure_colors_by_genre_not_cluster():
+    """A real reported preference: cluster coloring read as "insignificant"
+    (an unlabeled unsupervised id a viewer can't check against anything);
+    genre is a real, checkable label. Two songs in the SAME cluster but
+    DIFFERENT genres must get different colors -- the inverse of the old
+    cluster-coloring behavior, confirming this really switched sources
+    rather than coincidentally matching for same-cluster-same-genre cases."""
+    nodes_df = pd.DataFrame([
+        {"song_id": 101, "x": 0.0, "y": 0.0, "cluster": 0, "title": "A", "artist": "Artist A", "genre": "Rock"},
+        {"song_id": 202, "x": 1.0, "y": 1.0, "cluster": 0, "title": "B", "artist": "Artist B", "genre": "Folk"},
+    ])
+
+    fig = network_graph_figure(nodes_df, edges=[])
+
+    colors = list(fig.data[1].marker.color)
+    assert colors[0] != colors[1]  # same cluster (0), different genre -> different color
+
+
+def test_network_graph_figure_genre_color_is_consistent_with_genre_color_map():
+    """Same genre must resolve to the exact same color GENRE_COLOR_MAP
+    assigns elsewhere (fixed/alphabetical, not derived from this view's own
+    song counts) -- the whole point of a fixed map is one color meaning one
+    genre everywhere, not just self-consistently within one render."""
+    from components.plotting import GENRE_COLOR_MAP
+
+    nodes_df = pd.DataFrame([
+        {"song_id": 101, "x": 0.0, "y": 0.0, "cluster": 0, "title": "A", "artist": "Artist A", "genre": "Electronic"},
+    ])
+
+    fig = network_graph_figure(nodes_df, edges=[])
+
+    assert list(fig.data[1].marker.color)[0] == GENRE_COLOR_MAP["Electronic"]
+
+
+def test_network_graph_figure_unknown_genre_falls_back_gracefully():
+    """A genre value outside the known 8 (shouldn't happen with real
+    library data, but defensive against e.g. synthetic dev data) must not
+    crash -- falls back to a fixed neutral color rather than a KeyError."""
+    nodes_df = pd.DataFrame([
+        {"song_id": 101, "x": 0.0, "y": 0.0, "cluster": 0, "title": "A", "artist": "Artist A", "genre": "Unknown"},
+    ])
+
+    fig = network_graph_figure(nodes_df, edges=[])
+
+    assert list(fig.data[1].marker.color)[0] == "#888888"
 
 
 def test_network_graph_figure_highlight_song_ids_widen_marker_and_ring():

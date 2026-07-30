@@ -60,6 +60,7 @@ from resources import (
     get_repositories,
     hero_banner,
     nav_button,
+    render_toc,
     show_data_source_banner,
     show_logo,
     sticky_header,
@@ -77,8 +78,19 @@ from sonic_explorer.pipeline.sound_tagging import deserialize_tags
 # ({"title", "artist", "genre_top"} for whichever song was separated).
 STEM_EXAMPLE_DIR = Path(__file__).resolve().parents[1] / "static" / "stem_example"
 
+TOC_SECTIONS = [
+    ("0. First, get baseline", "step-0-baseline"),
+    ("1. Slicing the track into windows", "step-1-slicing"),
+    ("2. Seven ways of listening", "step-2-listening"),
+    ("3. Turning sound into an embedding", "step-3-embedding"),
+    ("4. Song DNA", "step-4-song-dna"),
+    ("5. Explaining in plain language", "step-5-explaining"),
+    ("6. From audio to image", "step-6-album-art"),
+]
+
 st.set_page_config(page_title="Sonic Explorer", layout="wide")
 hero_banner("approach")
+render_toc(TOC_SECTIONS)
 # show_logo()
 show_data_source_banner()
 st.title("Approach")
@@ -121,7 +133,7 @@ st.divider()
 # ---------------------------------------------------------------------------
 # Baseline
 # ---------------------------------------------------------------------------
-st.header("0. First, get baseline")
+st.header("0. First, get baseline", anchor="step-0-baseline")
 st.write(
     "Before testing whether audio-based similarity works, it's worth being clear about what "
     "it's being compared against."
@@ -140,7 +152,7 @@ st.divider()
 # ---------------------------------------------------------------------------
 # Step 1: slicing the track into windows
 # ---------------------------------------------------------------------------
-st.header("1. Slicing the track into windows")
+st.header("1. Slicing the track into windows", anchor="step-1-slicing")
 st.write("Songs don't sound the same throughout their entirety.")
 st.write(
     "Looking at a whole song at once risks losing or averaging out what makes any single moment "
@@ -182,7 +194,7 @@ st.divider()
 # ---------------------------------------------------------------------------
 # Step 2: seven ways of listening
 # ---------------------------------------------------------------------------
-st.header("2. Seven ways of listening")
+st.header("2. Seven ways of listening", anchor="step-2-listening")
 st.write(
     "A listener might be responding to one specific facet of a song -- the bass, the vocals, "
     "the overall vibe, background texture, structure -- without realizing it."
@@ -370,7 +382,7 @@ st.divider()
 # ---------------------------------------------------------------------------
 # Step 3: turning sound into an embedding
 # ---------------------------------------------------------------------------
-st.header("3. Turning sound into an embedding")
+st.header("3. Turning sound into an embedding", anchor="step-3-embedding")
 st.write(
     "Each measurement becomes an embedding -- a vector representation that can be directly "
     "compared. Once a song is represented this way, similarity is easy to compute."
@@ -401,7 +413,7 @@ st.divider()
 # ---------------------------------------------------------------------------
 # Step 4: a second kind of similarity -- Song DNA
 # ---------------------------------------------------------------------------
-st.header("4. A second kind of similarity: Song DNA")
+st.header("4. A second kind of similarity: Song DNA", anchor="step-4-song-dna")
 st.write("Alongside the seven embeddings, each song also gets five plainly engineered features:")
 
 dna_normalizer = build_dna_normalizer(song_repo, len(all_songs))
@@ -473,7 +485,7 @@ st.divider()
 # ---------------------------------------------------------------------------
 # Step 5: explaining it in plain language
 # ---------------------------------------------------------------------------
-st.header("5. Explaining it in plain language")
+st.header("5. Explaining it in plain language", anchor="step-5-explaining")
 st.write(
     "A similarity score alone doesn't say why two things match. So an LLM looks at the actual "
     "signals behind the match -- the relevant facet values, the song's DNA, and what sounds are "
@@ -535,7 +547,7 @@ st.divider()
 # Step 6: an experimental album-art pipeline (feature extraction + prompt
 # generation done; image generation pending a manual Colab run)
 # ---------------------------------------------------------------------------
-st.header("6. From audio to image: an experimental album-art pipeline")
+st.header("6. From audio to image: an experimental album-art pipeline", anchor="step-6-album-art")
 st.write(
     "This library has no album art -- FMA's metadata never included any, and nothing in the "
     "ingestion pipeline adds it (Song X-Ray's structure/sound/harmony fingerprint composite is "

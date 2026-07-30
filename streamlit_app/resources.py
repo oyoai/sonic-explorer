@@ -12,9 +12,11 @@ from sonic_explorer.facets.registry import default_registry
 from sonic_explorer.llm.agent import MusicAgent
 from sonic_explorer.llm.explain import ExplanationClient
 from sonic_explorer.llm.rerank import RerankClient
+from sonic_explorer.repository.calibration_repository import CalibrationRepository
 from sonic_explorer.repository.db import init_db
 from sonic_explorer.repository.embedding_repository import EmbeddingRepository
 from sonic_explorer.repository.song_repository import SongRepository
+from sonic_explorer.repository.taste_repository import TasteRepository
 from sonic_explorer.retrieval.service import RetrievalService
 
 # logo_transparent.png is a derived asset (white wordmark, transparent
@@ -67,9 +69,33 @@ def inject_global_styles() -> None:
        ring browsers show by default on a focused input; overriding it here
        to a neutral white keeps the rest of the theme (buttons, sliders)
        using the real primaryColor untouched, rather than changing that
-       theme-wide. */
+       theme-wide. Covers every input-like widget this app actually uses,
+       not just plain text inputs -- st.selectbox/st.multiselect render a
+       BaseWeb Select, not a real <input>, so they need their own selector
+       ([data-baseweb="select"] > div, the focus/hover ring BaseWeb itself
+       colors via its theme, same primaryColor source) rather than falling
+       under the input-element rule below. Not verified in a real browser
+       (no browser automation available in this environment) -- based on
+       Streamlit/BaseWeb's documented, stable data-testid/data-baseweb
+       attributes, same ones this file's other rules already rely on
+       elsewhere (stTextInput, stButton, stAlert, stMain), but flag if any
+       widget type still shows red after this. */
     [data-testid="stTextInput"] input:hover,
-    [data-testid="stTextInput"] input:focus {
+    [data-testid="stTextInput"] input:focus,
+    [data-testid="stTextArea"] textarea:hover,
+    [data-testid="stTextArea"] textarea:focus,
+    [data-testid="stNumberInput"] input:hover,
+    [data-testid="stNumberInput"] input:focus,
+    [data-testid="stChatInput"] textarea:hover,
+    [data-testid="stChatInput"] textarea:focus {
+        border-color: rgba(255,255,255,0.8) !important;
+        box-shadow: 0 0 0 1px rgba(255,255,255,0.8) !important;
+    }
+
+    [data-testid="stSelectbox"] [data-baseweb="select"] > div:hover,
+    [data-testid="stSelectbox"] [data-baseweb="select"] > div:focus-within,
+    [data-testid="stMultiSelect"] [data-baseweb="select"] > div:hover,
+    [data-testid="stMultiSelect"] [data-baseweb="select"] > div:focus-within {
         border-color: rgba(255,255,255,0.8) !important;
         box-shadow: 0 0 0 1px rgba(255,255,255,0.8) !important;
     }
@@ -110,9 +136,18 @@ def inject_global_styles() -> None:
        for its own toolbar -- the hamburger menu/Deploy button visible at
        the top right, a fixed-position overlay, not part of normal document
        flow) -- real dead space on content-dense pages like Explore, where
-       every panel is already fighting for vertical room. Content starts at
-       the actual top of the viewport now; the toolbar overlays on top of
-       it rather than reserving its own flow space, by explicit request.
+       every panel is already fighting for vertical room. padding-top was
+       originally dropped to 0 entirely (toolbar overlays on top of content
+       rather than reserving its own flow space) -- real reported regression
+       on the deployed app specifically: the toolbar there overlapped the
+       very top of page content (Explore's search bar rendering partly
+       under it), not just floating harmlessly above it the way it read
+       locally. 2.875rem restores just enough clearance for that fixed
+       toolbar without reverting to Streamlit's own much larger default gap
+       -- a reasoned estimate matching Streamlit's commonly-documented
+       toolbar height, not independently measured against the live deployed
+       app (no browser access in this environment) -- confirm after this
+       redeploys and adjust if it's still overlapping or now too roomy.
        Left/right trimmed the same way and for the same reason -- applied
        globally (not just Explore) since that's the existing precedent this
        rule already set for padding-top, and every page benefits from the
@@ -135,7 +170,7 @@ def inject_global_styles() -> None:
        once both real nodes are actually targeted. */
     [data-testid="stMain"],
     .block-container {
-        padding-top: 0rem !important;
+        padding-top: 2.875rem !important;
         padding-left: 1rem !important;
         padding-right: 1rem !important;
         max-width: initial !important;
@@ -153,6 +188,15 @@ def inject_global_styles() -> None:
     .st-key-explore_search_input input:focus {
         border-color: white !important;
         box-shadow: 0 0 0 1px white !important;
+    }
+
+    /* Selected Song panel: Tempo/Key/Sound Tags metric values shrunk down
+       from st.metric's own big default size -- scoped to explore_mid_panel
+       specifically (not a global stMetricValue rule), since st.metric is
+       also used on Methodology/Results/Engineering, where the default size
+       is unchanged/correct. */
+    .st-key-explore_mid_panel [data-testid="stMetricValue"] {
+        font-size: 1.4rem !important;
     }
 
     /* Small inline pill badges -- Explore's Tempo/Key readouts
@@ -328,6 +372,23 @@ def get_repositories():
     return song_repo, embedding_repo, retrieval_service
 
 
+@st.cache_resource
+def get_calibration_repositories():
+    """(real similarity, guest similarity, real taste, guest taste) --
+    all four share get_repositories()'s already-cached connection rather than
+    opening a second one to the same DB file. See db.py's schema comment and
+    calibration_repository.py's module docstring for why guest ratings live
+    in physically separate tables, not a flag column, on both the
+    similarity and taste sides."""
+    song_repo, _, _ = get_repositories()
+    return (
+        CalibrationRepository(song_repo.conn, table="calibration_ratings"),
+        CalibrationRepository(song_repo.conn, table="calibration_ratings_guest"),
+        TasteRepository(song_repo.conn, table="taste_ratings"),
+        TasteRepository(song_repo.conn, table="taste_ratings_guest"),
+    )
+
+
 @st.cache_data
 def build_dna_normalizer(_song_repo, cache_key):
     raw_stats = [{axis: getattr(s, axis) for axis in AXES} for s in _song_repo.list_songs()]
@@ -444,6 +505,36 @@ def is_deploy_subset() -> bool:
 def show_data_source_banner() -> None:
     if is_dev_data():
         st.warning("Using synthetic dev data (sine-wave placeholder audio) -- not the real library yet.")
+
+
+def render_toc(sections: list[tuple[str, str]]) -> None:
+    """Sidebar table of contents -- a fixed list of #anchor jump-links to
+    this page's own st.header(..., anchor=...) sections, visible the whole
+    time someone's scrolling a long narrative page. Deliberately only on
+    the "story" pages (Overview, Approach, Methodology, Results,
+    Engineering, App Walkthrough) -- Explore is a tool, not a document to
+    navigate section-by-section, and the hidden drill-down pages (Song
+    X-Ray, Moment Matcher, Ask the DJ, Calibration) are short/functional
+    enough not to need one either.
+
+    sections is [(display title, anchor slug), ...] in the same order the
+    headers appear on the page -- kept as an explicit list here rather than
+    introspecting the page's own rendered elements, since Streamlit has no
+    API for a page to enumerate its own headers from within itself. Plain
+    in-page "#anchor" markdown links, not st.page_link or nav_button --
+    these jump within the CURRENT page (a same-document fragment scroll),
+    not to a different page, so neither of those tools applies here.
+
+    Known limitation on Results specifically: its headers sit inside
+    st.tabs(), and Streamlit hides inactive tabs' content (display:none) --
+    a TOC link into a header under a tab that isn't already selected
+    scrolls to nothing visible until that tab is manually opened. Not
+    fixed here (would need syncing tab selection to the URL fragment, a
+    materially bigger feature than a jump-link list), just an honest gap."""
+    with st.sidebar:
+        st.caption("On this page")
+        for title, anchor in sections:
+            st.markdown(f"- [{title}](#{anchor})")
 
 
 def nav_button(label: str, target_page: str, key: str) -> None:

@@ -7,13 +7,21 @@ import plotly.graph_objects as go
 import streamlit as st
 
 from engineering_data import CNN_PER_GENRE_METRICS, CNN_RESULTS, RED_TEAM_CASES, predict_genre
-from resources import get_agent, get_repositories, hero_banner, nav_button, show_data_source_banner, show_logo
+from resources import get_agent, get_repositories, hero_banner, nav_button, render_toc, show_data_source_banner, show_logo
+
+TOC_SECTIONS = [
+    ("Agent architecture", "agent-architecture"),
+    ("1. Red-teaming, interactive", "red-teaming"),
+    ("2. CI / Docker", "ci-docker"),
+    ("3. CNN classifier, live", "cnn-classifier"),
+]
 
 CI_WORKFLOW_URL = "https://github.com/oyoai/sonic-explorer/actions/workflows/ci.yml"
 CI_BADGE_URL = "https://github.com/oyoai/sonic-explorer/actions/workflows/ci.yml/badge.svg"
 
 st.set_page_config(page_title="Sonic Explorer", layout="wide")
 hero_banner("engineering")
+render_toc(TOC_SECTIONS)
 
 song_repo, embedding_repo, retrieval_service = get_repositories()
 all_songs = song_repo.list_songs()
@@ -34,7 +42,7 @@ st.divider()
 # ---------------------------------------------------------------------------
 # 0. Agent architecture: planning pattern + memory
 # ---------------------------------------------------------------------------
-st.header("Agent architecture: planning pattern + memory")
+st.header("Agent architecture: planning pattern + memory", anchor="agent-architecture")
 st.write(
     "Ask the DJ's loop (`llm/agent.py`'s `MusicAgent.send_message`) is a **ReAct-style tool-calling "
     "loop**: the model reasons about a request, calls a tool, sees the real result, and either "
@@ -60,7 +68,7 @@ st.divider()
 # ---------------------------------------------------------------------------
 # 1. Red-teaming, interactive
 # ---------------------------------------------------------------------------
-st.header("1. Red-teaming, interactive")
+st.header("1. Red-teaming, interactive", anchor="red-teaming")
 n_pass = sum(1 for _, _, verdict, _ in RED_TEAM_CASES if verdict == "PASS")
 st.write(
     f"**{n_pass}/{len(RED_TEAM_CASES)} adversarial prompts passed** -- graded by hand against "
@@ -110,7 +118,7 @@ st.divider()
 # ---------------------------------------------------------------------------
 # 2. CI / Docker
 # ---------------------------------------------------------------------------
-st.header("2. CI / Docker")
+st.header("2. CI / Docker", anchor="ci-docker")
 st.write(
     "Every push and pull request against `main` runs ruff (lint) and the full pytest suite, plus a "
     "Docker build-verification job -- real, live GitHub Actions runs, not a static claim:"
@@ -129,7 +137,7 @@ st.divider()
 # ---------------------------------------------------------------------------
 # 3. CNN classifier, live
 # ---------------------------------------------------------------------------
-st.header("3. CNN classifier, live")
+st.header("3. CNN classifier, live", anchor="cnn-classifier")
 st.write(
     "A small CNN trained directly on log-mel spectrograms to predict genre "
     f"({CNN_RESULTS['n_classes']} classes, stratified "

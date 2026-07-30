@@ -18,13 +18,30 @@ from components.plotting import (
     network_graph_figure,
     song_dna_radar_overlay,
 )
-from resources import build_dna_normalizer, get_repositories, hero_banner, nav_button, show_data_source_banner, show_logo
+from resources import (
+    build_dna_normalizer,
+    get_repositories,
+    hero_banner,
+    nav_button,
+    render_toc,
+    show_data_source_banner,
+    show_logo,
+)
+
+TOC_SECTIONS = [
+    ("1. Explore", "walkthrough-explore"),
+    ("2. Song X-Ray", "walkthrough-song-xray"),
+    ("3. Moment Matcher", "walkthrough-moment-matcher"),
+    ("4. Ask the DJ", "walkthrough-ask-the-dj"),
+    ("5. Try it yourself", "walkthrough-try-it"),
+]
 
 MOMENT_MATCHER_EXAMPLE_TITLE = "Cipralex (c/ Pulso)"
 XRAY_EXAMPLE_TITLE = "Cipralex (c/ Pulso)"
 
 st.set_page_config(page_title="Sonic Explorer", layout="wide")
 hero_banner("app_walkthrough")
+render_toc(TOC_SECTIONS)
 
 song_repo, embedding_repo, retrieval_service = get_repositories()
 all_songs = song_repo.list_songs()
@@ -60,7 +77,7 @@ st.divider()
 # ---------------------------------------------------------------------------
 # 1. Explore -- two ways to see the whole library
 # ---------------------------------------------------------------------------
-st.header("1. Explore -- browse and drill into any song")
+st.header("1. Explore -- browse and drill into any song", anchor="walkthrough-explore")
 st.write(
     "**Explore** is one page, three panels: a searchable/browsable list of every song on the left "
     "(with a small clickable mini-map underneath it, toggling between a network graph and a 2D "
@@ -106,7 +123,7 @@ st.markdown("""
   is *not* the same kind of "position" as the 2D map below.
 - **A line between two nodes** means one song is genuinely among the other's top few nearest
   neighbors on the selected facet -- not every pair gets a line, only real close matches.
-- **Color** is a K-means cluster computed on the same vectors, purely for visual grouping.
+- **Color** is genre -- a real, checkable label rather than an unlabeled unsupervised cluster ID.
 - **A tightly-packed region** is a pocket of songs that all sound alike on this facet. **A node
   sitting off on its own with few or no visible connections** is a genuine outlier -- nothing else
   in the library sounds much like it, on this facet specifically (switching facets can change this
@@ -173,7 +190,7 @@ st.divider()
 # ---------------------------------------------------------------------------
 # 2. Song X-Ray
 # ---------------------------------------------------------------------------
-st.header("2. Song X-Ray -- one song's anatomy")
+st.header("2. Song X-Ray -- one song's anatomy", anchor="walkthrough-song-xray")
 st.write(
     "Pick any song on the live page and it shows you that song's fingerprints, its segmented "
     "structure, and where it sits on the map. Here's a live example:"
@@ -232,7 +249,7 @@ st.divider()
 # ---------------------------------------------------------------------------
 # 3. Moment Matcher
 # ---------------------------------------------------------------------------
-st.header("3. Moment Matcher -- finding a match, one moment at a time")
+st.header("3. Moment Matcher -- finding a match, one moment at a time", anchor="walkthrough-moment-matcher")
 st.write(
     "Moment Matcher has two modes: pick an existing moment in a song and find sonically similar "
     "moments elsewhere (by any facet), or hand-draw a target DNA profile and find whole songs "
@@ -299,7 +316,7 @@ st.divider()
 # ---------------------------------------------------------------------------
 # 4. Ask the DJ
 # ---------------------------------------------------------------------------
-st.header("4. Ask the DJ -- a conversational front-end")
+st.header("4. Ask the DJ -- a conversational front-end", anchor="walkthrough-ask-the-dj")
 st.write(
     "Ask the DJ doesn't run its own analysis -- it's a conversational layer *over* Moment Matcher "
     "and the 2D map. Not run live on this page (each turn is a real, billed LLM call, so it's not "
@@ -336,7 +353,7 @@ st.divider()
 # ---------------------------------------------------------------------------
 # 5. Try it yourself
 # ---------------------------------------------------------------------------
-st.header("5. Try it yourself")
+st.header("5. Try it yourself", anchor="walkthrough-try-it")
 st.write(
     "**Explore is the hub** -- Song X-Ray, Moment Matcher, and Ask the DJ aren't separate "
     "destinations with their own sidebar entries. Moment Matcher runs live inline on Explore's right "

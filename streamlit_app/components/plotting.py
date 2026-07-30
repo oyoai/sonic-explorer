@@ -14,6 +14,21 @@ FINGERPRINT_COLORSCALE = "Magma"
 
 _GENRE_PALETTE = px.colors.qualitative.Set2
 
+# Fixed, alphabetical -- this library's real 8 FMA genres (see spec/CLAUDE.md),
+# not derived from any one view's own song counts. network_graph_figure needs
+# a genre->color assignment that's IDENTICAL across every call site (Explore's
+# mini-graph, its full graph, Results, App Walkthrough) regardless of which
+# subset of songs that particular view happens to show -- a count-based
+# ordering (like _genre_color_map below) would assign different colors to the
+# same genre in a filtered view (e.g. Explore's "selected song + neighbors
+# only" mini-graph) than in the full-library view, which defeats the point of
+# a legend a viewer can actually learn.
+_KNOWN_GENRES = [
+    "Electronic", "Experimental", "Folk", "Hip-Hop",
+    "Instrumental", "International", "Pop", "Rock",
+]
+GENRE_COLOR_MAP = {genre: _GENRE_PALETTE[i % len(_GENRE_PALETTE)] for i, genre in enumerate(_KNOWN_GENRES)}
+
 
 def _genre_color_map(genre_counts: dict[str, int]) -> dict[str, str]:
     """Consistent genre->color assignment, sorted largest-genre-first --
@@ -130,6 +145,28 @@ def fingerprint_image_data_uri(fingerprint: np.ndarray, colorscale: str = FINGER
     from PIL import Image
 
     rgb = fingerprint_thumbnail_image(fingerprint, colorscale)
+    buffer = io.BytesIO()
+    Image.fromarray(rgb).save(buffer, format="PNG")
+    encoded = base64.b64encode(buffer.getvalue()).decode("ascii")
+    return f"data:image/png;base64,{encoded}"
+
+
+def composite_fingerprint_image_data_uri(composite: np.ndarray) -> str:
+    """composite_fingerprint()'s RGB overlay (structure=red, harmony=green,
+    sound=blue), base64 PNG-encoded for an ImageColumn cell -- the same
+    fingerprint_image_data_uri exists for, just skipping fingerprint_
+    thumbnail_image's colorscale-sampling step, since composite is already
+    RGB in [0, 1], not a single-channel value needing a colorscale mapped
+    onto it. Same flipud as fingerprint_thumbnail_image and for the same
+    reason: composite is built by stacking structure/sound/harmony
+    fingerprints, which all share their row-0-at-bottom convention, while
+    an <img> tag always renders row 0 at the top."""
+    import base64
+    import io
+
+    from PIL import Image
+
+    rgb = (np.clip(np.flipud(composite), 0.0, 1.0) * 255).astype(np.uint8)
     buffer = io.BytesIO()
     Image.fromarray(rgb).save(buffer, format="PNG")
     encoded = base64.b64encode(buffer.getvalue()).decode("ascii")
@@ -393,7 +430,17 @@ def network_graph_figure(
         edge_x += [x0, x1, None]
         edge_y += [y0, y1, None]
 
-    cluster_colors = [_GENRE_PALETTE[int(c) % len(_GENRE_PALETTE)] for c in nodes_df["cluster"]]
+    # Genre, not the unsupervised K-means cluster id -- a real reported
+    # preference (cluster coloring read as "insignificant"/hard to learn
+    # from, whereas genre is an immediately meaningful, checkable label).
+    # GENRE_COLOR_MAP is fixed/alphabetical (see its own module-level
+    # comment) so the same genre gets the same color in every view, not
+    # just within one render. The 2D taste map (taste_map_figure) keeps its
+    # own cluster-vs-genre "Color by" toggle unchanged -- that toggle IS
+    # the deliberate cluster/genre comparison the map exists to support;
+    # this graph never had one, so there's no comparison feature to
+    # preserve here, only a single fixed choice to make.
+    node_colors = [GENRE_COLOR_MAP.get(g, "#888888") for g in nodes_df["genre"]]
 
     fig = go.Figure()
     fig.add_trace(go.Scatter(
@@ -405,7 +452,7 @@ def network_graph_figure(
         x=nodes_df["x"], y=nodes_df["y"], mode="markers",
         marker=dict(
             size=[13 if sid in highlight_ids else 9 for sid in nodes_df["song_id"]],
-            color=cluster_colors,
+            color=node_colors,
             line=dict(
                 width=[
                     2.5 if sid == selected_song_id else (2 if sid in highlight_ids else 0)
