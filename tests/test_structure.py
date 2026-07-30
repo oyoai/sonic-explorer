@@ -8,6 +8,7 @@ from sonic_explorer.facets.structure import (
     _merge_short_segments,
     analyze_structure,
     compute_self_similarity_matrix,
+    repetition_rate,
 )
 
 
@@ -44,6 +45,43 @@ def test_self_similarity_matrix_diagonal_is_deliberately_zeroed():
     diag = np.diag(matrix)
 
     assert np.allclose(diag, 0.0)
+
+
+def test_repetition_rate_computes_mean_off_diagonal_excluding_diagonal():
+    """A hand-built matrix with a known diagonal (nonzero, to prove it's
+    genuinely EXCLUDED, not just coincidentally zero like the real pipeline's
+    own matrices) and known off-diagonal values -- confirms the exact
+    arithmetic rather than just "some number comes back"."""
+    matrix = np.array([
+        [1.0, 0.2, 0.4],
+        [0.2, 1.0, 0.6],
+        [0.4, 0.6, 1.0],
+    ])
+    # off-diagonal entries: 0.2, 0.4, 0.2, 0.6, 0.4, 0.6 -> mean = 0.4
+    assert repetition_rate(matrix) == pytest.approx(0.4)
+
+
+def test_repetition_rate_is_zero_for_a_matrix_too_small_to_have_off_diagonal_entries():
+    assert repetition_rate(np.array([[1.0]])) == 0.0
+    assert repetition_rate(np.zeros((0, 0))) == 0.0
+
+
+def test_repetition_rate_higher_for_a_pure_repeating_tone_than_two_different_tones():
+    """Real end-to-end check against compute_self_similarity_matrix, not just
+    the hand-built-matrix arithmetic test above: a single sustained tone
+    repeats itself throughout (every moment sounds like every other moment),
+    while two back-to-back DIFFERENT tones should self-similarize much less
+    across the join -- repetition_rate must reflect that real difference."""
+    repeating_audio = make_sine(duration_sec=10.0, freq=440.0)
+    half = len(repeating_audio) // 2
+    changing_audio = np.concatenate([
+        make_sine(duration_sec=5.0, freq=440.0)[: half], make_sine(duration_sec=5.0, freq=1046.5)[: half],
+    ])
+
+    repeating_matrix = compute_self_similarity_matrix(repeating_audio, CLAP_SR)
+    changing_matrix = compute_self_similarity_matrix(changing_audio, CLAP_SR)
+
+    assert repetition_rate(repeating_matrix) > repetition_rate(changing_matrix)
 
 
 def test_self_similarity_matrix_falls_back_when_synced_chroma_too_short(monkeypatch):

@@ -210,3 +210,20 @@ def compute_self_similarity_matrix(audio: np.ndarray, sr: int) -> np.ndarray:
     matrix. Prefer analyze_structure() when the timeline is needed too, to avoid
     computing chroma/beat-tracking twice."""
     return analyze_structure(audio, sr).matrix
+
+
+def repetition_rate(matrix: np.ndarray) -> float:
+    """Single scalar summary of how much a song repeats itself, derived from
+    the ALREADY-COMPUTED/persisted self-similarity matrix (EmbeddingRepository.
+    get_structure_matrix) -- no new audio analysis, just a reduction over data
+    this app already has for every song with a structure artifact. Mean of the
+    off-diagonal affinity values: the main diagonal is deliberately zeroed by
+    analyze_structure (see its own comment on why), so it's excluded here too
+    rather than trivially inflating the mean with n perfect self-matches.
+    Returns 0.0 for a matrix too small to have any off-diagonal entries."""
+    n = matrix.shape[0]
+    if n < 2:
+        return 0.0
+    off_diagonal_sum = float(matrix.sum()) - float(np.trace(matrix))
+    off_diagonal_count = n * n - n
+    return off_diagonal_sum / off_diagonal_count
