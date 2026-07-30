@@ -24,9 +24,11 @@ kept in sync with explore_selected_song_id in both directions: a row click
 updates it, and external changes to it (search, mini-map click) re-seed the
 table's own selection state before it's drawn. All songs render at once
 (no pagination) since st.dataframe is properly virtualized -- the real
-cost this trades in is computing every visible song's thumbnail up front;
-see _cached_thumbnail_data_uri's docstring for why that's a one-time,
-server-wide cost, not a per-user one.
+cost this trades in is computing every visible song's thumbnail AND every
+other computed column (DNA scalars, fingerprints, novelty curve) up front;
+see _row_thumbnail_data_uri/_cached_facet_fingerprint_data_uri's docstrings
+for why that's a one-time, server-wide cost (~78s cold for the four
+fingerprint columns alone, measured), not a per-user one.
 
 Moment Matcher's "Full Song" tab is the SAME song-level graph an earlier
 version of this page rendered as a standalone "mini-map" in the left
@@ -152,15 +154,19 @@ from sonic_explorer.analysis.song_dna import AXES, AXIS_LABELS
 from sonic_explorer.analysis.taste_map import compute_taste_map, mean_pool_song_vectors
 from sonic_explorer.analysis.waveform_preview import beat_times_for_song, chroma_for_display, rms_contour, waveform_envelope
 from sonic_explorer.config import album_art_path_for, audio_path_for
-from sonic_explorer.facets.fingerprint import structure_fingerprint
+from sonic_explorer.facets.fingerprint import composite_fingerprint, structure_fingerprint
 from sonic_explorer.facets.registry import default_registry
 from sonic_explorer.facets.structure import repetition_rate
 from sonic_explorer.llm.search import explanation_for_search_match, nl_search
+from sonic_explorer.pipeline.sound_tagging import deserialize_tags
 from components.plotting import (
     chord_strip_figure,
+    composite_fingerprint_image_data_uri,
+    composite_fingerprint_thumbnail,
     extract_selected_song_id,
     filter_to_neighbors,
     fingerprint_image_data_uri,
+    fingerprint_thumbnail,
     fingerprint_thumbnail_image,
     network_graph_figure,
     song_dna_bars,
@@ -342,25 +348,6 @@ def _cached_row_fingerprint(_embedding_repo, song_id: int):
 
 
 @st.cache_data(show_spinner=False)
-def _cached_thumbnail_data_uri(_embedding_repo, song_id: int):
-    """Same underlying fingerprint image _cached_row_fingerprint returns,
-    just base64-PNG-encoded -- st.dataframe's ImageColumn (the browsable
-    list, below) needs a URL/data-URI per cell, not a raw array. Cached
-    server-wide per song_id like every other st.cache_data call in this
-    file: computing all ~1400 thumbnails the first time this list renders
-    on a freshly-started server takes a real, measured ~25 seconds (not
-    per-user -- st.cache_data is shared across every session hitting this
-    same running process), after which every subsequent render across every
-    session is instant. A st.spinner around the call site makes that
-    one-time cold start visible rather than a silent freeze."""
-    try:
-        matrix = _embedding_repo.get_structure_matrix(song_id)
-    except FileNotFoundError:
-        return None
-    return fingerprint_image_data_uri(structure_fingerprint(matrix))
-
-
-@st.cache_data(show_spinner=False)
 def _cached_album_art_data_uri(song_id: int, art_path: str) -> str:
     """Real generated album art (deploy_data/album_art/{song_id}.png, see
     Approach step 6) base64-encoded the same way the fingerprint images
@@ -372,6 +359,110 @@ def _cached_album_art_data_uri(song_id: int, art_path: str) -> str:
     import base64
 
     return f"data:image/png;base64,{base64.b64encode(Path(art_path).read_bytes()).decode('ascii')}"
+
+
+def _row_sound_tags(song) -> str:
+    """Top 3 AST/AudioSet tags by score, comma-joined -- shared by the
+    browsable list's "Sound Tags" column and the Selected Song panel's own
+    Sound Tags metric, so both read the identical formatting for the same
+    song rather than two independently-drifting implementations."""
+    tags = deserialize_tags(song.sound_tags)
+    top = sorted(tags, key=lambda t: t[1], reverse=True)[:3]
+    return ", ".join(label for label, _score in top)
+
+
+def _row_thumbnail_data_uri(_embedding_repo, song) -> str:
+    """Same album-art-priority, structure-fingerprint-fallback logic the
+    Selected Song panel already uses (see its own comment above), applied to
+    the browsable list's Thumbnail column too -- real generated album art
+    when this song has one, the fingerprint substitute otherwise. Not itself
+    cached: both branches dispatch straight to an already-@st.cache_data'd
+    function, so there's nothing extra to cache here.
+
+    Fallback reuses _cached_facet_fingerprint_data_uri(..., "structure") --
+    the SAME structure fingerprint the dataframe's own "Structure" column
+    (below) shows, rather than a separate _cached_thumbnail_data_uri that
+    used to compute the identical image a second time under a different
+    cache key. Real, measured cost of the four fingerprint columns
+    (Structure/Sound/Harmony/Composite) together, cold: ~78s across the
+    full ~1400-song library -- de-duplicating this one avoids paying for
+    Structure's own downsample twice on top of that."""
+    album_art_path = album_art_path_for(song)
+    if album_art_path is not None:
+        return _cached_album_art_data_uri(song.id, str(album_art_path))
+    return _cached_facet_fingerprint_data_uri(_embedding_repo, song.id, "structure") or ""
+
+
+@st.cache_data(show_spinner=False)
+def _cached_structure_extras(_embedding_repo, song_id: int):
+    """One structure-matrix load + one structure-timeline load per song,
+    shared by every column below that needs them (Structure/Sound/Harmony/
+    Composite fingerprints, Repetition rate, Novelty curve) -- reads each
+    on-disk artifact once per song, not once per column. Both None (not
+    raised) when missing, so callers can check without their own try/except."""
+    try:
+        matrix = _embedding_repo.get_structure_matrix(song_id)
+    except FileNotFoundError:
+        matrix = None
+    try:
+        timeline = _embedding_repo.get_structure_timeline(song_id)
+    except FileNotFoundError:
+        timeline = None
+    return matrix, timeline
+
+
+@st.cache_data(show_spinner=False)
+def _cached_facet_fingerprint_data_uri(_embedding_repo, song_id: int, facet: str) -> str:
+    """Structure/Sound/Harmony self-similarity-matrix fingerprints as their
+    own list columns -- same cost tier as the existing Thumbnail column
+    (Structure) or one extra already-persisted-artifact read (Sound/
+    Harmony, both piggyback on the same structure-timeline .npz file), not
+    a live audio decode -- see Song DNA's own "Self-similarity matrices"
+    section, which shows the identical images at detail-view size."""
+    matrix, timeline = _cached_structure_extras(_embedding_repo, song_id)
+    if facet == "structure":
+        fingerprint = structure_fingerprint(matrix) if matrix is not None else None
+    elif facet == "sound":
+        fingerprint = timeline.sound_fingerprint if timeline is not None else None
+    elif facet == "harmony":
+        fingerprint = timeline.harmony_fingerprint if timeline is not None else None
+    else:
+        raise ValueError(f"Unknown facet {facet!r}")
+    if fingerprint is None:
+        return ""
+    return fingerprint_image_data_uri(fingerprint)
+
+
+@st.cache_data(show_spinner=False)
+def _cached_composite_data_uri(_embedding_repo, song_id: int) -> str:
+    matrix, timeline = _cached_structure_extras(_embedding_repo, song_id)
+    if matrix is None or timeline is None or timeline.sound_fingerprint is None or timeline.harmony_fingerprint is None:
+        return ""
+    composite = composite_fingerprint(structure_fingerprint(matrix), timeline.sound_fingerprint, timeline.harmony_fingerprint)
+    return composite_fingerprint_image_data_uri(composite)
+
+
+@st.cache_data(show_spinner=False)
+def _cached_row_repetition_rate(_embedding_repo, song_id: int) -> float | None:
+    matrix, _timeline = _cached_structure_extras(_embedding_repo, song_id)
+    return repetition_rate(matrix) if matrix is not None else None
+
+
+@st.cache_data(show_spinner=False)
+def _cached_row_novelty_curve(_embedding_repo, song_id: int) -> list[float] | None:
+    """A list of numbers, not a numpy array -- st.column_config.LineChartColumn
+    cells need plain lists (pandas/pyarrow can't round-trip a numpy array
+    inside a DataFrame cell the same way). Genuinely cheap despite being a
+    per-song curve, not a scalar: novelty_curve is PERSISTED in the same
+    structure-timeline .npz file Sound/Harmony's fingerprints already read
+    above, not computed live -- unlike Key/Chords/Beats/Loudness, which
+    this table deliberately does NOT add as columns (see the comment by
+    the Tempo column below: measured at ~4.6s/song for all four together,
+    which would mean an ~108-minute cold start across the full library)."""
+    _matrix, timeline = _cached_structure_extras(_embedding_repo, song_id)
+    if timeline is None or timeline.novelty_curve is None:
+        return None
+    return [float(v) for v in timeline.novelty_curve]
 
 
 @st.cache_data(show_spinner=False)
@@ -455,8 +546,13 @@ if search_query and search_query != st.session_state.explore_last_query:
     st.session_state.explore_filtered_song_ids = matched_ids
     st.session_state.explore_search_note = note
     st.session_state.explore_search_explanations = explanations
-    if matched_ids:
-        st.session_state.explore_selected_song_id = matched_ids[0]
+    # A zero-result search must not leave a PREVIOUS selection's detail
+    # panel/Moment Matcher on screen -- that would look like a stale
+    # leftover from before the search, not an honest "nothing matched."
+    # Both mid_col and the Moment Matcher panel already have a real
+    # song-is-None fallback ("Select a song from the list to see it here.")
+    # for exactly this case, so clearing here is safe, not a new code path.
+    st.session_state.explore_selected_song_id = matched_ids[0] if matched_ids else None
 
 if st.session_state.explore_search_note:
     st.caption(st.session_state.explore_search_note)
@@ -487,28 +583,56 @@ with left_col, st.container(height=PANEL_HEIGHT, border=False, gap="xxsmall", ke
     # value, so this can't do a stacked "bold title / artist / genre" card
     # look, just a plain table -- a deliberate, discussed trade for
     # reliability over that specific visual.
-    with st.spinner("Loading thumbnails…", show_time=False):
-        list_df = pd.DataFrame([
-            {
-                "song_id": s.id,
-                "Thumbnail": _cached_thumbnail_data_uri(embedding_repo, s.id) or "",
-                "Title": s.title,
-                "Artist": s.artist,
-                "Genre": s.genre_top,
-                # Tempo (song.tempo_bpm) is a real DB column, not recomputed
-                # here -- free to show for all songs. Key is deliberately NOT
-                # added alongside it: unlike tempo, key isn't persisted
-                # anywhere, only estimated live per song from real chroma
-                # analysis (_estimated_key_for_song) -- doing that for every
-                # row in an unpaginated ~1400-song table would mean decoding
-                # every song's audio up front, a genuinely heavy cold start,
-                # not a free column the way Tempo is.
-                "Tempo": f"{s.tempo_bpm:.0f} BPM" if s.tempo_bpm is not None else "—",
-                "Why it matched": row_explanations.get(s.id, ""),
-            }
-            for s in active_list
-        ])
+    def _build_row(s):
+        repetition_value = _cached_row_repetition_rate(embedding_repo, s.id)
+        return {
+            "song_id": s.id,
+            "Thumbnail": _row_thumbnail_data_uri(embedding_repo, s),
+            "Title": s.title,
+            "Artist": s.artist,
+            "Genre": s.genre_top,
+            # Tempo (song.tempo_bpm) is a real DB column, not recomputed
+            # here -- free to show for all songs, like every other DNA/
+            # metadata column below it. Key, Chord progression, Beats
+            # detected, and Loudness contour are deliberately NOT columns
+            # here (Novelty curve, below, IS -- it's persisted, these
+            # aren't): none of the four are persisted anywhere, each is only
+            # ever estimated live from real audio on demand
+            # (_estimated_key_for_song etc.), and a real benchmark of all
+            # four together measured ~4.6s/song -- ~108 minutes to compute
+            # across the full ~1400-song library on a cold render. Hiding a
+            # column by default (see column_order below) only solves visual
+            # clutter; the dataframe still has to compute every column for
+            # every row regardless of which are visible, so hiding these
+            # wouldn't avoid that cost -- this table simply doesn't have
+            # them at all, a known, deliberate gap (see Methodology) rather
+            # than a slow page.
+            "Tempo": f"{s.tempo_bpm:.0f} BPM" if s.tempo_bpm is not None else "—",
+            "Energy": f"{s.energy:.2f}" if s.energy is not None else "—",
+            "Brightness": f"{s.brightness:.2f}" if s.brightness is not None else "—",
+            "Harmonic Complexity": f"{s.harmonic_complexity:.2f}" if s.harmonic_complexity is not None else "—",
+            "Rhythmic Density": f"{s.rhythmic_density:.2f}" if s.rhythmic_density is not None else "—",
+            "Repetition Rate": f"{repetition_value:.2f}" if repetition_value is not None else "—",
+            "Novelty Curve": _cached_row_novelty_curve(embedding_repo, s.id) or [],
+            "Structure": _cached_facet_fingerprint_data_uri(embedding_repo, s.id, "structure"),
+            "Sound": _cached_facet_fingerprint_data_uri(embedding_repo, s.id, "sound"),
+            "Harmony": _cached_facet_fingerprint_data_uri(embedding_repo, s.id, "harmony"),
+            "Composite": _cached_composite_data_uri(embedding_repo, s.id),
+            "Description": s.description or "",
+            "Sound Tags": _row_sound_tags(s),
+            "Album": s.album_title or "",
+            "Why it matched": row_explanations.get(s.id, ""),
+        }
 
+    with st.spinner("Loading thumbnails…", show_time=False):
+        list_df = pd.DataFrame([_build_row(s) for s in active_list])
+
+    # Only this default set shows without the viewer doing anything --
+    # everything else (DNA scalars, fingerprints, novelty curve,
+    # description/tags/album) is a real column in list_df, just hidden by
+    # default (see st.dataframe's own column_order docs: columns omitted
+    # here stay fully available via the column-visibility menu in the
+    # table's own toolbar, not deleted from the data).
     column_order = ["Thumbnail", "Title", "Artist", "Genre", "Tempo"]
     if row_explanations:
         column_order.append("Why it matched")
@@ -564,7 +688,17 @@ with left_col, st.container(height=PANEL_HEIGHT, border=False, gap="xxsmall", ke
     event = st.dataframe(
         list_df,
         column_order=column_order,
-        column_config={"Thumbnail": st.column_config.ImageColumn("")},
+        column_config={
+            "Thumbnail": st.column_config.ImageColumn(""),
+            "Structure": st.column_config.ImageColumn(),
+            "Sound": st.column_config.ImageColumn(),
+            "Harmony": st.column_config.ImageColumn(),
+            "Composite": st.column_config.ImageColumn(),
+            # Cells need a plain list of numbers (see _cached_row_novelty_
+            # curve's docstring) -- LineChartColumn renders that as a real
+            # per-row sparkline, not a single scalar.
+            "Novelty Curve": st.column_config.LineChartColumn(),
+        },
         hide_index=True,
         on_select="rerun",
         selection_mode="single-row",
@@ -592,7 +726,7 @@ with mid_col, st.container(height=PANEL_HEIGHT, border=False, gap="xxsmall", key
     song = song_repo.get_song(int(selected_id)) if selected_id in all_song_ids else None
 
     if song is None:
-        st.markdown("### Selected song")
+        st.caption("Selected song")
         st.info("Select a song from the list to see it here.")
     else:
         if st.session_state.explore_selected_segment_song_id != song.id:
@@ -607,7 +741,7 @@ with mid_col, st.container(height=PANEL_HEIGHT, border=False, gap="xxsmall", key
             if "explore_segment_pills" in st.session_state:
                 st.session_state["explore_segment_pills"] = st.session_state.explore_selected_segment_id
 
-        st.markdown("### Selected song")
+        st.caption("Selected song")
 
         try:
             matrix = embedding_repo.get_structure_matrix(song.id)
@@ -636,7 +770,11 @@ with mid_col, st.container(height=PANEL_HEIGHT, border=False, gap="xxsmall", key
         # exact previous fingerprint-only behavior for those songs, not a
         # broken image.
         album_art_path = album_art_path_for(song)
-        thumb_col, meta_col = st.columns([1, 1])
+        # gap="xsmall" (0.5rem, down from st.columns' own "small"/1rem
+        # default) -- the art and the title/artist/genre block next to it
+        # read as two unrelated pieces of content at the default gap,
+        # rather than one grouped identity card.
+        thumb_col, meta_col = st.columns([1, 1], gap="xsmall")
         with thumb_col:
             if album_art_path is not None:
                 art_data_uri = _cached_album_art_data_uri(song.id, str(album_art_path))
@@ -670,9 +808,27 @@ with mid_col, st.container(height=PANEL_HEIGHT, border=False, gap="xxsmall", key
             else:
                 st.info("No fingerprint yet.")
         with meta_col:
-            st.markdown(f"#### {song.title}")
-            st.caption(song.artist)
-            st.markdown(badge(song.genre_top, kind="tag"), unsafe_allow_html=True)
+            # One combined block instead of three separate st.markdown/
+            # st.caption calls -- each of those adds its own default
+            # block-level margin, which is what made title/artist/genre
+            # read as loosely spread out rather than grouped with the
+            # thumbnail next to them. Title's font matches the global
+            # h1-h4 Playfair Display rule (inject_global_styles) manually,
+            # since a plain <div> doesn't inherit that selector -- just at
+            # a smaller size/tighter margins than a real #### heading.
+            # Explicit size hierarchy: title > artist > genre (genre's own
+            # badge() pill is already the smallest thing here, 12px per
+            # inject_global_styles' .tag-chip rule -- unchanged).
+            st.markdown(
+                '<div style="margin-top:2px; line-height:1.3;">'
+                f'<div style="font-family:\'Playfair Display\', serif; font-weight:700; '
+                f'font-size:1.45rem;">{song.title}</div>'
+                f'<div style="color:rgba(255,255,255,0.6); font-size:0.95rem; margin:2px 0 6px 0;">'
+                f'{song.artist}</div>'
+                f'{badge(song.genre_top, kind="tag")}'
+                '</div>',
+                unsafe_allow_html=True,
+            )
 
         # -- Previous/Next merged into one media-control strip with the
         # audio player, icon-only (⏮/⏭, not "◀ previous"/"next ▶") -- reads
@@ -698,9 +854,17 @@ with mid_col, st.container(height=PANEL_HEIGHT, border=False, gap="xxsmall", key
 
         media_cols = st.columns([1, 9, 1], vertical_alignment="center")
         with media_cols[0]:
+            # Real Material Symbols icon, not the ⏮ emoji -- the emoji
+            # glyph itself bakes in uneven internal padding that varies by
+            # font/platform, which flexbox centering can't fix since it
+            # centers the character CELL, not the visible ink inside it (a
+            # real reported "icon isn't centered" issue). A Material icon
+            # is a real vector glyph Streamlit's own button already centers
+            # correctly, same mechanism as every other icon= button in this
+            # app (see e.g. Ask the DJ/Engineering nav buttons).
             if st.button(
-                "⏮", disabled=not has_nav or nav_idx == 0, key="mid_prev_result",
-                help="Previous song", width="stretch",
+                "", icon=":material/skip_previous:", disabled=not has_nav or nav_idx == 0,
+                key="mid_prev_result", help="Previous song", width="stretch",
             ):
                 st.session_state.explore_selected_song_id = nav_song_ids[nav_idx - 1]
                 st.rerun()
@@ -708,8 +872,8 @@ with mid_col, st.container(height=PANEL_HEIGHT, border=False, gap="xxsmall", key
             st.audio(str(audio_path_for(song)))
         with media_cols[2]:
             if st.button(
-                "⏭", disabled=not has_nav or nav_idx == len(nav_song_ids) - 1, key="mid_next_result",
-                help="Next song", width="stretch",
+                "", icon=":material/skip_next:", disabled=not has_nav or nav_idx == len(nav_song_ids) - 1,
+                key="mid_next_result", help="Next song", width="stretch",
             ):
                 st.session_state.explore_selected_song_id = nav_song_ids[nav_idx + 1]
                 st.rerun()
@@ -741,6 +905,17 @@ with mid_col, st.container(height=PANEL_HEIGHT, border=False, gap="xxsmall", key
                      "wins. Same chord/key-detection approach used on the Approach page's Harmony card.",
             )
 
+        # Same st.metric format as Tempo/Key above, not a differently-styled
+        # row -- _row_sound_tags is the same top-3-by-score formatting the
+        # browsable list's own "Sound Tags" column uses (see that function's
+        # docstring), so a song reads identically here and in the list.
+        sound_tags_text = _row_sound_tags(song) or "Not yet tagged"
+        st.metric(
+            "Sound Tags", sound_tags_text,
+            help="Top 3 AST/AudioSet tags by confidence score, from a real per-segment audio "
+                 "classification pass (pipeline/sound_tagging.py) -- not read from any metadata tag.",
+        )
+
         # Open full Song X-Ray -> now lives inside Song DNA (moved from its
         # own Save/X-Ray button row -- Save is gone for now, see below, so
         # X-Ray no longer had a natural partner up there). Song DNA is where
@@ -771,6 +946,64 @@ with mid_col, st.container(height=PANEL_HEIGHT, border=False, gap="xxsmall", key
                 # Song X-Ray already persists per song, not recomputed. ----
                 song_audio_path = str(audio_path_for(song))
 
+                try:
+                    structure_timeline = embedding_repo.get_structure_timeline(song.id)
+                except FileNotFoundError:
+                    structure_timeline = None
+
+                # -- Self-similarity-matrix fingerprints -- moved here from
+                # the Selected Song thumbnail above (which now prioritizes
+                # real album art, with the structure fingerprint only as its
+                # own fallback when no art exists -- see _row_thumbnail_
+                # data_uri/the thumb_col comment above). Song DNA is where
+                # someone already wants technical detail, so this is where
+                # the full set (not just Structure) belongs: each facet's
+                # own self-similarity matrix, downsampled into a small
+                # brighter-means-more-alike heatmap, plus the composite RGB
+                # overlay (structure=red, harmony=green, sound=blue) the
+                # App Walkthrough page introduces this same visual language
+                # through -- reused here directly, not reinvented. sound_fp/
+                # harmony_fp piggyback on the same structure-timeline .npz
+                # file structure_fp's own matrix load doesn't touch (see
+                # StructureTimeline's docstring), so this costs one extra
+                # file read, not three separate matrix computations.
+                if matrix is not None:
+                    st.markdown("###### Self-similarity matrices")
+                    structure_fp = structure_fingerprint(matrix)
+                    sound_fp = structure_timeline.sound_fingerprint if structure_timeline is not None else None
+                    harmony_fp = structure_timeline.harmony_fingerprint if structure_timeline is not None else None
+
+                    fp_cols = st.columns(4)
+                    with fp_cols[0]:
+                        st.plotly_chart(
+                            fingerprint_thumbnail(structure_fp, "Structure", height=110),
+                            width="stretch", key="dna_fp_structure",
+                        )
+                    if sound_fp is not None:
+                        with fp_cols[1]:
+                            st.plotly_chart(
+                                fingerprint_thumbnail(sound_fp, "Sound", height=110),
+                                width="stretch", key="dna_fp_sound",
+                            )
+                    if harmony_fp is not None:
+                        with fp_cols[2]:
+                            st.plotly_chart(
+                                fingerprint_thumbnail(harmony_fp, "Harmony", height=110),
+                                width="stretch", key="dna_fp_harmony",
+                            )
+                    if sound_fp is not None and harmony_fp is not None:
+                        with fp_cols[3]:
+                            composite = composite_fingerprint(structure_fp, sound_fp, harmony_fp)
+                            st.plotly_chart(
+                                composite_fingerprint_thumbnail(composite, "Composite", height=110),
+                                width="stretch", key="dna_fp_composite",
+                            )
+                    st.caption(
+                        "Each cell compares two moments in the song against each other on that facet -- "
+                        "brighter means more alike. Composite overlays all three as RGB (structure=red, "
+                        "harmony=green, sound=blue)."
+                    )
+
                 st.markdown("###### Chord progression")
                 chord_segments = _estimated_chords_for_song(song.id, song_audio_path)
                 if chord_segments:
@@ -779,11 +1012,6 @@ with mid_col, st.container(height=PANEL_HEIGHT, border=False, gap="xxsmall", key
                     )
                 else:
                     st.caption("No chords detected (near-silent or unpitched audio).")
-
-                try:
-                    structure_timeline = embedding_repo.get_structure_timeline(song.id)
-                except FileNotFoundError:
-                    structure_timeline = None
 
                 novelty_cols = st.columns(2)
                 with novelty_cols[0]:
@@ -872,7 +1100,7 @@ with right_col, st.container(height=PANEL_HEIGHT, border=False, gap="xxsmall", k
         with full_song_tab:
             full_song_facet = st.selectbox(
                 "Match by", options=FACET_REGISTRY.names(), format_func=lambda f: facet_display_name(f),
-                key="explore_full_song_facet_select",
+                key="explore_full_song_facet_select", width=160,
                 help="Which facet's embeddings determine this graph's layout and edges.",
             )
             mini_points_df, mini_edges = build_explore_graph(
@@ -920,8 +1148,7 @@ with right_col, st.container(height=PANEL_HEIGHT, border=False, gap="xxsmall", k
                     st.caption(
                         f"Selected song + its direct {facet_display_name(full_song_facet)} neighbors only -- "
                         f"showing {len(displayed_edges)} of {len(neighbor_edges)} edges at ≥{threshold:.2f} "
-                        "similarity. Click a node to select that song. Color = unsupervised K-means cluster, "
-                        "not genre."
+                        "similarity. Click a node to select that song. Color = genre."
                     )
                 else:
                     taste_points_df = build_taste_map_points(
@@ -952,7 +1179,7 @@ with right_col, st.container(height=PANEL_HEIGHT, border=False, gap="xxsmall", k
             else:
                 moment_facet = st.selectbox(
                     "Match by", options=FACET_REGISTRY.names(), format_func=lambda f: facet_display_name(f),
-                    key="explore_moment_facet_select",
+                    key="explore_moment_facet_select", width=160,
                     help="Which facet's embeddings determine these results.",
                 )
 

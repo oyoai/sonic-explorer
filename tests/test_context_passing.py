@@ -37,13 +37,17 @@ def _some_song_with_segments():
 def test_explore_open_xray_button_carries_the_selected_song():
     song, _ = _some_song_with_segments()
 
-    # default_timeout=180, not this file's usual 120 -- this test's own two
+    # default_timeout=300, not this file's usual 120 -- this test's own two
     # full script runs (Explore, then a click into Song X-Ray) stack two
-    # genuinely heavy cold-start pages back to back; Song X-Ray alone
-    # measured at ~53s cold on this machine (full-library taste-map PCA),
-    # same reasoning the rest of this suite already uses 180s for either
-    # page individually. Not a sign of a hang -- real computation, timed.
-    at = AppTest.from_file("streamlit_app/Overview.py", default_timeout=180)
+    # genuinely heavy cold-start pages back to back. Song X-Ray alone
+    # measured at ~53s cold (full-library taste-map PCA); Explore alone now
+    # measured at ~78s cold just for its four fingerprint image columns
+    # (Structure/Sound/Harmony/Composite), on top of its own other
+    # rendering -- see test_explore_page.py's _run_explore() for that
+    # measurement. 180s (this test's previous budget, set before those
+    # columns existed) is no longer enough margin for both stacked in one
+    # run. Not a sign of a hang -- real computation, timed.
+    at = AppTest.from_file("streamlit_app/Overview.py", default_timeout=300)
     at.switch_page("pages/7_Explore.py")
     at.session_state["explore_selected_song_id"] = song.id
     at.run()

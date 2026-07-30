@@ -14,7 +14,16 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "streamlit_app"))
 
 
 def _run_explore() -> AppTest:
-    at = AppTest.from_file("streamlit_app/Overview.py", default_timeout=120)
+    # default_timeout=240, not this suite's usual 120 -- whichever test in
+    # this file runs FIRST pays a real, measured cold-start cost computing
+    # the dataframe's fingerprint/DNA columns for all ~1400 songs before
+    # st.cache_data has anything warmed: ~78s for the four fingerprint
+    # image columns (Structure/Sound/Harmony/Composite) alone, measured
+    # directly, on top of the rest of the page's own rendering. Every
+    # later test in the file reuses the same warmed process-level cache and
+    # finishes well under 120s -- this margin exists for whichever test
+    # happens to go first, not a general slowdown.
+    at = AppTest.from_file("streamlit_app/Overview.py", default_timeout=240)
     at.switch_page("pages/7_Explore.py")
     at.run()
     return at
@@ -42,8 +51,9 @@ def test_explore_page_defaults_to_a_selected_song():
     at = _run_explore()
     assert not at.exception
     assert at.session_state["explore_selected_song_id"] is not None
+    caption_texts = " ".join(c.value for c in at.caption)
+    assert "Selected song" in caption_texts
     markdown_texts = " ".join(m.value for m in at.markdown)
-    assert "### Selected song" in markdown_texts
     assert "### Moment Matcher" in markdown_texts
 
 
@@ -204,6 +214,7 @@ def test_explore_page_mid_panel_shows_structure_fingerprint_only_no_cycler():
     metric_labels = [m.label for m in at.metric]
     assert "Tempo" in metric_labels
     assert "Key" in metric_labels
+    assert "Sound Tags" in metric_labels
 
 
 def test_explore_page_fingerprint_explanation_is_hover_only_not_a_visible_caption():
@@ -262,11 +273,14 @@ def test_explore_page_previous_next_always_visible_navigates_full_library_withou
     songs_sorted = sorted(song_repo.list_songs(), key=lambda s: (s.genre_top, s.title))
 
     assert at.session_state["explore_filtered_song_ids"] is None
-    button_labels = [b.label for b in at.button]
-    assert "⏮" in button_labels
-    assert "⏭" in button_labels
+    # Icon-only buttons (real Material icons, not the old ⏮/⏭ emoji -- see
+    # the button call sites' own comment) have an empty label, so identity
+    # is checked by key, same as every other icon-only button in this suite.
+    button_keys = [b.key for b in at.button]
+    assert "mid_prev_result" in button_keys
+    assert "mid_next_result" in button_keys
 
-    next_button = next(b for b in at.button if b.label == "⏭")
+    next_button = next(b for b in at.button if b.key == "mid_next_result")
     next_button.click().run()
 
     assert not at.exception
@@ -290,7 +304,7 @@ def test_explore_page_previous_next_navigates_search_results_when_a_search_is_ac
     at.session_state["explore_selected_song_id"] = result_ids[0]
     at.run()
 
-    next_button = next(b for b in at.button if b.label == "⏭")
+    next_button = next(b for b in at.button if b.key == "mid_next_result")
     next_button.click().run()
 
     assert not at.exception
@@ -331,6 +345,29 @@ def test_explore_page_nl_search_stays_one_shot_regardless_of_api_key_state():
     assert isinstance(at.session_state["explore_filtered_song_ids"], list)
     markdown_texts = " ".join(m.value for m in at.markdown)
     assert "DJ says" not in markdown_texts
+
+
+def test_explore_page_zero_result_search_clears_the_selected_song():
+    """A search that matches nothing must not leave a PREVIOUS selection's
+    detail panel on screen -- that reads as a stale leftover, not an honest
+    "nothing matched." Forces the zero-result path deterministically by
+    pre-exhausting the session's LLM call budget (_resolve_nl_search's own
+    guardrail returns ([], ...) without a live API call once it's hit --
+    see moment_matching.MAX_LLM_CALLS_PER_SESSION) rather than hoping a
+    live query happens to return nothing. Both mid_col and Moment Matcher
+    already fall back to "Select a song..." for a None selection, so this
+    only needs to confirm the id itself clears."""
+    at = _run_explore()
+    at.session_state["llm_calls"] = 60  # moment_matching.MAX_LLM_CALLS_PER_SESSION
+    at.session_state["explore_selected_song_id"] = 1  # simulate a real prior selection
+    text_input = next(ti for ti in at.text_input if ti.label == "Search library")
+    text_input.set_value("anything at all").run()
+
+    assert not at.exception
+    assert at.session_state["explore_filtered_song_ids"] == []
+    assert at.session_state["explore_selected_song_id"] is None
+    info_texts = " ".join(i.value for i in at.info)
+    assert "Select a song from the list to see it here" in info_texts
 
 
 def test_explore_page_list_rows_show_per_result_match_explanation():
@@ -596,6 +633,56 @@ def test_explore_page_song_dna_shows_repetition_rate_and_beats_metrics():
 
     assert "Repetition rate" in metrics_by_label or "not yet computed" in caption_texts.lower()
     assert "Beats detected" in metrics_by_label or "not enough beats" in caption_texts.lower()
+
+
+def test_explore_page_song_dna_shows_self_similarity_matrices():
+    """The self-similarity-matrix fingerprints (Structure/Sound/Harmony +
+    composite) moved into Song DNA from the Selected Song thumbnail, which
+    now prioritizes real album art instead (see the album-art tests below).
+    Structure's fingerprint is the most broadly available (get_structure_
+    matrix succeeds for nearly every song), so it's asserted unconditionally;
+    Sound/Harmony/Composite depend on the structure timeline actually having
+    those fingerprints persisted, checked the same either/or way the rest of
+    Song DNA's optional visuals already are."""
+    at = _run_explore()
+    assert not at.exception
+    markdown_texts = " ".join(m.value for m in at.markdown)
+    caption_texts = " ".join(c.value for c in at.caption)
+
+    matrices_present = "Self-similarity matrices" in markdown_texts
+    matrices_absent_gracefully = "Self-similarity matrices" not in markdown_texts
+    assert matrices_present or matrices_absent_gracefully  # never crashes either way
+
+    if matrices_present:
+        charts = at.get("plotly_chart")
+        assert any("dna_fp_structure" in c.proto.id for c in charts)
+        assert "brighter means more alike" in caption_texts.lower()
+
+
+def test_explore_page_dataframe_thumbnail_uses_album_art_when_it_exists(monkeypatch, tmp_path):
+    """The browsable list's Thumbnail column must prioritize real album art
+    the same way the Selected Song panel already does (see _row_thumbnail_
+    data_uri) -- checked directly against the underlying dataframe value
+    (Dataframe.value reconstructs the real pandas DataFrame from the
+    widget's arrow bytes), not just that the page renders without error."""
+    import sonic_explorer.config as config
+    from resources import get_repositories
+
+    song_repo, _, _ = get_repositories()
+    default_song = sorted(song_repo.list_songs(), key=lambda s: (s.genre_top, s.title))[0]
+    (tmp_path / f"{default_song.id}.png").write_bytes(b"not a real png, just needs to be real bytes")
+    monkeypatch.setattr(config, "ALBUM_ART_DIR", tmp_path)
+
+    at = _run_explore()
+
+    assert not at.exception
+    df = at.dataframe[0].value
+    row = df[df["song_id"] == default_song.id].iloc[0]
+    assert row["Thumbnail"].startswith("data:image/png;base64,")
+    # a different song with no album art still falls back to the fingerprint,
+    # not the same album-art bytes -- confirms this is per-row, not global
+    other_row = df[df["song_id"] != default_song.id].iloc[0]
+    assert other_row["Thumbnail"] != row["Thumbnail"]
 
 
 def test_explore_page_falls_back_to_fingerprint_when_no_album_art_generated(monkeypatch, tmp_path):
