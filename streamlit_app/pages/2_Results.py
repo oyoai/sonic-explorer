@@ -3,13 +3,15 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
+import pandas as pd
 import plotly.graph_objects as go
 import streamlit as st
 
 from comparison_data import build_metadata_vs_real_graphs, get_demo_pairs
 from components.plotting import network_graph_figure
-from resources import get_agent, get_repositories, nav_button, show_data_source_banner, show_logo
+from resources import facet_display_name, get_agent, get_repositories, hero_banner, nav_button, show_data_source_banner, show_logo
 from sonic_explorer.analysis.network_graph import cross_genre_edge_fraction
+from sonic_explorer.analysis.song_dna import AXIS_LABELS
 from sonic_explorer.config import audio_path_for
 from sonic_explorer.evaluation.retrieval_diagnostics import top1_score_distribution
 from sonic_explorer.llm.agent import extract_mentioned_song_ids
@@ -44,6 +46,51 @@ GENRE_COHESION_RESULTS = {
 
 FACET_ORDER = ["sound", "harmony", "vocal", "drums", "bass", "instrumental"]
 
+# Same real measurement Methodology §7f documents (that page's own copy is
+# the technique write-up; this is the same real numbers, duplicated here per
+# this file's own "curated evidence embedded directly" convention above,
+# not loaded from Methodology at runtime -- pages don't import curated
+# numbers from each other in this codebase).
+# Source: scripts/measure_clap_gain_sensitivity.py, 30 real segments
+# sampled from the library (seed=42), pure multiplicative gain scaling.
+CLAP_GAIN_SENSITIVITY_RESULTS = [
+    # (gain_db, mean_sim, min_sim, max_sim)
+    (-12.0, 0.9086, 0.8201, 0.9704),
+    (-6.0, 0.9759, 0.9560, 0.9920),
+    (-3.0, 0.9940, 0.9894, 0.9980),
+    (3.0, 0.9932, 0.9754, 0.9981),
+    (6.0, 0.9729, 0.9046, 0.9924),
+    (12.0, 0.8914, 0.6997, 0.9712),
+]
+
+# Source: scripts/measure_genre_free_clustering_and_probing.py, run for real
+# against deploy_data (233 songs, 8 genres) -- see Methodology §7h for the
+# technique (KMeans k=8 over mean-pooled Sound/CLAP embeddings, scored
+# against genre_top via Adjusted Rand Index; genre_top never touches the
+# clustering step itself).
+GENRE_FREE_CLUSTERING_RESULT = {
+    "n_songs": 233,
+    "n_clusters": 8,
+    "adjusted_rand_index": 0.2197,
+    "genre_sizes": {
+        "Electronic": 31, "Experimental": 27, "Folk": 29, "Hip-Hop": 31,
+        "Instrumental": 26, "International": 26, "Pop": 33, "Rock": 30,
+    },
+    "cluster_sizes": [48, 35, 39, 20, 30, 30, 23, 8],
+}
+
+# Source: same script as above -- see Methodology §7i for the technique
+# (Ridge regression, 5-fold cross-validated R^2, predicting each raw DNA
+# scalar from the same per-song CLAP embeddings the clustering above uses).
+LINEAR_PROBING_RESULTS = [
+    # (axis, n_songs, r2_mean, r2_std)
+    ("tempo_bpm", 233, -0.0367, 0.0251),
+    ("energy", 233, 0.3371, 0.0262),
+    ("brightness", 233, 0.3006, 0.0423),
+    ("harmonic_complexity", 233, 0.2805, 0.0315),
+    ("rhythmic_density", 233, 0.2044, 0.0513),
+]
+
 # Sound-recognition-specific queries sit alongside typical mood/genre ones --
 # the DJ's search_by_sound_content tool (agent_tools.py) is otherwise easy to
 # miss since it only fires for named-sound requests, not mood language.
@@ -55,6 +102,7 @@ DJ_GALLERY_QUERIES = [
 ]
 
 st.set_page_config(page_title="Sonic Explorer", layout="wide")
+hero_banner("results")
 
 song_repo, embedding_repo, retrieval_service = get_repositories()
 all_songs = song_repo.list_songs()
@@ -147,14 +195,14 @@ with tab_facet:
         )
         with score_dist_cols[i % 3]:
             if n_queries == 0:
-                st.caption(f"{facet_name.capitalize()}: no embedded segments yet.")
+                st.caption(f"{facet_display_name(facet_name)}: no embedded segments yet.")
                 continue
             dist_fig = go.Figure()
             dist_fig.add_trace(go.Histogram(x=top1_scores, name="top-1 match", opacity=0.7, nbinsx=20))
             dist_fig.add_trace(go.Histogram(x=random_scores, name="random pair", opacity=0.7, nbinsx=20))
             dist_fig.update_layout(
                 height=240, margin=dict(l=10, r=10, t=30, b=10), barmode="overlay",
-                title=f"{facet_name.capitalize()} (n={n_queries})", showlegend=(i == 0),
+                title=f"{facet_display_name(facet_name)} (n={n_queries})", showlegend=(i == 0),
                 legend=dict(orientation="h", y=-0.15),
             )
             st.plotly_chart(dist_fig, width="stretch", key=f"score_dist_{facet_name}")
@@ -171,6 +219,111 @@ with tab_facet:
         f"(typically <0.01) -- with {song_repo.count_segments()} segments and no more than a few hundred "
         "per genre, there's usually a long plateau of near-tied candidates rather than one sharply-best "
         "match."
+    )
+
+    st.divider()
+
+    st.header("CLAP gain sensitivity")
+    st.write(
+        "Measured before building a planned perturbation/robustness test on top of this pipeline -- "
+        "see Methodology §7f for the full reasoning and the loudness-normalization decision it led "
+        "to. 30 real segments sampled from the library (seed=42), gain-shifted by a pure "
+        "multiplicative factor (clipped to the valid sample range, so this measures loudness alone, "
+        "not loudness plus clipping distortion), cosine similarity between each clip's original and "
+        "gain-shifted CLAP embedding."
+    )
+    _gain_df = pd.DataFrame(CLAP_GAIN_SENSITIVITY_RESULTS, columns=["gain_db", "mean_sim", "min_sim", "max_sim"])
+    _results_gain_fig = go.Figure(go.Scatter(
+        x=_gain_df["gain_db"], y=_gain_df["mean_sim"], mode="markers+lines",
+        error_y=dict(
+            type="data", symmetric=False,
+            array=_gain_df["max_sim"] - _gain_df["mean_sim"], arrayminus=_gain_df["mean_sim"] - _gain_df["min_sim"],
+        ),
+        marker=dict(size=9, color="rgb(99,110,250)"), line=dict(color="rgb(99,110,250)"),
+    ))
+    _results_gain_fig.update_layout(
+        height=320, margin=dict(l=10, r=10, t=10, b=10),
+        xaxis_title="gain (dB)", yaxis_title="cosine similarity (original vs. gain-shifted)",
+        yaxis=dict(range=[0.6, 1.02]),
+    )
+    st.plotly_chart(_results_gain_fig, width="stretch", key="results_clap_gain_sensitivity_chart")
+    st.caption(
+        "Markers = mean cosine similarity across the 30 sampled clips; error bars = observed min/max "
+        "range at that gain level. **Essentially loudness-invariant at ±3dB** (mean 0.993-0.994, worst "
+        "case still 0.989). **Modest, real drift at ±6dB** (mean 0.973-0.976, worst case 0.905). "
+        "**Clear drift at ±12dB** (mean 0.891-0.909, worst-case similarity down to 0.70) -- CLAP is "
+        "not fully loudness-invariant at larger gain swings, which is why the planned perturbation "
+        "suite loudness-normalizes both sides of every comparison rather than assuming this away."
+    )
+
+    st.divider()
+
+    st.header("Genre-free clustering: real supporting evidence for the core thesis")
+    st.write(
+        "This app argues throughout Approach and Methodology that genre_top is a metadata proxy, "
+        "not a measurement of what a song actually sounds like. This is the quantitative test of "
+        "that claim -- see Methodology §7h for the full method (KMeans, k=8, over per-song "
+        "mean-pooled Sound/CLAP embeddings; genre_top never touches the clustering step itself, "
+        "only used afterward to score it)."
+    )
+    _gfc = GENRE_FREE_CLUSTERING_RESULT
+    st.metric(
+        "Adjusted Rand Index (audio-only clusters vs. real genre labels)",
+        f"{_gfc['adjusted_rand_index']:.3f}",
+        help="1.0 = clusters perfectly reproduce genre. ~0.0 = no better than chance agreement. "
+             "Negative = worse than chance.",
+    )
+    _genre_cluster_cols = st.columns(2)
+    with _genre_cluster_cols[0]:
+        st.markdown(f"**Real genre distribution** (n={_gfc['n_songs']})")
+        st.bar_chart(pd.Series(_gfc["genre_sizes"], name="songs"))
+    with _genre_cluster_cols[1]:
+        st.markdown(f"**Audio-only KMeans cluster sizes** (k={_gfc['n_clusters']})")
+        st.bar_chart(pd.Series(
+            _gfc["cluster_sizes"], index=[f"cluster {i}" for i in range(len(_gfc["cluster_sizes"]))], name="songs",
+        ))
+    st.info(
+        f"**ARI = {_gfc['adjusted_rand_index']:.2f}: a real, moderate, positive signal -- clearly above "
+        "chance agreement, clearly far short of genre fully explaining the audio-based clusters.** "
+        "If genre fully captured what these songs sound like, ARI would sit close to 1.0; it doesn't. "
+        "If audio similarity had nothing to do with genre at all, ARI would sit close to 0; it "
+        "doesn't do that either. The honest reading: genre correlates with audio-based similarity "
+        "more than chance, but most of the structure KMeans finds in the raw audio embeddings isn't "
+        "explained by genre alone -- real, quantitative support for treating genre as a lossy proxy "
+        "rather than ground truth for \"sounds similar,\" the framing this app uses throughout, not "
+        "an assumption going unchecked."
+    )
+
+    st.divider()
+
+    st.header("Linear probing: what CLAP's embedding encodes about Song DNA")
+    st.write(
+        "Lighter-weight, complementary evidence to the clustering result above -- not about genre, "
+        "but about what the Sound facet's CLAP embedding geometrically encodes on its own. See "
+        "Methodology §7i for the full method (Ridge regression, 5-fold cross-validated R², "
+        "predicting each raw DNA scalar from the same per-song CLAP embeddings the clustering above "
+        "uses -- CLAP was never trained on any of these targets)."
+    )
+    _probe_df = pd.DataFrame(LINEAR_PROBING_RESULTS, columns=["axis", "n_songs", "r2_mean", "r2_std"])
+    _probe_fig = go.Figure(go.Bar(
+        x=[AXIS_LABELS[a] for a in _probe_df["axis"]], y=_probe_df["r2_mean"],
+        error_y=dict(type="data", array=_probe_df["r2_std"]),
+        text=[f"{v:.2f}" for v in _probe_df["r2_mean"]], textposition="auto",
+        marker_color="rgb(0,204,150)",
+    ))
+    _probe_fig.update_layout(
+        height=340, margin=dict(l=10, r=10, t=10, b=10), yaxis_title="cross-validated R²",
+    )
+    st.plotly_chart(_probe_fig, width="stretch", key="linear_probing_chart")
+    st.caption(
+        "Error bars = std across the 5 folds. **Energy, brightness, and harmonic complexity probe "
+        "moderately well (R² 0.28-0.34)** -- CLAP's embedding encodes real, roughly-linear structure "
+        "for these. **Rhythmic density probes more weakly but still clearly above zero (R² 0.20).** "
+        "**Tempo does not probe at all (R² -0.04, indistinguishable from a model that just predicts "
+        "the mean)** -- a real, honest null result, not a data problem: CLAP is a general-purpose "
+        "audio-TEXT alignment model, not trained for periodicity/BPM estimation, so a linear probe "
+        "finding no recoverable tempo signal is exactly what that architecture would predict, not a "
+        "surprise to paper over."
     )
 
 # ---------------------------------------------------------------------------

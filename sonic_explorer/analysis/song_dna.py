@@ -28,7 +28,16 @@ class DNANormalizer:
     """Min-max bounds per axis, fit once across every song in the corpus that
     has song DNA computed. Simpler than percentile-rank and sufficient here --
     the radar chart only needs "where does this song sit within the library's
-    actual range," not outlier-robust statistics."""
+    actual range," not outlier-robust statistics.
+
+    normalize() clips its output to [0, 1] -- a real gap this closes: a raw
+    value outside [lo, hi] (anything evaluated against a normalizer fit on a
+    DIFFERENT corpus than it's a member of -- e.g. a perturbation test's
+    modified track, whose raw feature can legitimately exceed whatever the
+    clean corpus's stored max happens to be) used to silently produce a
+    normalized value below 0 or above 1, with no error and no signal that
+    the axis had gone out of the range every consumer (the radar chart,
+    nearest_songs_by_dna's distance calculation) assumes it's bounded to."""
 
     mins: dict[str, float]
     maxs: dict[str, float]
@@ -38,7 +47,10 @@ class DNANormalizer:
         for axis in AXES:
             lo, hi = self.mins[axis], self.maxs[axis]
             val = raw.get(axis)
-            out[axis] = (val - lo) / (hi - lo) if val is not None and hi > lo else 0.0
+            if val is None or hi <= lo:
+                out[axis] = 0.0
+            else:
+                out[axis] = float(np.clip((val - lo) / (hi - lo), 0.0, 1.0))
         return out
 
 

@@ -59,6 +59,24 @@ def test_normalize_handles_none_values():
     assert result["energy"] == pytest.approx(0.5)
 
 
+def test_normalize_clips_out_of_range_values_to_zero_one():
+    """Real regression coverage for a real gap: a raw value outside the
+    fitted [lo, hi] range -- e.g. evaluating a normalizer against a track
+    that wasn't part of the corpus it was fit on, such as a perturbation
+    test's modified audio whose raw feature can legitimately exceed the
+    clean corpus's stored max -- used to silently produce a normalized
+    value below 0 or above 1, with nothing to signal it had happened."""
+    stats = [make_raw(100.0, 0.1, 1000.0, 0.2, 1.0), make_raw(140.0, 0.3, 3000.0, 0.8, 3.0)]
+    normalizer = fit_normalizer(stats)
+
+    above_range = normalizer.normalize(make_raw(200.0, 0.5, 5000.0, 1.5, 5.0))
+    below_range = normalizer.normalize(make_raw(50.0, 0.0, 0.0, -0.5, 0.0))
+
+    for axis in AXES:
+        assert above_range[axis] == pytest.approx(1.0)
+        assert below_range[axis] == pytest.approx(0.0)
+
+
 def test_fit_normalizer_handles_empty_corpus():
     normalizer = fit_normalizer([])
     result = normalizer.normalize(make_raw(120.0, 0.2, 2000.0, 0.5, 2.0))

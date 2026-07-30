@@ -5,17 +5,26 @@ library wherever possible (a real waveform, real playable window clips, a
 real embedding vector, real song DNA, real detected tags) rather than
 abstract UI-box illustrations, so the mechanic is shown, not just described.
 
-The demo song threading through steps 1-5 is pinned to "flekkefjord" by Blear
-Moon -- also the real Step 2 stem-audio example (notebooks/03) and the
-sound_tags facet's real crow-detection example (Methodology 7b), so the
-whole walkthrough centers on one song with real content at every step
-instead of assorted ones. A fixed title is normally risky here (could easily
-not exist in a smaller deployed subset -- this project has hit that exact
-bug before; see git history), but this one is safe: it's force-included in
-`scripts/build_deploy_subset.py`'s REQUIRED_EXAMPLE_TITLES, guaranteed
-present in the deployed subset regardless of the random stratified sample.
-Falls back to the old dynamic `real_pair`-derived pick if "flekkefjord" is
-ever missing (e.g. synthetic dev data), rather than crashing.
+The demo song threading through steps 1-5 is pinned to "Freak of Nature
+(Time Out Dubb)" by C-Doc -- also the real Step 2 stem-audio example
+(notebooks/03), chosen specifically because its vocal/drums/bass stems are
+all clearly audible and distinct (real measured RMS: vocal 0.06, drums 0.19,
+bass 0.29, vs. e.g. a sparse/ambient track where some stems come out nearly
+silent), which matters here since Step 2 plays each stem separately. A fixed
+title is normally risky here (could easily not exist in a smaller deployed
+subset -- this project has hit that exact bug before; see git history), but
+this one is safe: it's force-included in `scripts/build_deploy_subset.py`'s
+REQUIRED_EXAMPLE_TITLES, guaranteed present in the deployed subset
+regardless of the random stratified sample. Falls back to the old dynamic
+`real_pair`-derived pick if it's ever missing (e.g. synthetic dev data),
+rather than crashing.
+
+"flekkefjord" by Blear Moon (the earlier pick) was reassigned rather than
+dropped -- it's a real, strong crow-sound detection example (Methodology 7b),
+which fits Results' Ask the DJ Gallery's sound-recognition query ("Any songs
+with crow sounds?") much better than this page's general walkthrough; that
+demo is a live search_by_sound_content query, not a hardcoded reference, so
+no code change was needed there to preserve it.
 
 Step 2 ("seven ways of listening") needs two things this page can't fabricate:
 real isolated stem audio (vocal/drums/bass/instrumental -- never persisted
@@ -35,12 +44,21 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 import streamlit as st
 
 from comparison_data import build_metadata_vs_real_graphs, get_demo_pairs
-from components.plotting import close_by_illustration, embedding_strip_figure, song_dna_bars, waveform_figure
+from components.plotting import (
+    chord_strip_figure,
+    chromagram_figure,
+    close_by_illustration,
+    embedding_strip_figure,
+    mel_spectrogram_figure,
+    song_dna_bars,
+    waveform_figure,
+)
 from resources import (
     build_dna_normalizer,
     build_normalized_dna_by_song,
     get_explanation_client,
     get_repositories,
+    hero_banner,
     nav_button,
     show_data_source_banner,
     show_logo,
@@ -60,17 +78,14 @@ from sonic_explorer.pipeline.sound_tagging import deserialize_tags
 STEM_EXAMPLE_DIR = Path(__file__).resolve().parents[1] / "static" / "stem_example"
 
 st.set_page_config(page_title="Sonic Explorer", layout="wide")
-show_logo()
+hero_banner("approach")
+# show_logo()
 show_data_source_banner()
-
-with sticky_header("approach_header"):
-    st.title("Approach")
+st.title("Approach")
 st.write(
     "This page lays out the framework used to test whether songs can be matched by "
     "how they actually sound: what it's measured against, how a song gets broken "
-    "down, and how similarity gets computed from there. Real audio and real data at "
-    "every step, not abstract diagrams. **Methodology** covers each of these in full "
-    "technical depth afterward, with evidence."
+    "down, and how similarity gets computed from there."
 )
 
 song_repo, embedding_repo, _ = get_repositories()
@@ -86,9 +101,10 @@ metadata_nodes, metadata_edges, real_nodes, real_edges, vectors, genre_by_song =
 )
 metadata_pair, real_pair = get_demo_pairs(song_repo, embedding_repo, len(all_songs))
 
-# Pinned to "flekkefjord" -- see module docstring for why this one's safe
-# to hardcode. Falls back to the old dynamic pick if it's ever missing.
-demo_song = next((s for s in all_songs if s.title == "flekkefjord"), None) or (
+# Pinned to "Freak of Nature (Time Out Dubb)" -- see module docstring for
+# why this one's safe to hardcode and why it was chosen over flekkefjord.
+# Falls back to the old dynamic pick if it's ever missing.
+demo_song = next((s for s in all_songs if s.title == "Freak of Nature (Time Out Dubb)"), None) or (
     songs_by_id.get(real_pair.song_id_a) if real_pair is not None else all_songs[0]
 )
 
@@ -105,7 +121,7 @@ st.divider()
 # ---------------------------------------------------------------------------
 # Baseline
 # ---------------------------------------------------------------------------
-st.header("0. Baseline")
+st.header("0. First, get baseline")
 st.write(
     "Before testing whether audio-based similarity works, it's worth being clear about what "
     "it's being compared against."
@@ -114,8 +130,8 @@ st.write(
     "Of the two existing paradigms just described, this project tests against metadata-based "
     "similarity."
 )
-st.caption(
-    "Because our dataset has no listen counts, ratings, or user-level interaction data to build "
+st.info(
+    "ⓘ Because our dataset has no listen counts, ratings, or user-level interaction data to build "
     "it from, collaborative filtering isn't attempted here. See more in Methodology > Data."
 )
 
@@ -126,16 +142,6 @@ st.divider()
 # ---------------------------------------------------------------------------
 st.header("1. Slicing the track into windows")
 st.write("Songs don't sound the same throughout their entirety.")
-
-st.plotly_chart(
-    waveform_figure(
-        waveform_envelope(audio_path_for(demo_song)), title=demo_song.title,
-        duration_sec=demo_song.duration_sec, color="rgb(99,110,250)",
-    ),
-    width="stretch", key="step1_full_waveform",
-)
-st.caption(f"\"{demo_song.title}\" -- real amplitude shape across the whole clip, not a flat signal.")
-
 st.write(
     "Looking at a whole song at once risks losing or averaging out what makes any single moment "
     "distinct. So we slice each song into overlapping "
@@ -143,17 +149,33 @@ st.write(
     "library right now. Here are a few real windows from the song above, each one separately "
     "playable:"
 )
-
 demo_segments = song_repo.get_segments(demo_song.id)
 sample_segments = demo_segments[:: max(1, len(demo_segments) // 4)][:4] if demo_segments else []
+
+st.plotly_chart(
+    waveform_figure(
+        waveform_envelope(audio_path_for(demo_song)), title=demo_song.title,
+        duration_sec=demo_song.duration_sec, color="rgb(99,110,250)",
+        highlight_ranges=[(seg.start_sec, seg.end_sec) for seg in sample_segments] or None,
+        highlight_labels=[f"{i + 1}" for i in range(len(sample_segments))] or None,
+    ),
+    width="stretch", key="step1_full_waveform",
+)
 if sample_segments:
+    st.caption(
+        "The four shaded, numbered regions above are exactly the four windows below -- each one a "
+        "real, separately playable clip."
+    )
     window_cols = st.columns(len(sample_segments))
-    for col, seg in zip(window_cols, sample_segments, strict=False):
+    for i, (col, seg) in enumerate(zip(window_cols, sample_segments, strict=False)):
         with col:
-            st.caption(f"{seg.start_sec:.1f}-{seg.end_sec:.1f}s")
+            st.caption(f"**{i + 1}** · {seg.start_sec:.1f}-{seg.end_sec:.1f}s")
             st.audio(_window_clip_bytes(demo_song.id, seg.start_sec, seg.end_sec - seg.start_sec), format="audio/wav")
 else:
     st.info("No segments available yet for this song.")
+
+# st.caption(f"\"{demo_song.title}\" -- real amplitude shape across the whole clip, not a flat signal.")
+
 
 st.divider()
 
@@ -167,52 +189,139 @@ st.write(
 )
 st.write(
     "Measuring several independent qualities, rather than one blended score, makes sense given "
-    "that."
+    "that. But these seven aren't all the same *kind* of measurement -- they split into three "
+    "genuinely different categories, by what audio they actually run on and what computes them:"
 )
 
 stem_meta_path = STEM_EXAMPLE_DIR / "meta.json"
 has_real_stems = stem_meta_path.exists() and (STEM_EXAMPLE_DIR / "mix.wav").exists()
+demo_mix_path = audio_path_for(demo_song)
 
 if has_real_stems:
     stem_meta = json.loads(stem_meta_path.read_text(encoding="utf-8"))
     if stem_meta["title"] == demo_song.title:
         st.caption(
-            f"Sound and Harmony above, and the four isolated facets below, all use real audio from "
-            f"the same song -- \"{demo_song.title}\" by {demo_song.artist} ({demo_song.genre_top}) -- "
-            "separation is a one-time, offline step (Demucs, notebooks/03), not something this page "
-            "runs live."
+            f"All seven below use real audio from the same song -- \"{demo_song.title}\" by "
+            f"{demo_song.artist} ({demo_song.genre_top}). Stem separation is a one-time, offline "
+            "step (Demucs, notebooks/03), not something this page runs live."
         )
     else:
         st.caption(
-            f"Sound and Harmony use \"{demo_song.title}\"'s real audio, same as elsewhere on this "
-            f"page. The four isolated facets below use real separated stems from a different real "
-            f"song -- \"{stem_meta['title']}\" by {stem_meta['artist']} ({stem_meta['genre_top']}) -- "
-            "separation is a one-time, offline step (Colab notebook 03), not something this page runs live."
+            f"Whole-mix and Detected-content facets below use \"{demo_song.title}\"'s real audio, "
+            f"same as elsewhere on this page. The Stems section uses real separated stems from a "
+            f"different real song -- \"{stem_meta['title']}\" by {stem_meta['artist']} "
+            f"({stem_meta['genre_top']}) -- separation is a one-time, offline step (Colab notebook "
+            "03), not something this page runs live."
         )
-    mix_path_for_stems = STEM_EXAMPLE_DIR / "mix.wav"
 else:
     st.info(
-        "**Placeholder for four of seven.** Isolated stem audio (vocal/drums/bass/instrumental) "
-        "hasn't been extracted into the app yet -- Sound and Harmony below already use real audio "
+        "**Stems placeholder.** Isolated stem audio (vocal/drums/bass/instrumental) hasn't been "
+        "extracted into the app yet -- the other two categories below already use real audio "
         "regardless (neither needs isolated stems). See this page's module docstring for exactly "
         "how to extract and drop in the real stem files."
     )
-    mix_path_for_stems = None
 
-demo_mix_path = audio_path_for(demo_song)
-facet_defs = [
-    ("Sound", demo_mix_path, "Overall timbre, instrumentation, production character.", True, "rgb(99,110,250)"),
-    ("Harmony", demo_mix_path, "Key, chords, tonal color.", True, "rgb(0,204,150)"),
-    ("Vocal", STEM_EXAMPLE_DIR / "vocal.wav", "Isolated voice timbre and delivery.", has_real_stems, "rgb(239,85,59)"),
-    ("Drums", STEM_EXAMPLE_DIR / "drums.wav", "Isolated drum/percussion pattern and timbre.", has_real_stems, "rgb(171,99,250)"),
-    ("Bass", STEM_EXAMPLE_DIR / "bass.wav", "Isolated bassline tone and pattern.", has_real_stems, "rgb(255,161,90)"),
-    ("Instrumental", STEM_EXAMPLE_DIR / "instrumental.wav", "Backing instrumentation with vocals removed.", has_real_stems, "rgb(25,211,243)"),
+#NOTE FOR CLAUDE CODE: maybe we'll put each fact in a card
+# -- Category 1: whole-mix measures ------------------------------------------
+st.subheader("Whole-mix measures")
+st.write(
+    "Sound and Harmony each measure something about the mix as a whole, the way an actual "
+    "listener hears it -- overall timbre and production character, or the song's harmonic "
+    "backbone. Neither is about isolating one part; separating out a single instrument first "
+    "would work against what they're trying to capture, not help it. That's what sets this "
+    "category apart from Stems below, where isolating one part first is the entire point."
+)
+
+
+@st.cache_data(show_spinner=False)
+def _chroma_for_display(song_id: int):
+    from sonic_explorer.analysis.waveform_preview import chroma_for_display
+
+    return chroma_for_display(audio_path_for(songs_by_id[song_id]))
+
+
+@st.cache_data(show_spinner=False)
+def _key_and_chords_for_display(song_id: int):
+    from sonic_explorer.analysis.key_chord import estimate_chords, estimate_key
+
+    chroma, times = _chroma_for_display(song_id)
+    return estimate_key(chroma), estimate_chords(chroma, times)
+
+
+@st.cache_data(show_spinner=False)
+def _mel_spectrogram_for_display(song_id: int):
+    from sonic_explorer.analysis.waveform_preview import mel_spectrogram_for_display
+
+    return mel_spectrogram_for_display(audio_path_for(songs_by_id[song_id]))
+
+
+whole_mix_cols = st.columns(2)
+with whole_mix_cols[0]:
+    mel_db, mel_times = _mel_spectrogram_for_display(demo_song.id)
+    st.markdown("**Sound**")
+    st.plotly_chart(
+        mel_spectrogram_figure(mel_db, mel_times, height=100),
+        width="stretch", key="step2_facet_Sound",
+    )
+    st.audio(str(demo_mix_path))
+    st.caption("Overall timbre, instrumentation, production character.")
+    st.caption(
+        "This is a mel-spectrogram: the raw acoustic texture (frequency energy over time) Sound is "
+        "computed *from*, shown for context -- not a view of what CLAP actually \"sees.\" CLAP's "
+        "similarity is a learned, black-box representation with no raw visual proxy the way chroma "
+        "is directly Harmony's input. The real way to judge Sound similarity is a paired comparison "
+        "-- two songs side by side (see §6c's curated examples and Overview's two-pair demo), not "
+        "reading this spectrogram alone."
+    )
+    st.caption("Runs on: Full mix. Computed by: CLAP.")
+with whole_mix_cols[1]:
+    chroma, chroma_times = _chroma_for_display(demo_song.id)
+    key_estimate, chord_segments = _key_and_chords_for_display(demo_song.id)
+
+    st.markdown(f"**Harmony** -- estimated key: **{key_estimate.tonic} {key_estimate.mode}**")
+    st.caption("Key, chords, tonal color.")
+    st.caption(
+        f"Krumhansl-Schmuckler correlation: {key_estimate.correlation:.2f} (1.0 = perfect fit to the "
+        "profile; a rough confidence, not a certainty -- real songs modulate and rarely fit one "
+        "textbook key profile exactly)."
+    )
+    st.plotly_chart(
+        chromagram_figure(chroma, chroma_times, height=100),
+        width="stretch", key="step2_facet_Harmony",
+    )
+    chord_event = st.plotly_chart(
+        chord_strip_figure(chord_segments), width="stretch", key="step2_harmony_chords", on_select="rerun",
+    )
+    harmony_start_time = 0.0
+    if chord_event and chord_event.selection and chord_event.selection.points:
+        harmony_start_time = float(chord_event.selection.points[0]["customdata"][0])
+    st.audio(str(demo_mix_path), start_time=harmony_start_time)
+    st.caption(
+        "Click a chord segment below to listen from that moment (the chromagram above is display-"
+        "only -- Plotly heatmaps don't support click-to-select the way the bar strip below does). "
+        "Chord labels are estimated by matching each moment's chroma against major/minor triad "
+        "templates, smoothed to avoid flickering between near-tied frames -- both real closed-form "
+        "techniques on top of the same chroma data, not new audio processing."
+    )
+    st.caption("Runs on: Full mix. Computed by: Chroma features.")
+
+# -- Category 2: stems --------------------------------------------------------
+st.subheader("Stems")
+st.write(
+    "Genuinely isolated audio via Demucs source separation, then measured the same way Sound is "
+    "(CLAP) -- a real, physically separate signal, not a whole-mix measurement pretending to "
+    "isolate one part."
+)
+stem_defs = [
+    ("Vocal", STEM_EXAMPLE_DIR / "vocal.wav", "Isolated voice timbre and delivery.", "rgb(239,85,59)"),
+    ("Drums", STEM_EXAMPLE_DIR / "drums.wav", "Isolated drum/percussion pattern and timbre.", "rgb(171,99,250)"),
+    ("Bass", STEM_EXAMPLE_DIR / "bass.wav", "Isolated bassline tone and pattern.", "rgb(255,161,90)"),
+    ("Instrumental", STEM_EXAMPLE_DIR / "instrumental.wav", "Backing instrumentation with vocals removed.", "rgb(25,211,243)"),
 ]
-
-facet_cols = st.columns(3)
-for i, (name, path, desc, ready, color) in enumerate(facet_defs):
-    with facet_cols[i % 3]:
-        if ready:
+stem_cols = st.columns(4)
+for col, (name, path, desc, color) in zip(stem_cols, stem_defs, strict=False):
+    with col:
+        if has_real_stems:
             st.plotly_chart(
                 waveform_figure(waveform_envelope(path), title=name, color=color, height=100),
                 width="stretch", key=f"step2_facet_{name}",
@@ -221,35 +330,39 @@ for i, (name, path, desc, ready, color) in enumerate(facet_defs):
         else:
             st.info(f"**{name}** -- placeholder, waiting on real isolated stem audio.")
         st.caption(desc)
+        st.caption(f"Runs on: isolated {name.lower()} stem (Demucs). Computed by: CLAP.")
 
+# -- Category 3: detected content ---------------------------------------------
+st.subheader("Detected content")
+st.write(
+    "The six facets above all answer \"how similar do these sound?\" -- a continuous score. "
+    "Sound Tags answers a different question: \"what's actually in this mix?\" A pretrained "
+    "audio-tagging model (AST) listens to each ~5s window and names what it hears -- an "
+    "instrument, a sound effect, a texture -- and those labels get embedded (via CLAP's text "
+    "encoder) into the same searchable space every other facet uses. That's what makes literal, "
+    "content-based search possible -- \"find songs with crow sounds\" isn't a query any of the "
+    "other six facets could answer, since none of them name *what's* in a mix, only how the "
+    "whole thing compares to something else."
+)
 demo_tags = [
     (label, score) for label, score in deserialize_tags(demo_song.sound_tags) if label not in GENERIC_TAG_LABELS
 ]
-with facet_cols[len(facet_defs) % 3]:
-    st.plotly_chart(
-        waveform_figure(waveform_envelope(demo_mix_path), title="Sound Tags", color="rgb(255,105,180)", height=100),
-        width="stretch", key="step2_facet_sound_tags",
-    )
-    st.audio(str(demo_mix_path))
-    if demo_tags:
-        st.caption(f"Detected: {', '.join(label for label, _ in demo_tags)}.")
-    else:
-        st.caption("Detected sounds/instruments in the mix.")
-st.success(
-    "**Sound Tags is the 7th facet.** The per-segment searchable index (real AST tagging on every "
-    "~5s window, embedded via CLAP's text encoder) is now live: `notebooks/11_sound_tags_facet.ipynb` "
-    "finished its full-library run (14,722 segments across all 1,400 songs) and genre-cohesion@10 "
-    "measures 45.7% vs. an 11.8% random baseline -- the second-strongest facet after Sound, and a "
-    "real, validated similarity signal, not just LLM grounding (see Step 5)."
-)
+st.markdown("**Sound Tags**")
+st.audio(str(demo_mix_path))
+if demo_tags:
+    st.markdown(" &nbsp; ".join(f"`{label}` {score:.0%}" for label, score in demo_tags))
+else:
+    st.caption("No tags detected above the confidence floor for this song.")
+st.caption("Runs on: full mix. Computed by: AST (tagging), then CLAP's text encoder (embedding).")
+
 if not demo_tags:
     st.caption(
-        "Note: the tag list above and Step 5's expander pull from a separate, older per-*song* "
-        "column (`songs.sound_tags`, Methodology 7b's song-level 10s-clip tagging) that hasn't been "
-        "backfilled across the library yet (`scripts/generate_song_descriptions.py` exists but hasn't "
-        "been run at scale) -- unrelated to the per-segment facet index above, which is real and live "
-        "regardless. That's why this specific demo song shows a generic caption instead of its real "
-        "detected tags."
+        "Note: this pulls from a separate, older per-*song* column (`songs.sound_tags`, "
+        "Methodology 7b's song-level 10s-clip tagging) that hasn't been backfilled for this "
+        "specific song yet (`scripts/tag_songs.py` -- free, local AST tagging, no API key needed -- "
+        "exists but hasn't been run against this song) -- unrelated to the per-segment facet index "
+        "used for search, which is real and live regardless. That's why this demo song shows an "
+        "empty list instead of its real detected tags."
     )
 
 st.divider()
@@ -325,6 +438,36 @@ st.warning(
     "specific moment."
 )
 
+st.write(
+    "**Five more views, added since the original five above -- none of them a sixth radar-chart "
+    "axis.** The radar's five numbers are corpus-normalized scalars: comparable 0-1 numbers "
+    "specifically because every song's raw value is measured against the same library-wide range "
+    "(`analysis.song_dna.DNANormalizer`, see Methodology for why it also clips). These five aren't "
+    "that -- they're per-song shapes, events, or single derived readings, not values comparable "
+    "across songs on a shared scale -- so they live as separate views inside the same Song DNA "
+    "panel rather than being forced into a sixth spoke that wouldn't mean the same thing as the "
+    "other five:"
+)
+st.write(
+    "- **Chord progression** -- the exact same per-frame chord-template matching described above "
+    "(`analysis.key_chord.estimate_chords`), rendered as a labeled strip of contiguous chord "
+    "segments, computed live.\n"
+    "- **Novelty curve** -- read directly from the already-computed, already-persisted structure "
+    "artifact Song X-Ray's structural timeline also uses (`EmbeddingRepository."
+    "get_structure_timeline`), not recomputed here. See Methodology for the exact kernel and "
+    "window size.\n"
+    "- **Loudness contour** -- a real RMS-energy-over-TIME curve, distinct from the single "
+    "whole-song `energy` scalar above (which is that same curve collapsed to one mean value) -- "
+    "computed live at a cheap, display-only sample rate.\n"
+    "- **Repetition rate** -- one scalar derived from the self-similarity matrix Song X-Ray "
+    "already computes: the mean similarity between every pair of non-identical moments in the "
+    "song. No new audio analysis, purely a reduction over data this app already had.\n"
+    "- **Beats detected** -- a real `librosa.beat.beat_track` count plus the average interval "
+    "between beats, computed live. Deliberately labeled \"beats,\" not \"downbeats\": this app has "
+    "no bar/measure-level meter-tracking model, and the label says so honestly rather than "
+    "implying a beat count gives you bar lines for free."
+)
+
 st.divider()
 
 # ---------------------------------------------------------------------------
@@ -385,6 +528,50 @@ if real_pair is not None:
                 time.sleep(0.015)
 else:
     st.info("Not enough data yet for a live example.")
+
+st.divider()
+
+# ---------------------------------------------------------------------------
+# Step 6: an experimental album-art pipeline (feature extraction + prompt
+# generation done; image generation pending a manual Colab run)
+# ---------------------------------------------------------------------------
+st.header("6. From audio to image: an experimental album-art pipeline")
+st.write(
+    "This library has no album art -- FMA's metadata never included any, and nothing in the "
+    "ingestion pipeline adds it (Song X-Ray's structure/sound/harmony fingerprint composite is "
+    "the honest fallback used everywhere else in this app). A separate, experimental pipeline "
+    "generates AI album art FROM the same real, already-computed audio features this page "
+    "describes elsewhere -- not from a generic prompt, and not from the song's title/artist text."
+)
+st.write(
+    "**Feature extraction (done):** brightness (spectral centroid), intensity (RMS energy), mood "
+    "(major/minor key, the exact same live estimate step 2 uses), pace (tempo), and detected AST "
+    "sound tags -- five signals this page already describes computing elsewhere, reused for this "
+    "purpose rather than recomputed."
+)
+st.write(
+    "**Deterministic prompt generation (done), no LLM involved:** each descriptor value maps to "
+    "one of several pre-written evocative phrasings -- low brightness, for instance, might render "
+    "as \"shrouded in shadow,\" \"dim, low-lit tones,\" or \"a dark, brooding palette\" -- picked at "
+    "random but SEEDED by the song's own ID, so the same song gets the identical prompt on every "
+    "re-run. Every phrase in a generated prompt traces back to one specific real detected feature "
+    "(`sonic_explorer.analysis.album_art_prompt`), kept inspectable by design rather than a black "
+    "box. A fixed style constraint -- abstract/textural only, no faces, no text, no literal "
+    "band-photo imagery -- is appended to every prompt."
+)
+st.write(
+    "**Image generation (pending a manual run):** the deterministic prompts are exported "
+    "(`scripts/export_album_art_prompts.py`) and consumed by a separate Colab notebook "
+    "(`notebooks/12_album_art_generation.ipynb`) running SD-Turbo via `diffusers` on a free Colab "
+    "GPU -- deliberately never run inside this deployed app itself (no paid API, no GPU dependency "
+    "for anything a live visitor triggers)."
+)
+st.info(
+    "**Status:** feature extraction and deterministic prompt generation are built, tested, and "
+    "have already run for real against the full deployed song set (233/233 songs, real prompts, "
+    "real traceable phrases). Image generation is drafted but not yet run -- once that Colab batch "
+    "job actually happens, this section gets updated with real generated art, not a mockup."
+)
 
 st.divider()
 

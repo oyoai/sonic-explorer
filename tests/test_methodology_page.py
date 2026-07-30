@@ -60,6 +60,24 @@ def test_methodology_page_has_case_study_subsections():
     assert any("7c. Harmony whitening" in s for s in subheader_texts)
     assert any("7d. Song-level aggregation" in s for s in subheader_texts)
     assert any("7e. Does segment misalignment explain" in s for s in subheader_texts)
+    assert any("7f. CLAP gain sensitivity" in s for s in subheader_texts)
+
+
+def test_methodology_page_clap_gain_sensitivity_section_shows_real_measured_numbers():
+    """Real regression coverage: the measured gain-sensitivity numbers (not
+    just the section existing) must actually be on the page -- this is
+    presented as a real empirical finding driving a real decision (loudness-
+    normalize before perturbation testing), not just an implementation
+    detail, so the numbers themselves need to be checkable, not asserted."""
+    at = _run_methodology()
+    assert not at.exception
+    caption_texts = " ".join(c.value for c in at.caption)
+    assert "loudness-invariant at ±3dB" in caption_texts
+    assert "0.70" in caption_texts  # the worst-case similarity at +-12dB
+    info_texts = " ".join(i.value for i in at.info)
+    assert "normalize_peak" in info_texts
+    charts = at.get("plotly_chart")
+    assert any("clap_gain_sensitivity_chart" in c.proto.id for c in charts)
 
 
 def test_methodology_page_renders_waffle_grid_without_exception():
