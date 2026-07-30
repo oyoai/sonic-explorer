@@ -46,5 +46,10 @@ pg = st.navigation([
     st.Page("pages/5_Moment_Matcher.py", title="Moment Matcher", visibility="hidden"),
     st.Page("pages/6_Ask_The_DJ.py", title="Ask the DJ", visibility="hidden"),
     st.Page("pages/7_Explore.py", title="Explore"),
+    # A personal data-collection tool, not portfolio content -- hidden from
+    # the sidebar like the drill-down pages above, but still directly
+    # reachable via nav_button (Results' Calibration tab links to it) or a
+    # direct URL. See its own module docstring for the multi-profile design.
+    st.Page("pages/9_Calibration.py", title="Calibration", visibility="hidden"),
 ])
 pg.run()

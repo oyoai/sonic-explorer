@@ -112,3 +112,25 @@ def generate_calibration_triplets(
 
     order = rng.permutation(len(triplets))
     return [triplets[i] for i in order]
+
+
+def generate_taste_candidates(
+    song_repo: SongRepository, embedding_repo: EmbeddingRepository, facet_name: str = "sound", seed: int = 42
+) -> list[int]:
+    """Segment ids eligible for taste rating ("do I like this," not "is this
+    similar to that" -- see repository/taste_repository.py), in a stable
+    seeded-random order. Same eligible population generate_calibration_
+    triplets() draws from (has a real facet_name embedding computed) and the
+    same seed, for consistency -- but no bands/triplet structure, since taste
+    is a single-item judgment, not a comparison, so there's nothing to
+    rotate through pairwise."""
+    rng = np.random.default_rng(seed)
+    segment_song: dict[int, int] = {}
+    for song in song_repo.list_songs():
+        for seg in song_repo.get_segments(song.id):
+            if embedding_repo.status(seg.id, facet_name) == "done":
+                segment_song[seg.id] = song.id
+
+    all_seg_ids = list(segment_song.keys())
+    order = rng.permutation(len(all_seg_ids))
+    return [all_seg_ids[i] for i in order]

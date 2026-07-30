@@ -27,9 +27,22 @@ from resources import (
     hero_banner,
     is_deploy_subset,
     nav_button,
+    render_toc,
     show_data_source_banner,
     show_logo,
 )
+
+TOC_SECTIONS = [
+    ("1. The dataset", "the-dataset"),
+    ("2. Segmentation", "segmentation"),
+    ("3. The seven similarity facets", "seven-facets"),
+    ("4. Structure / Abstractivity", "structure-abstractivity"),
+    ("5. Per-song artifacts", "per-song-artifacts"),
+    ("6. The 2D map", "the-2d-map"),
+    ("7. Case studies", "case-studies"),
+    ("8. Calibration / XAB methodology", "calibration-xab"),
+    ("9. Next: Engineering", "next-engineering"),
+]
 
 # ---------------------------------------------------------------------------
 # Curated evidence, embedded directly rather than loaded from data/artifacts/
@@ -294,6 +307,7 @@ LOCAL_LLM_RED_TEAM_SUMMARY = [
 
 st.set_page_config(page_title="Sonic Explorer", layout="wide")
 hero_banner("methodology")
+render_toc(TOC_SECTIONS)
 
 song_repo, embedding_repo, retrieval_service = get_repositories()
 all_songs = song_repo.list_songs()
@@ -340,7 +354,7 @@ st.divider()
 # ---------------------------------------------------------------------------
 # 1. The dataset
 # ---------------------------------------------------------------------------
-st.header("1. The dataset")
+st.header("1. The dataset", anchor="the-dataset")
 st.write(
     "The library is a curated subset of the Free Music Archive (FMA) -- Creative Commons-licensed "
     "tracks spanning 8 genres. Every clip is a **30-second preview**, not a full track -- worth "
@@ -424,7 +438,7 @@ st.divider()
 # ---------------------------------------------------------------------------
 # 2. Segmentation
 # ---------------------------------------------------------------------------
-st.header("2. Segmentation")
+st.header("2. Segmentation", anchor="segmentation")
 st.write(
     f"Every song is sliced into overlapping {WINDOW_SEC:.0f}-second windows, {HOP_SEC:.1f}s apart -- "
     f"**{song_repo.count_segments()} segments** across the library as loaded right now (this number "
@@ -441,7 +455,7 @@ st.divider()
 # ---------------------------------------------------------------------------
 # 3. The seven similarity facets
 # ---------------------------------------------------------------------------
-st.header("3. The seven similarity facets")
+st.header("3. The seven similarity facets", anchor="seven-facets")
 st.write(
     "Similarity isn't one thing. Instead of a single blended score, the library is embedded along "
     "several independent facets -- each captures a genuinely different aspect of how a song sounds. "
@@ -546,7 +560,7 @@ st.divider()
 # ---------------------------------------------------------------------------
 # 4. Structure / Abstractivity
 # ---------------------------------------------------------------------------
-st.header("4. Structure / Abstractivity")
+st.header("4. Structure / Abstractivity", anchor="structure-abstractivity")
 st.write(
     "Structure is deliberately different from the other seven facets: it's a song-level visualization "
     "(a self-similarity matrix and the fingerprints derived from it), not a per-segment vector in a "
@@ -647,7 +661,7 @@ st.divider()
 # ---------------------------------------------------------------------------
 # 5. Per-song artifacts
 # ---------------------------------------------------------------------------
-st.header("5. Per-song artifacts")
+st.header("5. Per-song artifacts", anchor="per-song-artifacts")
 st.write(
     "Each song also gets a handful of aggregate scalar stats (\"song DNA\"), a small visual "
     "\"fingerprint\" per facet, an LLM-synthesized natural-language description, and raw AST/AudioSet "
@@ -819,7 +833,7 @@ st.divider()
 # ---------------------------------------------------------------------------
 # 6. The 2D map and axis interpretability
 # ---------------------------------------------------------------------------
-st.header("6. The 2D map and axis interpretability")
+st.header("6. The 2D map and axis interpretability", anchor="the-2d-map")
 st.caption(
     "This is the methodology behind the projection -- the live, interactive, clickable version of "
     "this same map lives in **Explore** (\"2D map\" view), not on this page."
@@ -1011,7 +1025,7 @@ st.divider()
 # ---------------------------------------------------------------------------
 # 7. Case studies
 # ---------------------------------------------------------------------------
-st.header("7. Case studies")
+st.header("7. Case studies", anchor="case-studies")
 st.write(
     "The **Results** page's genre-cohesion numbers established real weaknesses per facet, not "
     "just aggregate scores. This section documents concrete attempts to fix or explain them -- "
@@ -1442,7 +1456,7 @@ st.divider()
 # ---------------------------------------------------------------------------
 # 8. Calibration / XAB methodology
 # ---------------------------------------------------------------------------
-st.header("8. Calibration / XAB methodology")
+st.header("8. Calibration / XAB methodology", anchor="calibration-xab")
 st.write(
     "A genre-cohesion lift is necessary but not sufficient -- it doesn't say whether a match "
     "*feels* right to an actual listener. This section describes **how** human similarity "
@@ -1473,6 +1487,19 @@ st.write(
     "feed a regression producing per-facet blend weights -- interpretable, instrument-wise "
     "contributions to perceived similarity, the same outcome Vohra & Akama's methodology produces."
 )
+st.warning(
+    "**Known limitation: Sound-only sampling is a real coverage bias, not a neutral choice.** "
+    "Every triplet's candidates are drawn from the reference's *Sound*-facet retrieval results -- "
+    "the regression itself will use every facet's score as a feature once it's built, but which "
+    "*pairs* ever get shown to a rater is decided by Sound's own notion of \"high/medium/random\" "
+    "similarity alone. A pair where, say, only Harmony places two segments close together "
+    "(independent of whether Sound does) may simply never be sampled into the main pool -- an "
+    "under-explored region of the space, not an absent one. A small opt-in supplemental pool "
+    "sampled via Harmony retrieval instead (15 triplets, same XAB format) exists in the rating "
+    "tool as a cheap sanity check for whether this changes anything in practice, tagged separately "
+    "(sampling_facet) so it stays distinguishable from the main pool rather than silently mixing "
+    "in -- a full rotation across all six facets remains future work, not something this covers."
+)
 st.write(
     "**Named technique: hybrid search / score fusion.** Both the metadata-baseline weighting "
     "(Overview §2 -- genre, genre hierarchy, album, and tags blended into one score) and this "
@@ -1501,7 +1528,7 @@ st.divider()
 # ---------------------------------------------------------------------------
 # 9. Next: Engineering
 # ---------------------------------------------------------------------------
-st.header("9. Next: Engineering")
+st.header("9. Next: Engineering", anchor="next-engineering")
 st.write(
     "That's the methodology -- how the library was analyzed and iterated on, including the "
     "honest failures along the way. **Engineering** picks up next with the rigor/safety side "

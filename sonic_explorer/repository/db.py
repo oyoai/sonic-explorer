@@ -45,6 +45,42 @@ CREATE TABLE IF NOT EXISTS calibration_ratings (
     rater TEXT,
     created_at TEXT DEFAULT CURRENT_TIMESTAMP
 );
+
+-- Same shape as calibration_ratings, physically separate table rather than a
+-- flag column: a "Guest / Test" rating (anyone using the deployed app, not a
+-- real calibration participant) must never leak into the blend-weight
+-- regression -- a separate table makes that a query that literally cannot
+-- select guest rows by accident, rather than a WHERE clause every future
+-- consumer has to remember to include.
+CREATE TABLE IF NOT EXISTS calibration_ratings_guest (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    segment_x_id INTEGER NOT NULL REFERENCES segments(id),
+    segment_a_id INTEGER NOT NULL REFERENCES segments(id),
+    segment_b_id INTEGER NOT NULL REFERENCES segments(id),
+    choice TEXT NOT NULL,
+    rater TEXT,
+    created_at TEXT DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Taste ("do I like this," not "is this similar to that") is a deliberately
+-- separate judgment from calibration_ratings' similarity XAB -- a single
+-- segment, liked or not, not a comparison. Same real/guest table split and
+-- same reasoning as calibration_ratings/calibration_ratings_guest above.
+CREATE TABLE IF NOT EXISTS taste_ratings (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    segment_id INTEGER NOT NULL REFERENCES segments(id),
+    liked INTEGER NOT NULL,
+    rater TEXT,
+    created_at TEXT DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS taste_ratings_guest (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    segment_id INTEGER NOT NULL REFERENCES segments(id),
+    liked INTEGER NOT NULL,
+    rater TEXT,
+    created_at TEXT DEFAULT CURRENT_TIMESTAMP
+);
 """
 
 # Columns added after the initial schema. CREATE TABLE IF NOT EXISTS is a no-op
@@ -67,6 +103,17 @@ _MIGRATIONS: dict[str, list[tuple[str, str]]] = {
         ("album_title", "TEXT"),
         ("track_tags", "TEXT"),
     ],
+    # Which facet's retrieval results picked this triplet's A/B candidates --
+    # NULL on every row predating this column means "sound" by convention
+    # (the only facet ever used before it), not backfilled explicitly since
+    # that's unambiguous and backfilling risks touching real rated data for
+    # no benefit. Exists so a small supplemental pool sampled from a
+    # DIFFERENT facet's bands (see calibration_triplets.py's module
+    # docstring on Sound-only sampling's known coverage bias) stays
+    # distinguishable from the main pool later, instead of silently mixing
+    # into one undifferentiated set no analysis can split back apart.
+    "calibration_ratings": [("sampling_facet", "TEXT")],
+    "calibration_ratings_guest": [("sampling_facet", "TEXT")],
 }
 
 

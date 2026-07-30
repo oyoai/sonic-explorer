@@ -401,14 +401,19 @@ classes) — a real, non-trivial signal from raw spectrograms alone, confirming 
 library's genre labels correlate with something genuinely audible, independent of any
 of the pretrained models the rest of the app leans on.
 
-**Calibration-rating collection** — a standalone, blind pairwise-rating tool
-(no title, artist, or algorithmic score shown, to avoid biasing a judgment with
-recognition rather than actual sound) that draws pairs stratified across
-high/medium/random similarity bands off the Sound facet's real retrieval results,
-rather than naive random sampling (which would skew almost entirely to "obviously
-dissimilar" and give little usable variance). This is the prerequisite data source
-for a planned blend-weight regression and a conditional CLAP fine-tuning decision —
-both still pending real rating volume.
+**Calibration-rating collection** — an in-app, blind rating tool (no title, artist,
+or algorithmic score shown, to avoid biasing a judgment with recognition rather than
+actual sound) with two independent judgment types collected as sequential batches:
+XAB similarity triplets, drawn stratified across high/medium/random similarity bands
+off the Sound facet's real retrieval results (rather than naive random sampling,
+which would skew almost entirely to "obviously dissimilar" and give little usable
+variance), and single-clip taste ("do I like this") ratings. Supports multiple named
+rating profiles plus a fixed "Guest / Test" profile whose ratings are written to
+physically separate tables and never feed the real numbers below — the profile list
+itself is environment-aware, so only Guest/Test is selectable on the deployed app.
+Similarity ratings are the prerequisite data source for a planned blend-weight
+regression and a conditional CLAP fine-tuning decision — both still pending real
+rating volume.
 
 ---
 

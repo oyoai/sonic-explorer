@@ -81,6 +81,57 @@ def test_add_choice_without_rater_is_optional(conn, three_segments):
     assert repo.get_all_ratings()[0]["rater"] is None
 
 
+def test_rejects_unknown_table_name(conn):
+    with pytest.raises(ValueError):
+        CalibrationRepository(conn, table="calibration_ratings; DROP TABLE songs")
+
+
+def test_guest_table_is_fully_isolated_from_the_real_table(conn, three_segments):
+    """The whole point of the separate calibration_ratings_guest table: a
+    guest rating must be structurally impossible to see from the real
+    table's own repository instance, not just excluded by convention."""
+    seg_x, seg_a, seg_b = three_segments
+    real_repo = CalibrationRepository(conn, table="calibration_ratings")
+    guest_repo = CalibrationRepository(conn, table="calibration_ratings_guest")
+
+    guest_repo.add_choice(seg_x, seg_a, seg_b, choice="a", rater="Guest / Test")
+
+    assert real_repo.count() == 0
+    assert guest_repo.count() == 1
+
+
+def test_add_choice_stores_sampling_facet(conn, three_segments):
+    repo = CalibrationRepository(conn)
+    seg_x, seg_a, seg_b = three_segments
+
+    repo.add_choice(seg_x, seg_a, seg_b, choice="a", rater="profile1", sampling_facet="harmony")
+
+    assert repo.get_all_ratings()[0]["sampling_facet"] == "harmony"
+
+
+def test_add_choice_sampling_facet_defaults_to_none(conn, three_segments):
+    repo = CalibrationRepository(conn)
+    seg_x, seg_a, seg_b = three_segments
+
+    repo.add_choice(seg_x, seg_a, seg_b, choice="a")
+
+    assert repo.get_all_ratings()[0]["sampling_facet"] is None
+
+
+def test_rated_triplet_keys_filters_by_rater(conn, three_segments):
+    """Essential for multiple real profiles: one profile rating a triplet
+    must not make it disappear from another profile's remaining set."""
+    repo = CalibrationRepository(conn)
+    seg_x, seg_a, seg_b = three_segments
+    key = (seg_x, min(seg_a, seg_b), max(seg_a, seg_b))
+
+    repo.add_choice(seg_x, seg_a, seg_b, choice="a", rater="profile1")
+
+    assert key in repo.rated_triplet_keys(rater="profile1")
+    assert key not in repo.rated_triplet_keys(rater="profile2")
+    assert key in repo.rated_triplet_keys()  # no filter -- sees every rater's history
+
+
 def _create_old_shape_calibration_table(db_path):
     """Simulates a DB created before the XAB migration -- the pair-rating
     shape (segment_a_id, segment_b_id, rating), no segment_x_id/choice."""
@@ -123,7 +174,9 @@ def test_migration_replaces_empty_old_schema_calibration_table(tmp_path):
 
     conn = init_db(db_path)
     cols = {row["name"] for row in conn.execute("PRAGMA table_info(calibration_ratings)")}
-    assert cols == {"id", "segment_x_id", "segment_a_id", "segment_b_id", "choice", "rater", "created_at"}
+    assert cols == {
+        "id", "segment_x_id", "segment_a_id", "segment_b_id", "choice", "rater", "sampling_facet", "created_at",
+    }
 
     repo = CalibrationRepository(conn)
     assert repo.count() == 0

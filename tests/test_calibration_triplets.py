@@ -1,7 +1,7 @@
 import numpy as np
 import pytest
 
-from sonic_explorer.evaluation.calibration_triplets import generate_calibration_triplets
+from sonic_explorer.evaluation.calibration_triplets import generate_calibration_triplets, generate_taste_candidates
 from sonic_explorer.models import Segment, Song
 from sonic_explorer.repository.db import init_db
 from sonic_explorer.repository.embedding_repository import EmbeddingRepository
@@ -115,3 +115,34 @@ def test_generate_calibration_triplets_caps_gracefully_when_library_too_small(re
     # requesting far more triplets than a 3-segment library can supply must not hang or crash
     triplets = generate_calibration_triplets(song_repo, embedding_repo, facet_name="sound", n_triplets=50)
     assert len(triplets) <= 3
+
+
+def test_generate_taste_candidates_returns_every_embedded_segment_exactly_once(repos):
+    song_repo, embedding_repo = repos
+    rng = np.random.default_rng(6)
+    seg_ids = set()
+    for i in range(20):
+        _, seg_id = add_song(song_repo, embedding_repo, i, rng.normal(size=4).astype(np.float32))
+        seg_ids.add(seg_id)
+
+    candidates = generate_taste_candidates(song_repo, embedding_repo, facet_name="sound")
+
+    assert set(candidates) == seg_ids
+    assert len(candidates) == len(seg_ids)  # no duplicates
+
+
+def test_generate_taste_candidates_is_seeded_deterministic(repos):
+    song_repo, embedding_repo = repos
+    rng = np.random.default_rng(7)
+    for i in range(20):
+        add_song(song_repo, embedding_repo, i, rng.normal(size=4).astype(np.float32))
+
+    first = generate_taste_candidates(song_repo, embedding_repo, facet_name="sound", seed=42)
+    second = generate_taste_candidates(song_repo, embedding_repo, facet_name="sound", seed=42)
+
+    assert first == second
+
+
+def test_generate_taste_candidates_handles_no_embedded_segments(repos):
+    song_repo, embedding_repo = repos
+    assert generate_taste_candidates(song_repo, embedding_repo, facet_name="sound") == []

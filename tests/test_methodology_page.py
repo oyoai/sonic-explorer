@@ -172,6 +172,17 @@ def test_methodology_page_has_calibration_xab_methodology_not_outcomes():
     assert "350" in body_text
 
 
+def test_methodology_page_names_sound_only_sampling_as_a_known_limitation():
+    """Real methodological honesty check: the main calibration pool only
+    ever samples candidates via Sound-facet retrieval, a real coverage bias
+    (see calibration_triplets.py / pages/9_Calibration.py) -- this must be
+    named explicitly, not left implicit in "currently calibrating Sound."""
+    at = _run_methodology()
+    warning_texts = " ".join(w.value for w in at.warning)
+    assert "coverage bias" in warning_texts.lower()
+    assert "harmony" in warning_texts.lower()
+
+
 def test_methodology_page_links_to_results_next():
     at = _run_methodology()
     body_text = " ".join(m.value for m in at.markdown)
