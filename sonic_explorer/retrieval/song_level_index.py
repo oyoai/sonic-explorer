@@ -17,9 +17,17 @@ import numpy as np
 from sonic_explorer.analysis.taste_map import mean_pool_song_vectors
 
 
-def build_song_level_index(song_repo, embedding_repo, facet_name: str) -> faiss.IndexIDMap2 | None:
-    """None if no songs have this facet embedded yet."""
-    song_vectors = mean_pool_song_vectors(song_repo, embedding_repo, facet_name=facet_name)
+def build_song_level_index(
+    song_repo, embedding_repo, facet_name: str, song_vectors: dict[int, np.ndarray] | None = None
+) -> faiss.IndexIDMap2 | None:
+    """None if no songs have this facet embedded yet. song_vectors defaults to
+    mean_pool_song_vectors()'s flat pooling; pass a precomputed dict (e.g.
+    similarity_weighted_pool_song_vectors()'s output) to build the index over
+    an alternative pooling instead -- this is what lets
+    song_level_genre_cohesion_at_k() compare pooling strategies on the exact
+    same metric without duplicating this function."""
+    if song_vectors is None:
+        song_vectors = mean_pool_song_vectors(song_repo, embedding_repo, facet_name=facet_name)
     if not song_vectors:
         return None
 

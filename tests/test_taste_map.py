@@ -1,7 +1,12 @@
 import numpy as np
 import pytest
 
-from sonic_explorer.analysis.taste_map import compute_taste_map, correlate_axes_with_features, mean_pool_song_vectors
+from sonic_explorer.analysis.taste_map import (
+    compute_taste_map,
+    correlate_axes_with_features,
+    mean_pool_song_vectors,
+    similarity_weighted_pool_song_vectors,
+)
 from sonic_explorer.models import Segment, Song
 from sonic_explorer.repository.db import init_db
 from sonic_explorer.repository.embedding_repository import EmbeddingRepository
@@ -60,6 +65,74 @@ def test_mean_pool_song_vectors_skips_songs_with_no_embeddings(repos):
     pooled = mean_pool_song_vectors(song_repo, EmbeddingRepository(song_repo.conn))
 
     assert song_id not in pooled
+
+
+def test_similarity_weighted_pool_favors_typical_segments_over_an_outlier(repos):
+    """Two near-identical "typical" segments plus one very different "outlier"
+    -- the outlier should get down-weighted (low mean similarity to the
+    others), pulling the weighted result closer to the typical direction
+    than a flat mean, which treats all three equally."""
+    song_repo, embedding_repo = repos
+    typical_a = np.array([1.0, 0.0], dtype=np.float32)
+    typical_b = np.array([0.9, 0.1], dtype=np.float32)
+    outlier = np.array([0.0, 1.0], dtype=np.float32)
+    song_id = add_song_with_segments(song_repo, embedding_repo, 1, "Rock", [typical_a, typical_b, outlier])
+
+    flat = mean_pool_song_vectors(song_repo, embedding_repo)[song_id]
+    weighted = similarity_weighted_pool_song_vectors(song_repo, embedding_repo)[song_id]
+
+    # y-component comes almost entirely from the outlier -- down-weighting it
+    # should shrink that component relative to the flat mean.
+    assert weighted[1] < flat[1]
+
+
+def test_similarity_weighted_pool_matches_flat_mean_when_segments_are_identical(repos):
+    """No real outlier -- every segment is equally similar to every other, so
+    the weights are uniform and the weighted result should coincide with a
+    plain flat mean."""
+    song_repo, embedding_repo = repos
+    vec = np.array([1.0, 2.0, 3.0], dtype=np.float32)
+    song_id = add_song_with_segments(song_repo, embedding_repo, 1, "Rock", [vec, vec.copy(), vec.copy()])
+
+    flat = mean_pool_song_vectors(song_repo, embedding_repo)[song_id]
+    weighted = similarity_weighted_pool_song_vectors(song_repo, embedding_repo)[song_id]
+
+    assert weighted == pytest.approx(flat)
+
+
+def test_similarity_weighted_pool_handles_single_segment_song(repos):
+    song_repo, embedding_repo = repos
+    vec = np.array([1.0, 2.0], dtype=np.float32)
+    song_id = add_song_with_segments(song_repo, embedding_repo, 1, "Rock", [vec])
+
+    weighted = similarity_weighted_pool_song_vectors(song_repo, embedding_repo)[song_id]
+
+    assert weighted.shape == (2,)
+
+
+def test_similarity_weighted_pool_skips_songs_with_no_embeddings(repos):
+    song_repo, _ = repos
+    song = Song(filepath="/x.mp3", fma_track_id=99, title="No embeddings", artist="A", genre_top="Rock", duration_sec=10.0)
+    song_id = song_repo.add_song(song)
+    song_repo.add_segments(song_id, [Segment(song_id=song_id, start_sec=0.0, end_sec=5.0, segment_index=0)])
+
+    weighted = similarity_weighted_pool_song_vectors(song_repo, EmbeddingRepository(song_repo.conn))
+
+    assert song_id not in weighted
+
+
+def test_similarity_weighted_pool_handles_all_negative_similarity_without_crashing(repos):
+    """Degenerate case: every pair of segments points in opposite-ish
+    directions, so raw weights would all clip to 0 -- must fall back to a
+    plain uniform-weight mean instead of dividing by zero or crashing."""
+    song_repo, embedding_repo = repos
+    vec_a = np.array([1.0, 0.0], dtype=np.float32)
+    vec_b = np.array([-1.0, 0.0], dtype=np.float32)
+    song_id = add_song_with_segments(song_repo, embedding_repo, 1, "Rock", [vec_a, vec_b])
+
+    weighted = similarity_weighted_pool_song_vectors(song_repo, embedding_repo)[song_id]
+
+    assert np.all(np.isfinite(weighted))
 
 
 def test_compute_taste_map_separates_distinct_clusters():

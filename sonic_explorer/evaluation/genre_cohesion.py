@@ -94,20 +94,25 @@ def song_level_genre_cohesion_at_k(
     k: int = 10,
     sample_size: int | None = None,
     seed: int = 42,
+    song_vectors: dict[int, np.ndarray] | None = None,
 ) -> GenreCohesionResult:
     """Same metric as genre_cohesion_at_k, but querying a song-level index
     (retrieval/song_level_index.py's mean-pooled-per-song vectors) instead of
     individual segments -- the direct comparison retrieval/song_level_index.py's
     aggregation hypothesis needs on the same metric already used to evaluate
-    every other facet."""
+    every other facet. song_vectors defaults to mean_pool_song_vectors()'s
+    flat pooling; pass a precomputed dict (e.g.
+    similarity_weighted_pool_song_vectors()'s output) to evaluate an
+    alternative pooling strategy on this exact metric instead."""
     from sonic_explorer.analysis.taste_map import mean_pool_song_vectors
 
     rng = np.random.default_rng(seed)
     songs = song_repo.list_songs()
     genre_by_song = {s.id: s.genre_top for s in songs}
 
-    index = build_song_level_index(song_repo, embedding_repo, facet_name)
-    song_vectors = mean_pool_song_vectors(song_repo, embedding_repo, facet_name=facet_name)
+    if song_vectors is None:
+        song_vectors = mean_pool_song_vectors(song_repo, embedding_repo, facet_name=facet_name)
+    index = build_song_level_index(song_repo, embedding_repo, facet_name, song_vectors=song_vectors)
     all_song_ids = list(song_vectors.keys())
     if index is None or not all_song_ids:
         return GenreCohesionResult(facet_name=facet_name, k=k, n_queries=0, observed=0.0, random_baseline=0.0)

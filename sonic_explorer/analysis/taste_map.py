@@ -40,6 +40,64 @@ def mean_pool_song_vectors(
     return song_vectors
 
 
+def similarity_weighted_pool_song_vectors(
+    song_repo: SongRepository, embedding_repo: EmbeddingRepository, facet_name: str = "sound"
+) -> dict[int, np.ndarray]:
+    """Alternative to mean_pool_song_vectors() -- same signature/output shape
+    (one vector per song), but each segment is weighted by how representative
+    it is of the song's *other* segments (its mean cosine similarity to them),
+    rather than every segment counting equally. Deliberately favors typical/
+    central segments over outliers: this function's whole purpose (like
+    mean_pool_song_vectors', which it's a drop-in alternative to) is a
+    coarse, denoised, library-level summary for views that need one point per
+    song (Explore's graph, Taste Map) -- not a "most distinctive moment"
+    detector, which is what Moment Matcher's segment-level search already is,
+    deliberately kept separate. Favoring outliers here would also conflate
+    "genuinely distinctive" with "just a noisy transition/silence" -- cosine
+    distance from a song's other segments can't tell those apart, so
+    amplifying outliers risks polluting the summary with noise as often as
+    with something meaningful. Not currently used by anything by default --
+    a candidate to evaluate against mean_pool_song_vectors on genre-cohesion
+    before adopting it anywhere (see evaluation/genre_cohesion.py's
+    song_level_genre_cohesion_at_k, which accepts precomputed vectors for
+    exactly this comparison)."""
+    song_vectors: dict[int, np.ndarray] = {}
+    for song in song_repo.list_songs():
+        segments = song_repo.get_segments(song.id)
+        vectors = [
+            embedding_repo.get_vector(facet_name, seg.id)
+            for seg in segments
+            if embedding_repo.status(seg.id, facet_name) == "done"
+        ]
+        if not vectors:
+            continue
+        if len(vectors) == 1:
+            song_vectors[song.id] = vectors[0]
+            continue
+
+        matrix = np.stack(vectors)
+        norms = np.linalg.norm(matrix, axis=1, keepdims=True)
+        norms[norms == 0] = 1.0
+        normalized = matrix / norms
+        sims = normalized @ normalized.T
+        np.fill_diagonal(sims, np.nan)
+        # Each segment's weight = its mean similarity to the song's *other*
+        # segments -- central/typical segments (similar to the rest) score
+        # higher, outliers score lower. Clipped at 0 and renormalized so a
+        # degenerate all-negative-similarity song still falls back to a
+        # plain (uniform-weight) mean rather than dividing by ~0 or flipping
+        # sign.
+        weights = np.clip(np.nanmean(sims, axis=1), 0.0, None)
+        total = weights.sum()
+        if total <= 0:
+            weights = np.ones(len(vectors))
+            total = float(len(vectors))
+        weights = weights / total
+
+        song_vectors[song.id] = np.average(matrix, axis=0, weights=weights)
+    return song_vectors
+
+
 @dataclass
 class TasteMapPoint:
     song_id: int
