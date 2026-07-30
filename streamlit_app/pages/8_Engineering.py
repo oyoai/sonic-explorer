@@ -7,12 +7,13 @@ import plotly.graph_objects as go
 import streamlit as st
 
 from engineering_data import CNN_PER_GENRE_METRICS, CNN_RESULTS, RED_TEAM_CASES, predict_genre
-from resources import get_agent, get_repositories, nav_button, show_data_source_banner, show_logo
+from resources import get_agent, get_repositories, hero_banner, nav_button, show_data_source_banner, show_logo
 
 CI_WORKFLOW_URL = "https://github.com/oyoai/sonic-explorer/actions/workflows/ci.yml"
 CI_BADGE_URL = "https://github.com/oyoai/sonic-explorer/actions/workflows/ci.yml/badge.svg"
 
 st.set_page_config(page_title="Sonic Explorer", layout="wide")
+hero_banner("engineering")
 
 song_repo, embedding_repo, retrieval_service = get_repositories()
 all_songs = song_repo.list_songs()

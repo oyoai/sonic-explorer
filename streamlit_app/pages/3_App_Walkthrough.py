@@ -18,12 +18,13 @@ from components.plotting import (
     network_graph_figure,
     song_dna_radar_overlay,
 )
-from resources import build_dna_normalizer, get_repositories, nav_button, show_data_source_banner, show_logo
+from resources import build_dna_normalizer, get_repositories, hero_banner, nav_button, show_data_source_banner, show_logo
 
 MOMENT_MATCHER_EXAMPLE_TITLE = "Cipralex (c/ Pulso)"
 XRAY_EXAMPLE_TITLE = "Cipralex (c/ Pulso)"
 
 st.set_page_config(page_title="Sonic Explorer", layout="wide")
+hero_banner("app_walkthrough")
 
 song_repo, embedding_repo, retrieval_service = get_repositories()
 all_songs = song_repo.list_songs()
@@ -59,10 +60,15 @@ st.divider()
 # ---------------------------------------------------------------------------
 # 1. Explore -- two ways to see the whole library
 # ---------------------------------------------------------------------------
-st.header("1. Explore -- two ways to see the whole library")
+st.header("1. Explore -- browse and drill into any song")
 st.write(
-    "**Explore** is one page with two view modes, toggled at the top -- both show every song as a "
-    "dot, but the position means something different in each, so they're worth reading differently."
+    "**Explore** is one page, three panels: a searchable/browsable list of every song on the left "
+    "(with a small clickable mini-map underneath it, toggling between a network graph and a 2D "
+    "PCA map), the currently selected song's identity card in the middle, and Moment Matcher -- "
+    "live, matching against whichever song is selected -- on the right. The two visualizations "
+    "below are the same two real view modes the mini-map toggles between, just shown bigger here "
+    "to explain how each actually works -- a ~180px mini-map is a tight space to read cluster "
+    "shapes and connections in."
 )
 
 st.subheader("1a. Network graph")
@@ -105,11 +111,18 @@ st.markdown("""
   sitting off on its own with few or no visible connections** is a genuine outlier -- nothing else
   in the library sounds much like it, on this facet specifically (switching facets can change this
   completely, since "similar" means something different per facet).
-- Clicking a node opens its player and lets you queue up a random / looping / closest-match "next" track.
+- On Explore itself, this same graph construction appears as a small "Network" mini-map in the left
+  panel, real and clickable there too -- but simplified to just the selected song and its direct
+  neighbors, since the full ~1400-node graph reads as an unreadable tangle at that size. Clicking a
+  neighbor there selects it, same as picking it from the searchable list next to it.
 """)
 
 st.subheader("1b. 2D map (PCA/ICA)")
-st.write("Same page, second view mode -- a projection instead of a graph:")
+st.write(
+    "This IS a real second view mode on the live Explore page too -- the same mini-map has a "
+    "Network/Map toggle, and \"Map\" is exactly this projection, real and clickable, pan/scroll-zoom "
+    "included. Shown bigger here since a ~180px mini-map is a tight space to read cluster shapes in:"
+)
 
 
 @st.cache_data
@@ -152,7 +165,6 @@ st.markdown("""
 - **Switching "Color by"** between cluster and genre is the actual test of whether sound and genre
   agree -- where cluster boundaries track genre boundaries, they do; where a cluster spans several
   genre colors, the audio is telling you something the label doesn't.
-- Click any point to hear it immediately -- same click-to-play mechanism as the network graph above.
 """)
 nav_button("Open Explore →", "pages/7_Explore.py", key="nav_walkthrough_explore_1")
 
@@ -188,17 +200,17 @@ if xray_song is not None:
     fp_cols = st.columns(4)
     if structure_fp is not None:
         with fp_cols[0]:
-            st.plotly_chart(fingerprint_thumbnail(structure_fp, "Structure"), width="stretch", key="wt2_fp_structure")
+            st.plotly_chart(fingerprint_thumbnail(structure_fp, "Structure"), width=180, height=180, key="wt2_fp_structure")
     if sound_fp is not None:
         with fp_cols[1]:
-            st.plotly_chart(fingerprint_thumbnail(sound_fp, "Sound"), width="stretch", key="wt2_fp_sound")
+            st.plotly_chart(fingerprint_thumbnail(sound_fp, "Sound"), width=180, height=180, key="wt2_fp_sound")
     if harmony_fp is not None:
         with fp_cols[2]:
-            st.plotly_chart(fingerprint_thumbnail(harmony_fp, "Harmony"), width="stretch", key="wt2_fp_harmony")
+            st.plotly_chart(fingerprint_thumbnail(harmony_fp, "Harmony"), width=180, height=180, key="wt2_fp_harmony")
     if structure_fp is not None and sound_fp is not None and harmony_fp is not None:
         with fp_cols[3]:
             composite = composite_fingerprint(structure_fp, sound_fp, harmony_fp)
-            st.plotly_chart(composite_fingerprint_thumbnail(composite), width="stretch", key="wt2_fp_composite")
+            st.plotly_chart(composite_fingerprint_thumbnail(composite), width=180, height=180, key="wt2_fp_composite")
 
 st.markdown("""
 **How to read it:**
@@ -327,15 +339,15 @@ st.divider()
 st.header("5. Try it yourself")
 st.write(
     "**Explore is the hub** -- Song X-Ray, Moment Matcher, and Ask the DJ aren't separate "
-    "destinations with their own sidebar entries; they're reached by interacting with Explore "
-    "itself (select a song to open its X-Ray, select a moment there to open Moment Matcher), or "
-    "via Ask the DJ's persistent companion link. The direct links below are for this walkthrough "
-    "specifically -- landing on Song X-Ray or Moment Matcher with no song selected wouldn't mean "
-    "much, so start with Explore."
+    "destinations with their own sidebar entries. Moment Matcher runs live inline on Explore's right "
+    "panel for whichever song is selected; Song X-Ray opens from the \"Other Detailed Metadata\" "
+    "expander under the selected song; Ask the DJ is one click away via its own button next to the "
+    "search bar. The direct links below are for this walkthrough specifically -- landing on Song "
+    "X-Ray or Moment Matcher with no song selected wouldn't mean much, so start with Explore."
 )
 
 nav_button("Open Explore →", "pages/7_Explore.py", key="nav_walkthrough_explore_2")
-st.caption("Network graph or 2D map -- every song, click one to open the player and drill in from there.")
+st.caption("Search or browse the list, pick a song, and everything else follows from there.")
 
 with st.expander("Direct links to the other states (for this walkthrough only)"):
     cta_cols = st.columns(3)

@@ -5,13 +5,14 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 import streamlit as st
 
-from resources import get_agent, get_repositories, nav_button, show_data_source_banner, show_logo
+from resources import get_agent, get_repositories, hero_banner, nav_button, show_data_source_banner, show_logo
 from sonic_explorer.config import audio_path_for
 from sonic_explorer.llm.agent import extract_mentioned_song_ids
 
 MAX_MESSAGES_PER_SESSION = 30  # simple abuse/cost guardrail for the public deployment (spec section 11)
 
 st.set_page_config(page_title="Ask the DJ")
+hero_banner("ask_the_dj")
 st.title("Ask the DJ")
 st.caption(
     "A conversational companion to **Explore** -- the same library, the same underlying search "

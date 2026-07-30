@@ -27,7 +27,7 @@ def test_app_walkthrough_page_has_all_five_sections():
     at = _run_app_walkthrough()
     header_texts = [h.value for h in at.header]
     for expected in [
-        "1. Explore -- two ways to see the whole library",
+        "1. Explore -- browse and drill into any song",
         "2. Song X-Ray -- one song's anatomy",
         "3. Moment Matcher -- finding a match, one moment at a time",
         "4. Ask the DJ -- a conversational front-end",
