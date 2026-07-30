@@ -70,3 +70,29 @@ def audio_path_for(song) -> Path:
     written in, so the stored path is already correct for them."""
     candidate = AUDIO_DIR / f"{song.fma_track_id}.mp3"
     return candidate if candidate.exists() else Path(song.filepath)
+
+
+ALBUM_ART_DIR = DATA_DIR / "album_art"
+
+
+def album_art_path_for(song) -> Path | None:
+    """Resolves a song's AI-generated album art image (scripts/export_
+    album_art_prompts.py -> notebooks/12_album_art_generation.ipynb), if one
+    exists for THIS environment's resolved DATA_DIR. Returns None, not a
+    guessed fallback path, when it doesn't -- unlike audio_path_for's
+    song.filepath fallback, there's no "wrong but valid" path to fall back
+    to for an image that was never generated.
+
+    Deliberately keyed by song.id under DATA_DIR specifically, not e.g.
+    song.fma_track_id: album art was generated against deploy_data's own
+    song_id numbering, and data/'s song_ids are a DIFFERENT numbering for
+    the same underlying songs (build_deploy_subset.py reassigns ids when it
+    builds the subset). Resolving via DATA_DIR (not a hardcoded deploy_data
+    path) means this only ever looks for art under whichever environment is
+    actually active -- on Streamlit Cloud (DATA_DIR resolves to deploy_data)
+    that's exactly right; running locally against the full data/ library
+    (DATA_DIR resolves to data/, which has no album_art/ directory at all)
+    this correctly returns None rather than risking a same-numbered-but-
+    different-song mismatch by reaching into deploy_data's art from there."""
+    candidate = ALBUM_ART_DIR / f"{song.id}.png"
+    return candidate if candidate.exists() else None

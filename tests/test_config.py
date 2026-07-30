@@ -32,3 +32,34 @@ def test_audio_path_for_falls_back_to_stored_filepath_when_no_local_match(tmp_pa
     resolved = config.audio_path_for(song)
 
     assert resolved == Path("/dev/audio/dev_99.wav")
+
+
+def make_song_with_id(song_id, fma_track_id=42):
+    song = make_song(fma_track_id=fma_track_id)
+    song.id = song_id
+    return song
+
+
+def test_album_art_path_for_returns_the_path_when_the_image_exists(tmp_path, monkeypatch):
+    import sonic_explorer.config as config
+
+    monkeypatch.setattr(config, "ALBUM_ART_DIR", tmp_path)
+    real_file = tmp_path / "7.png"
+    real_file.write_bytes(b"fake png bytes")
+
+    resolved = config.album_art_path_for(make_song_with_id(song_id=7))
+
+    assert resolved == real_file
+
+
+def test_album_art_path_for_returns_none_not_a_guessed_path_when_missing(tmp_path, monkeypatch):
+    """Unlike audio_path_for, there's no valid fallback for an image that
+    was never generated -- must return None, never a path that doesn't
+    exist."""
+    import sonic_explorer.config as config
+
+    monkeypatch.setattr(config, "ALBUM_ART_DIR", tmp_path)  # empty dir, no 123.png present
+
+    resolved = config.album_art_path_for(make_song_with_id(song_id=123))
+
+    assert resolved is None

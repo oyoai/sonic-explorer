@@ -1,0 +1,3479 @@
+[
+  {
+    "song_id": 1,
+    "title": "Ichill",
+    "artist": "Kakurenbo",
+    "genre": "Electronic",
+    "prompt": "Album art evoking dim, low-lit tones, a steady, grounded intensity, a warm, major-key brightness, a steady, walking pace, hints of background music, diffuse, atmospheric texture. Abstract, textural album art. No faces, no text, no literal band-photo imagery.",
+    "trace": {
+      "dim, low-lit tones": "brightness=645.1 -> low",
+      "a steady, grounded intensity": "energy=0.2239 -> mid",
+      "a warm, major-key brightness": "key=F major",
+      "a steady, walking pace": "tempo_bpm=117 -> mid",
+      "hints of background music": "sound_tag='Background music'",
+      "diffuse, atmospheric texture": "sound_tag='Ambient music'"
+    }
+  },
+  {
+    "song_id": 2,
+    "title": "Feels Good 2 B",
+    "artist": "Jason Shaw",
+    "genre": "Electronic",
+    "prompt": "Album art evoking balanced, natural tones, a steady, grounded intensity, an open, uplifted mood, drifting, spacious motion. Abstract, textural album art. No faces, no text, no literal band-photo imagery.",
+    "trace": {
+      "balanced, natural tones": "brightness=1925.0 -> mid",
+      "a steady, grounded intensity": "energy=0.2869 -> mid",
+      "an open, uplifted mood": "key=C major",
+      "drifting, spacious motion": "tempo_bpm=89 -> low"
+    }
+  },
+  {
+    "song_id": 3,
+    "title": "Spirtus...",
+    "artist": "Project 5am (Feat. DJ Whodini)",
+    "genre": "Electronic",
+    "prompt": "Album art evoking dim, low-lit tones, soft-edged and understated, a shadowed emotional cast, a slow, unhurried pace, a rapped vocal drive, beat-driven, rhythmic drive. Abstract, textural album art. No faces, no text, no literal band-photo imagery.",
+    "trace": {
+      "dim, low-lit tones": "brightness=1637.6 -> low",
+      "soft-edged and understated": "energy=0.1202 -> low",
+      "a shadowed emotional cast": "key=D# minor",
+      "a slow, unhurried pace": "tempo_bpm=112 -> low",
+      "a rapped vocal drive": "sound_tag='Rapping'",
+      "beat-driven, rhythmic drive": "sound_tag='Hip hop music'"
+    }
+  },
+  {
+    "song_id": 4,
+    "title": "PMoos - Champagne Dreamz (Shatterfreak's 0% Alcohol Remix)",
+    "artist": "Shatterfreak",
+    "genre": "Electronic",
+    "prompt": "Album art evoking dim, low-lit tones, a hushed, delicate presence, a somber, minor-key undertone, measured, even movement, diffuse, atmospheric texture, electronic, machine-made texture. Abstract, textural album art. No faces, no text, no literal band-photo imagery.",
+    "trace": {
+      "dim, low-lit tones": "brightness=1308.7 -> low",
+      "a hushed, delicate presence": "energy=0.1169 -> low",
+      "a somber, minor-key undertone": "key=A minor",
+      "measured, even movement": "tempo_bpm=129 -> mid",
+      "diffuse, atmospheric texture": "sound_tag='Ambient music'",
+      "electronic, machine-made texture": "sound_tag='Electronic music'"
+    }
+  },
+  {
+    "song_id": 5,
+    "title": "Sunshine",
+    "artist": "Fancy Mike",
+    "genre": "Electronic",
+    "prompt": "Album art evoking neither bright nor dark, measured and even in force, a shadowed emotional cast, drifting, spacious motion, hints of angry music, hints of drum and bass. Abstract, textural album art. No faces, no text, no literal band-photo imagery.",
+    "trace": {
+      "neither bright nor dark": "brightness=2250.2 -> mid",
+      "measured and even in force": "energy=0.2069 -> mid",
+      "a shadowed emotional cast": "key=F# minor",
+      "drifting, spacious motion": "tempo_bpm=78 -> low",
+      "hints of angry music": "sound_tag='Angry music'",
+      "hints of drum and bass": "sound_tag='Drum and bass'"
+    }
+  },
+  {
+    "song_id": 6,
+    "title": "Back to a Simpler Time",
+    "artist": "Gilo",
+    "genre": "Electronic",
+    "prompt": "Album art evoking neither bright nor dark, a steady, grounded intensity, a wistful, introspective mood, measured, even movement, electronic, machine-made texture. Abstract, textural album art. No faces, no text, no literal band-photo imagery.",
+    "trace": {
+      "neither bright nor dark": "brightness=2025.1 -> mid",
+      "a steady, grounded intensity": "energy=0.2302 -> mid",
+      "a wistful, introspective mood": "key=C minor",
+      "measured, even movement": "tempo_bpm=136 -> mid",
+      "electronic, machine-made texture": "sound_tag='Electronic music'"
+    }
+  },
+  {
+    "song_id": 7,
+    "title": "Poison",
+    "artist": "Quaro",
+    "genre": "Electronic",
+    "prompt": "Album art evoking an even, neutral palette, forceful and dense, a wistful, introspective mood, languid, floating movement, hints of drum and bass, electronic, machine-made texture. Abstract, textural album art. No faces, no text, no literal band-photo imagery.",
+    "trace": {
+      "an even, neutral palette": "brightness=2089.3 -> mid",
+      "forceful and dense": "energy=0.4816 -> high",
+      "a wistful, introspective mood": "key=D# minor",
+      "languid, floating movement": "tempo_bpm=70 -> low",
+      "hints of drum and bass": "sound_tag='Drum and bass'",
+      "electronic, machine-made texture": "sound_tag='Electronic music'"
+    }
+  },
+  {
+    "song_id": 8,
+    "title": "Nothing Else Matters",
+    "artist": "Mystery Mammal",
+    "genre": "Electronic",
+    "prompt": "Album art evoking balanced, natural tones, a hushed, delicate presence, a wistful, introspective mood, a steady, walking pace, hints of trance music, electronic, machine-made texture. Abstract, textural album art. No faces, no text, no literal band-photo imagery.",
+    "trace": {
+      "balanced, natural tones": "brightness=2459.9 -> mid",
+      "a hushed, delicate presence": "energy=0.0444 -> low",
+      "a wistful, introspective mood": "key=C# minor",
+      "a steady, walking pace": "tempo_bpm=161 -> mid",
+      "hints of trance music": "sound_tag='Trance music'",
+      "electronic, machine-made texture": "sound_tag='Electronic music'"
+    }
+  },
+  {
+    "song_id": 9,
+    "title": "HARAKIRI NATION",
+    "artist": "Blasterhead",
+    "genre": "Electronic",
+    "prompt": "Album art evoking crisp and shimmering light, measured and even in force, a wistful, introspective mood, a steady, walking pace, electronic, machine-made texture, hints of drum machine. Abstract, textural album art. No faces, no text, no literal band-photo imagery.",
+    "trace": {
+      "crisp and shimmering light": "brightness=3885.8 -> high",
+      "measured and even in force": "energy=0.2542 -> mid",
+      "a wistful, introspective mood": "key=G# minor",
+      "a steady, walking pace": "tempo_bpm=136 -> mid",
+      "electronic, machine-made texture": "sound_tag='Electronic music'",
+      "hints of drum machine": "sound_tag='Drum machine'"
+    }
+  },
+  {
+    "song_id": 10,
+    "title": "Searching",
+    "artist": "Eric Skiff",
+    "genre": "Electronic",
+    "prompt": "Album art evoking neither bright nor dark, quiet and restrained, a wistful, introspective mood, drifting, spacious motion, hints of video game music, hints of cacophony. Abstract, textural album art. No faces, no text, no literal band-photo imagery.",
+    "trace": {
+      "neither bright nor dark": "brightness=2009.9 -> mid",
+      "quiet and restrained": "energy=0.1506 -> low",
+      "a wistful, introspective mood": "key=D minor",
+      "drifting, spacious motion": "tempo_bpm=112 -> low",
+      "hints of video game music": "sound_tag='Video game music'",
+      "hints of cacophony": "sound_tag='Cacophony'"
+    }
+  },
+  {
+    "song_id": 11,
+    "title": "One And",
+    "artist": "Broke For Free",
+    "genre": "Electronic",
+    "prompt": "Album art evoking muted and murky hues, measured and even in force, a warm, major-key brightness, languid, floating movement, hints of sampler. Abstract, textural album art. No faces, no text, no literal band-photo imagery.",
+    "trace": {
+      "muted and murky hues": "brightness=1237.4 -> low",
+      "measured and even in force": "energy=0.2567 -> mid",
+      "a warm, major-key brightness": "key=G major",
+      "languid, floating movement": "tempo_bpm=108 -> low",
+      "hints of sampler": "sound_tag='Sampler'"
+    }
+  },
+  {
+    "song_id": 12,
+    "title": "OST 12 Wherever Aliens!!!",
+    "artist": "sawsquarenoise",
+    "genre": "Electronic",
+    "prompt": "Album art evoking an even, neutral palette, measured and even in force, a shadowed emotional cast, languid, floating movement, hints of video game music, hints of soundtrack music. Abstract, textural album art. No faces, no text, no literal band-photo imagery.",
+    "trace": {
+      "an even, neutral palette": "brightness=2527.6 -> mid",
+      "measured and even in force": "energy=0.2032 -> mid",
+      "a shadowed emotional cast": "key=D# minor",
+      "languid, floating movement": "tempo_bpm=92 -> low",
+      "hints of video game music": "sound_tag='Video game music'",
+      "hints of soundtrack music": "sound_tag='Soundtrack music'"
+    }
+  },
+  {
+    "song_id": 13,
+    "title": "Another Boring Lunchtime (edit)",
+    "artist": "Psychadelik Pedestrian",
+    "genre": "Electronic",
+    "prompt": "Album art evoking an even, neutral palette, measured and even in force, an optimistic emotional cast, languid, floating movement, electronic, machine-made texture, hints of dubstep. Abstract, textural album art. No faces, no text, no literal band-photo imagery.",
+    "trace": {
+      "an even, neutral palette": "brightness=2839.4 -> mid",
+      "measured and even in force": "energy=0.2148 -> mid",
+      "an optimistic emotional cast": "key=G# major",
+      "languid, floating movement": "tempo_bpm=112 -> low",
+      "electronic, machine-made texture": "sound_tag='Electronic music'",
+      "hints of dubstep": "sound_tag='Dubstep'"
+    }
+  },
+  {
+    "song_id": 14,
+    "title": "Her breath",
+    "artist": "arizono kazuhiro",
+    "genre": "Electronic",
+    "prompt": "Album art evoking balanced, natural tones, a steady, grounded intensity, a wistful, introspective mood, languid, floating movement, synthetic production, hints of electronica. Abstract, textural album art. No faces, no text, no literal band-photo imagery.",
+    "trace": {
+      "balanced, natural tones": "brightness=2221.5 -> mid",
+      "a steady, grounded intensity": "energy=0.1947 -> mid",
+      "a wistful, introspective mood": "key=C# minor",
+      "languid, floating movement": "tempo_bpm=78 -> low",
+      "synthetic production": "sound_tag='Electronic music'",
+      "hints of electronica": "sound_tag='Electronica'"
+    }
+  },
+  {
+    "song_id": 15,
+    "title": "Here and Now",
+    "artist": "Trip.Logic",
+    "genre": "Electronic",
+    "prompt": "Album art evoking sharp, glinting highlights, quiet and restrained, a shadowed emotional cast, a steady, walking pace, hints of singing, electronic, machine-made texture. Abstract, textural album art. No faces, no text, no literal band-photo imagery.",
+    "trace": {
+      "sharp, glinting highlights": "brightness=3373.9 -> high",
+      "quiet and restrained": "energy=0.1254 -> low",
+      "a shadowed emotional cast": "key=D# minor",
+      "a steady, walking pace": "tempo_bpm=129 -> mid",
+      "hints of singing": "sound_tag='Singing'",
+      "electronic, machine-made texture": "sound_tag='Electronic music'"
+    }
+  },
+  {
+    "song_id": 16,
+    "title": "Weeklybeats 2014 #1 - KORG M01D Jam",
+    "artist": "RoccoW",
+    "genre": "Electronic",
+    "prompt": "Album art evoking an even, neutral palette, a hushed, delicate presence, a warm, major-key brightness, drifting, spacious motion, hints of video game music, hints of soundtrack music. Abstract, textural album art. No faces, no text, no literal band-photo imagery.",
+    "trace": {
+      "an even, neutral palette": "brightness=2357.2 -> mid",
+      "a hushed, delicate presence": "energy=0.1316 -> low",
+      "a warm, major-key brightness": "key=D major",
+      "drifting, spacious motion": "tempo_bpm=103 -> low",
+      "hints of video game music": "sound_tag='Video game music'",
+      "hints of soundtrack music": "sound_tag='Soundtrack music'"
+    }
+  },
+  {
+    "song_id": 17,
+    "title": "NTD11",
+    "artist": "Skip",
+    "genre": "Electronic",
+    "prompt": "Album art evoking neither bright nor dark, measured and even in force, a wistful, introspective mood, measured, even movement, hints of video game music, hints of cacophony. Abstract, textural album art. No faces, no text, no literal band-photo imagery.",
+    "trace": {
+      "neither bright nor dark": "brightness=2665.0 -> mid",
+      "measured and even in force": "energy=0.1949 -> mid",
+      "a wistful, introspective mood": "key=C minor",
+      "measured, even movement": "tempo_bpm=129 -> mid",
+      "hints of video game music": "sound_tag='Video game music'",
+      "hints of cacophony": "sound_tag='Cacophony'"
+    }
+  },
+  {
+    "song_id": 18,
+    "title": "Easy",
+    "artist": "SPCZ",
+    "genre": "Electronic",
+    "prompt": "Album art evoking balanced, natural tones, a steady, grounded intensity, a shadowed emotional cast, measured, even movement, hints of drum and bass, synthetic production. Abstract, textural album art. No faces, no text, no literal band-photo imagery.",
+    "trace": {
+      "balanced, natural tones": "brightness=2696.3 -> mid",
+      "a steady, grounded intensity": "energy=0.3004 -> mid",
+      "a shadowed emotional cast": "key=F minor",
+      "measured, even movement": "tempo_bpm=144 -> mid",
+      "hints of drum and bass": "sound_tag='Drum and bass'",
+      "synthetic production": "sound_tag='Electronic music'"
+    }
+  },
+  {
+    "song_id": 19,
+    "title": "Evening Drum",
+    "artist": "Nihilore",
+    "genre": "Electronic",
+    "prompt": "Album art evoking neither bright nor dark, quiet and restrained, a shadowed emotional cast, a steady, walking pace, hints of electric piano, resonant piano tones. Abstract, textural album art. No faces, no text, no literal band-photo imagery.",
+    "trace": {
+      "neither bright nor dark": "brightness=2275.6 -> mid",
+      "quiet and restrained": "energy=0.1250 -> low",
+      "a shadowed emotional cast": "key=D minor",
+      "a steady, walking pace": "tempo_bpm=172 -> mid",
+      "hints of electric piano": "sound_tag='Electric piano'",
+      "resonant piano tones": "sound_tag='Piano'"
+    }
+  },
+  {
+    "song_id": 20,
+    "title": "The Cemetery",
+    "artist": "Sinqlogue",
+    "genre": "Electronic",
+    "prompt": "Album art evoking dim, low-lit tones, measured and even in force, a shadowed emotional cast, languid, floating movement, hints of scary music, a wide, ambient wash. Abstract, textural album art. No faces, no text, no literal band-photo imagery.",
+    "trace": {
+      "dim, low-lit tones": "brightness=983.5 -> low",
+      "measured and even in force": "energy=0.1776 -> mid",
+      "a shadowed emotional cast": "key=A minor",
+      "languid, floating movement": "tempo_bpm=92 -> low",
+      "hints of scary music": "sound_tag='Scary music'",
+      "a wide, ambient wash": "sound_tag='Ambient music'"
+    }
+  },
+  {
+    "song_id": 21,
+    "title": "Golden",
+    "artist": "Little Glass Men",
+    "genre": "Electronic",
+    "prompt": "Album art evoking dim, low-lit tones, measured and even in force, an optimistic emotional cast, measured, even movement, string-driven texture, fine, articulated string texture. Abstract, textural album art. No faces, no text, no literal band-photo imagery.",
+    "trace": {
+      "dim, low-lit tones": "brightness=995.2 -> low",
+      "measured and even in force": "energy=0.2252 -> mid",
+      "an optimistic emotional cast": "key=A major",
+      "measured, even movement": "tempo_bpm=117 -> mid",
+      "string-driven texture": "sound_tag='Guitar'",
+      "fine, articulated string texture": "sound_tag='Plucked string instrument'"
+    }
+  },
+  {
+    "song_id": 22,
+    "title": "ruby cactus",
+    "artist": "I, Cactus",
+    "genre": "Electronic",
+    "prompt": "Album art evoking balanced, natural tones, quiet and restrained, an open, uplifted mood, languid, floating movement, synthetic production, hints of video game music. Abstract, textural album art. No faces, no text, no literal band-photo imagery.",
+    "trace": {
+      "balanced, natural tones": "brightness=2169.5 -> mid",
+      "quiet and restrained": "energy=0.1189 -> low",
+      "an open, uplifted mood": "key=D major",
+      "languid, floating movement": "tempo_bpm=103 -> low",
+      "synthetic production": "sound_tag='Electronic music'",
+      "hints of video game music": "sound_tag='Video game music'"
+    }
+  },
+  {
+    "song_id": 23,
+    "title": "Herbie",
+    "artist": "Podington Bear",
+    "genre": "Electronic",
+    "prompt": "Album art evoking a dark, brooding palette, a steady, grounded intensity, an open, uplifted mood, measured, even movement, cold synthesizer tones, hints of drum machine. Abstract, textural album art. No faces, no text, no literal band-photo imagery.",
+    "trace": {
+      "a dark, brooding palette": "brightness=1012.0 -> low",
+      "a steady, grounded intensity": "energy=0.1944 -> mid",
+      "an open, uplifted mood": "key=F# major",
+      "measured, even movement": "tempo_bpm=144 -> mid",
+      "cold synthesizer tones": "sound_tag='Synthesizer'",
+      "hints of drum machine": "sound_tag='Drum machine'"
+    }
+  },
+  {
+    "song_id": 24,
+    "title": "We Did It! (Fulfillment Tune)",
+    "artist": "D SMILEZ",
+    "genre": "Electronic",
+    "prompt": "Album art evoking crisp and shimmering light, soft-edged and understated, an open, uplifted mood, a steady, walking pace, hints of afrobeat, hints of music of africa. Abstract, textural album art. No faces, no text, no literal band-photo imagery.",
+    "trace": {
+      "crisp and shimmering light": "brightness=3002.3 -> high",
+      "soft-edged and understated": "energy=0.0773 -> low",
+      "an open, uplifted mood": "key=C major",
+      "a steady, walking pace": "tempo_bpm=117 -> mid",
+      "hints of afrobeat": "sound_tag='Afrobeat'",
+      "hints of music of africa": "sound_tag='Music of Africa'"
+    }
+  },
+  {
+    "song_id": 25,
+    "title": "Este som - parte2",
+    "artist": "Gilo",
+    "genre": "Electronic",
+    "prompt": "Album art evoking an even, neutral palette, quiet and restrained, an open, uplifted mood, measured, even movement, hints of background music, hints of soundtrack music. Abstract, textural album art. No faces, no text, no literal band-photo imagery.",
+    "trace": {
+      "an even, neutral palette": "brightness=1775.4 -> mid",
+      "quiet and restrained": "energy=0.0553 -> low",
+      "an open, uplifted mood": "key=G major",
+      "measured, even movement": "tempo_bpm=117 -> mid",
+      "hints of background music": "sound_tag='Background music'",
+      "hints of soundtrack music": "sound_tag='Soundtrack music'"
+    }
+  },
+  {
+    "song_id": 26,
+    "title": "R\u00f6relse av Ljus",
+    "artist": "Bisamr\u00e5tta",
+    "genre": "Experimental",
+    "prompt": "Album art evoking dim, low-lit tones, soft-edged and understated, an open, uplifted mood, measured, even movement, the grain of a real guitar, hints of effects unit. Abstract, textural album art. No faces, no text, no literal band-photo imagery.",
+    "trace": {
+      "dim, low-lit tones": "brightness=1407.4 -> low",
+      "soft-edged and understated": "energy=0.1278 -> low",
+      "an open, uplifted mood": "key=F major",
+      "measured, even movement": "tempo_bpm=123 -> mid",
+      "the grain of a real guitar": "sound_tag='Guitar'",
+      "hints of effects unit": "sound_tag='Effects unit'"
+    }
+  },
+  {
+    "song_id": 27,
+    "title": "boys boys boys",
+    "artist": "Sabrina",
+    "genre": "Experimental",
+    "prompt": "Album art evoking neither bright nor dark, measured and even in force, a shadowed emotional cast, measured, even movement, hints of singing, hints of rock and roll. Abstract, textural album art. No faces, no text, no literal band-photo imagery.",
+    "trace": {
+      "neither bright nor dark": "brightness=2553.8 -> mid",
+      "measured and even in force": "energy=0.1718 -> mid",
+      "a shadowed emotional cast": "key=C minor",
+      "measured, even movement": "tempo_bpm=123 -> mid",
+      "hints of singing": "sound_tag='Singing'",
+      "hints of rock and roll": "sound_tag='Rock and roll'"
+    }
+  },
+  {
+    "song_id": 28,
+    "title": "In Ages Past, The Myths And Legends Happened A Long Time Ago",
+    "artist": "Noggin",
+    "genre": "Experimental",
+    "prompt": "Album art evoking shrouded in shadow, a steady, grounded intensity, a shadowed emotional cast, languid, floating movement, hints of rock music, the grain of a real guitar. Abstract, textural album art. No faces, no text, no literal band-photo imagery.",
+    "trace": {
+      "shrouded in shadow": "brightness=1606.2 -> low",
+      "a steady, grounded intensity": "energy=0.1670 -> mid",
+      "a shadowed emotional cast": "key=D# minor",
+      "languid, floating movement": "tempo_bpm=99 -> low",
+      "hints of rock music": "sound_tag='Rock music'",
+      "the grain of a real guitar": "sound_tag='Guitar'"
+    }
+  },
+  {
+    "song_id": 29,
+    "title": "Thank You Beyonc\u00e9",
+    "artist": "Leslie Keffer",
+    "genre": "Experimental",
+    "prompt": "Album art evoking radiant and luminous, a hushed, delicate presence, a shadowed emotional cast, languid, floating movement, hints of pump (liquid), hints of white noise. Abstract, textural album art. No faces, no text, no literal band-photo imagery.",
+    "trace": {
+      "radiant and luminous": "brightness=3314.6 -> high",
+      "a hushed, delicate presence": "energy=0.0662 -> low",
+      "a shadowed emotional cast": "key=D# minor",
+      "languid, floating movement": "tempo_bpm=108 -> low",
+      "hints of pump (liquid)": "sound_tag='Pump (liquid)'",
+      "hints of white noise": "sound_tag='White noise'"
+    }
+  },
+  {
+    "song_id": 30,
+    "title": "Schreien",
+    "artist": "Joerg Piringer",
+    "genre": "Experimental",
+    "prompt": "Album art evoking neither bright nor dark, measured and even in force, a shadowed emotional cast, a steady, walking pace, hints of cacophony, hints of radio. Abstract, textural album art. No faces, no text, no literal band-photo imagery.",
+    "trace": {
+      "neither bright nor dark": "brightness=2023.7 -> mid",
+      "measured and even in force": "energy=0.2035 -> mid",
+      "a shadowed emotional cast": "key=G# minor",
+      "a steady, walking pace": "tempo_bpm=144 -> mid",
+      "hints of cacophony": "sound_tag='Cacophony'",
+      "hints of radio": "sound_tag='Radio'"
+    }
+  },
+  {
+    "song_id": 31,
+    "title": "Soft Beast",
+    "artist": "Teeth Mountain",
+    "genre": "Experimental",
+    "prompt": "Album art evoking balanced, natural tones, a hushed, delicate presence, an open, uplifted mood, measured, even movement, hints of organ, plucked string detail. Abstract, textural album art. No faces, no text, no literal band-photo imagery.",
+    "trace": {
+      "balanced, natural tones": "brightness=1829.6 -> mid",
+      "a hushed, delicate presence": "energy=0.1061 -> low",
+      "an open, uplifted mood": "key=F major",
+      "measured, even movement": "tempo_bpm=185 -> mid",
+      "hints of organ": "sound_tag='Organ'",
+      "plucked string detail": "sound_tag='Plucked string instrument'"
+    }
+  },
+  {
+    "song_id": 32,
+    "title": "resurrect dead on planet jupiter",
+    "artist": "Lucky Dragons",
+    "genre": "Experimental",
+    "prompt": "Album art evoking radiant and luminous, quiet and restrained, a somber, minor-key undertone, measured, even movement, hints of lullaby, electronic, machine-made texture. Abstract, textural album art. No faces, no text, no literal band-photo imagery.",
+    "trace": {
+      "radiant and luminous": "brightness=2983.7 -> high",
+      "quiet and restrained": "energy=0.0643 -> low",
+      "a somber, minor-key undertone": "key=G# minor",
+      "measured, even movement": "tempo_bpm=117 -> mid",
+      "hints of lullaby": "sound_tag='Lullaby'",
+      "electronic, machine-made texture": "sound_tag='Electronic music'"
+    }
+  },
+  {
+    "song_id": 33,
+    "title": "Fear in the Dust Bowl",
+    "artist": "The Fucked Up Beat",
+    "genre": "Experimental",
+    "prompt": "Album art evoking dim, low-lit tones, soft-edged and understated, a somber, minor-key undertone, measured, even movement, hints of rain, hints of rain on surface. Abstract, textural album art. No faces, no text, no literal band-photo imagery.",
+    "trace": {
+      "dim, low-lit tones": "brightness=1440.9 -> low",
+      "soft-edged and understated": "energy=0.1443 -> low",
+      "a somber, minor-key undertone": "key=C minor",
+      "measured, even movement": "tempo_bpm=117 -> mid",
+      "hints of rain": "sound_tag='Rain'",
+      "hints of rain on surface": "sound_tag='Rain on surface'"
+    }
+  },
+  {
+    "song_id": 34,
+    "title": "Hip Bee",
+    "artist": "Rene Kita",
+    "genre": "Experimental",
+    "prompt": "Album art evoking a dark, brooding palette, a steady, grounded intensity, an open, uplifted mood, a steady, walking pace, hints of beatboxing, hints of vocal music. Abstract, textural album art. No faces, no text, no literal band-photo imagery.",
+    "trace": {
+      "a dark, brooding palette": "brightness=538.7 -> low",
+      "a steady, grounded intensity": "energy=0.2425 -> mid",
+      "an open, uplifted mood": "key=C# major",
+      "a steady, walking pace": "tempo_bpm=136 -> mid",
+      "hints of beatboxing": "sound_tag='Beatboxing'",
+      "hints of vocal music": "sound_tag='Vocal music'"
+    }
+  },
+  {
+    "song_id": 35,
+    "title": "no title",
+    "artist": "Molestia Auricularum",
+    "genre": "Experimental",
+    "prompt": "Album art evoking neither bright nor dark, a hushed, delicate presence, a somber, minor-key undertone, languid, floating movement, hints of static, hints of white noise. Abstract, textural album art. No faces, no text, no literal band-photo imagery.",
+    "trace": {
+      "neither bright nor dark": "brightness=2017.0 -> mid",
+      "a hushed, delicate presence": "energy=0.0558 -> low",
+      "a somber, minor-key undertone": "key=C# minor",
+      "languid, floating movement": "tempo_bpm=103 -> low",
+      "hints of static": "sound_tag='Static'",
+      "hints of white noise": "sound_tag='White noise'"
+    }
+  },
+  {
+    "song_id": 36,
+    "title": "party",
+    "artist": "File Under Toner",
+    "genre": "Experimental",
+    "prompt": "Album art evoking a dark, brooding palette, quiet and restrained, an open, uplifted mood, measured, even movement, hints of fireworks, hints of hum. Abstract, textural album art. No faces, no text, no literal band-photo imagery.",
+    "trace": {
+      "a dark, brooding palette": "brightness=1194.1 -> low",
+      "quiet and restrained": "energy=0.0420 -> low",
+      "an open, uplifted mood": "key=C major",
+      "measured, even movement": "tempo_bpm=129 -> mid",
+      "hints of fireworks": "sound_tag='Fireworks'",
+      "hints of hum": "sound_tag='Hum'"
+    }
+  },
+  {
+    "song_id": 37,
+    "title": "Press, Stir Up and Stretch With a Dotted Line",
+    "artist": "HighWay17",
+    "genre": "Experimental",
+    "prompt": "Album art evoking neither bright nor dark, soft-edged and understated, an open, uplifted mood, a steady, walking pace, cold synthesizer tones, synthetic production. Abstract, textural album art. No faces, no text, no literal band-photo imagery.",
+    "trace": {
+      "neither bright nor dark": "brightness=2740.6 -> mid",
+      "soft-edged and understated": "energy=0.0420 -> low",
+      "an open, uplifted mood": "key=C major",
+      "a steady, walking pace": "tempo_bpm=152 -> mid",
+      "cold synthesizer tones": "sound_tag='Synthesizer'",
+      "synthetic production": "sound_tag='Electronic music'"
+    }
+  },
+  {
+    "song_id": 38,
+    "title": "France-excerpt",
+    "artist": "FRANCE",
+    "genre": "Experimental",
+    "prompt": "Album art evoking neither bright nor dark, measured and even in force, a warm, major-key brightness, a steady, walking pace, hints of cacophony, hints of didgeridoo. Abstract, textural album art. No faces, no text, no literal band-photo imagery.",
+    "trace": {
+      "neither bright nor dark": "brightness=1863.5 -> mid",
+      "measured and even in force": "energy=0.2546 -> mid",
+      "a warm, major-key brightness": "key=A major",
+      "a steady, walking pace": "tempo_bpm=129 -> mid",
+      "hints of cacophony": "sound_tag='Cacophony'",
+      "hints of didgeridoo": "sound_tag='Didgeridoo'"
+    }
+  },
+  {
+    "song_id": 39,
+    "title": "Matter008",
+    "artist": "Nate Scheible",
+    "genre": "Experimental",
+    "prompt": "Album art evoking dim, low-lit tones, measured and even in force, a wistful, introspective mood, a steady, walking pace, a wide, ambient wash, hints of organ. Abstract, textural album art. No faces, no text, no literal band-photo imagery.",
+    "trace": {
+      "dim, low-lit tones": "brightness=446.0 -> low",
+      "measured and even in force": "energy=0.1767 -> mid",
+      "a wistful, introspective mood": "key=D# minor",
+      "a steady, walking pace": "tempo_bpm=136 -> mid",
+      "a wide, ambient wash": "sound_tag='Ambient music'",
+      "hints of organ": "sound_tag='Organ'"
+    }
+  },
+  {
+    "song_id": 40,
+    "title": "flekkefjord",
+    "artist": "Blear Moon",
+    "genre": "Experimental",
+    "prompt": "Album art evoking muted and murky hues, soft-edged and understated, an optimistic emotional cast, a steady, walking pace, resonant piano tones. Abstract, textural album art. No faces, no text, no literal band-photo imagery.",
+    "trace": {
+      "muted and murky hues": "brightness=1523.6 -> low",
+      "soft-edged and understated": "energy=0.0739 -> low",
+      "an optimistic emotional cast": "key=C major",
+      "a steady, walking pace": "tempo_bpm=152 -> mid",
+      "resonant piano tones": "sound_tag='Piano'"
+    }
+  },
+  {
+    "song_id": 41,
+    "title": "Western Fixings",
+    "artist": "Semyon",
+    "genre": "Experimental",
+    "prompt": "Album art evoking crisp and shimmering light, a hushed, delicate presence, an open, uplifted mood, a slow, unhurried pace, synthetic production, hints of techno. Abstract, textural album art. No faces, no text, no literal band-photo imagery.",
+    "trace": {
+      "crisp and shimmering light": "brightness=3608.1 -> high",
+      "a hushed, delicate presence": "energy=0.1232 -> low",
+      "an open, uplifted mood": "key=G# major",
+      "a slow, unhurried pace": "tempo_bpm=103 -> low",
+      "synthetic production": "sound_tag='Electronic music'",
+      "hints of techno": "sound_tag='Techno'"
+    }
+  },
+  {
+    "song_id": 42,
+    "title": "An Egg In The Piano Lost In The Box Of Nails",
+    "artist": "Zreen Toyz",
+    "genre": "Experimental",
+    "prompt": "Album art evoking neither bright nor dark, quiet and restrained, a somber, minor-key undertone, measured, even movement, hints of vehicle, hints of car. Abstract, textural album art. No faces, no text, no literal band-photo imagery.",
+    "trace": {
+      "neither bright nor dark": "brightness=2504.6 -> mid",
+      "quiet and restrained": "energy=0.0646 -> low",
+      "a somber, minor-key undertone": "key=F minor",
+      "measured, even movement": "tempo_bpm=136 -> mid",
+      "hints of vehicle": "sound_tag='Vehicle'",
+      "hints of car": "sound_tag='Car'"
+    }
+  },
+  {
+    "song_id": 43,
+    "title": "Toy Guitar 6 (Exotica)",
+    "artist": "Lezet",
+    "genre": "Experimental",
+    "prompt": "Album art evoking balanced, natural tones, a hushed, delicate presence, a shadowed emotional cast, a steady, walking pace, hints of ukulele, hints of pizzicato. Abstract, textural album art. No faces, no text, no literal band-photo imagery.",
+    "trace": {
+      "balanced, natural tones": "brightness=1795.7 -> mid",
+      "a hushed, delicate presence": "energy=0.0927 -> low",
+      "a shadowed emotional cast": "key=G minor",
+      "a steady, walking pace": "tempo_bpm=161 -> mid",
+      "hints of ukulele": "sound_tag='Ukulele'",
+      "hints of pizzicato": "sound_tag='Pizzicato'"
+    }
+  },
+  {
+    "song_id": 44,
+    "title": "Ignoble Cleft (First Visit)",
+    "artist": "Base Cleft",
+    "genre": "Experimental",
+    "prompt": "Album art evoking muted and murky hues, soft-edged and understated, an optimistic emotional cast, a steady, walking pace, hints of sonar, hints of rumble. Abstract, textural album art. No faces, no text, no literal band-photo imagery.",
+    "trace": {
+      "muted and murky hues": "brightness=761.6 -> low",
+      "soft-edged and understated": "energy=0.0806 -> low",
+      "an optimistic emotional cast": "key=E major",
+      "a steady, walking pace": "tempo_bpm=123 -> mid",
+      "hints of sonar": "sound_tag='Sonar'",
+      "hints of rumble": "sound_tag='Rumble'"
+    }
+  },
+  {
+    "song_id": 45,
+    "title": "Spacespagetti (stoleyourburgermix)",
+    "artist": "Paza Rahm",
+    "genre": "Experimental",
+    "prompt": "Album art evoking an even, neutral palette, a hushed, delicate presence, a wistful, introspective mood, drifting, spacious motion, electronic, machine-made texture, hints of dubstep. Abstract, textural album art. No faces, no text, no literal band-photo imagery.",
+    "trace": {
+      "an even, neutral palette": "brightness=2709.7 -> mid",
+      "a hushed, delicate presence": "energy=0.1418 -> low",
+      "a wistful, introspective mood": "key=G# minor",
+      "drifting, spacious motion": "tempo_bpm=83 -> low",
+      "electronic, machine-made texture": "sound_tag='Electronic music'",
+      "hints of dubstep": "sound_tag='Dubstep'"
+    }
+  },
+  {
+    "song_id": 46,
+    "title": "I love you (B-side)",
+    "artist": "L.D.I.",
+    "genre": "Experimental",
+    "prompt": "Album art evoking shrouded in shadow, a hushed, delicate presence, an open, uplifted mood, languid, floating movement, hints of cacophony, synthetic, electronic texture. Abstract, textural album art. No faces, no text, no literal band-photo imagery.",
+    "trace": {
+      "shrouded in shadow": "brightness=1392.7 -> low",
+      "a hushed, delicate presence": "energy=0.0957 -> low",
+      "an open, uplifted mood": "key=C major",
+      "languid, floating movement": "tempo_bpm=99 -> low",
+      "hints of cacophony": "sound_tag='Cacophony'",
+      "synthetic, electronic texture": "sound_tag='Synthesizer'"
+    }
+  },
+  {
+    "song_id": 47,
+    "title": "Good Night/ Sleep",
+    "artist": "Electric Mirrors",
+    "genre": "Experimental",
+    "prompt": "Album art evoking a dark, brooding palette, quiet and restrained, a wistful, introspective mood, languid, floating movement, diffuse, atmospheric texture, a deep gong resonance. Abstract, textural album art. No faces, no text, no literal band-photo imagery.",
+    "trace": {
+      "a dark, brooding palette": "brightness=1028.1 -> low",
+      "quiet and restrained": "energy=0.1185 -> low",
+      "a wistful, introspective mood": "key=E minor",
+      "languid, floating movement": "tempo_bpm=78 -> low",
+      "diffuse, atmospheric texture": "sound_tag='Ambient music'",
+      "a deep gong resonance": "sound_tag='Gong'"
+    }
+  },
+  {
+    "song_id": 48,
+    "title": "Inner Mental Cage (Bitmap Remix)",
+    "artist": "Controlled Insanity",
+    "genre": "Experimental",
+    "prompt": "Album art evoking a dark, brooding palette, quiet and restrained, a shadowed emotional cast, measured, even movement, hints of aircraft engine, hints of fixed-wing aircraft, airplane. Abstract, textural album art. No faces, no text, no literal band-photo imagery.",
+    "trace": {
+      "a dark, brooding palette": "brightness=1573.7 -> low",
+      "quiet and restrained": "energy=0.1261 -> low",
+      "a shadowed emotional cast": "key=A# minor",
+      "measured, even movement": "tempo_bpm=123 -> mid",
+      "hints of aircraft engine": "sound_tag='Aircraft engine'",
+      "hints of fixed-wing aircraft, airplane": "sound_tag='Fixed-wing aircraft, airplane'"
+    }
+  },
+  {
+    "song_id": 49,
+    "title": "three lullabies 1",
+    "artist": "Eva-Maria Houben",
+    "genre": "Experimental",
+    "prompt": "Album art evoking shrouded in shadow, a hushed, delicate presence, a wistful, introspective mood, a slow, unhurried pace, the ring of struck piano strings, hints of keyboard (musical). Abstract, textural album art. No faces, no text, no literal band-photo imagery.",
+    "trace": {
+      "shrouded in shadow": "brightness=945.1 -> low",
+      "a hushed, delicate presence": "energy=0.0054 -> low",
+      "a wistful, introspective mood": "key=D minor",
+      "a slow, unhurried pace": "tempo_bpm=40 -> low",
+      "the ring of struck piano strings": "sound_tag='Piano'",
+      "hints of keyboard (musical)": "sound_tag='Keyboard (musical)'"
+    }
+  },
+  {
+    "song_id": 50,
+    "title": "Worm Fortress",
+    "artist": "Ersatz",
+    "genre": "Experimental",
+    "prompt": "Album art evoking muted and murky hues, measured and even in force, a warm, major-key brightness, languid, floating movement, the grain of a real guitar, low-register string weight. Abstract, textural album art. No faces, no text, no literal band-photo imagery.",
+    "trace": {
+      "muted and murky hues": "brightness=446.8 -> low",
+      "measured and even in force": "energy=0.1901 -> mid",
+      "a warm, major-key brightness": "key=F# major",
+      "languid, floating movement": "tempo_bpm=81 -> low",
+      "the grain of a real guitar": "sound_tag='Guitar'",
+      "low-register string weight": "sound_tag='Bass guitar'"
+    }
+  },
+  {
+    "song_id": 51,
+    "title": "Phantasmagoric Sheeps Of The World",
+    "artist": "Julia K. Mars",
+    "genre": "Folk",
+    "prompt": "Album art evoking balanced, natural tones, bold, saturated energy, an optimistic emotional cast, a steady, walking pace, hints of rock and roll, hints of rock music. Abstract, textural album art. No faces, no text, no literal band-photo imagery.",
+    "trace": {
+      "balanced, natural tones": "brightness=2026.7 -> mid",
+      "bold, saturated energy": "energy=0.4510 -> high",
+      "an optimistic emotional cast": "key=F# major",
+      "a steady, walking pace": "tempo_bpm=117 -> mid",
+      "hints of rock and roll": "sound_tag='Rock and roll'",
+      "hints of rock music": "sound_tag='Rock music'"
+    }
+  },
+  {
+    "song_id": 52,
+    "title": "Sunny Sea Walk",
+    "artist": "Jan Gr\u00fcnfeld",
+    "genre": "Folk",
+    "prompt": "Album art evoking an even, neutral palette, quiet and restrained, an optimistic emotional cast, languid, floating movement, string-driven texture, fine, articulated string texture. Abstract, textural album art. No faces, no text, no literal band-photo imagery.",
+    "trace": {
+      "an even, neutral palette": "brightness=1727.3 -> mid",
+      "quiet and restrained": "energy=0.1399 -> low",
+      "an optimistic emotional cast": "key=E major",
+      "languid, floating movement": "tempo_bpm=86 -> low",
+      "string-driven texture": "sound_tag='Guitar'",
+      "fine, articulated string texture": "sound_tag='Plucked string instrument'"
+    }
+  },
+  {
+    "song_id": 53,
+    "title": "This is Record, OK?",
+    "artist": "Big Blood",
+    "genre": "Folk",
+    "prompt": "Album art evoking neither bright nor dark, quiet and restrained, a wistful, introspective mood, languid, floating movement, hints of mantra, hints of vehicle. Abstract, textural album art. No faces, no text, no literal band-photo imagery.",
+    "trace": {
+      "neither bright nor dark": "brightness=2592.2 -> mid",
+      "quiet and restrained": "energy=0.1122 -> low",
+      "a wistful, introspective mood": "key=E minor",
+      "languid, floating movement": "tempo_bpm=112 -> low",
+      "hints of mantra": "sound_tag='Mantra'",
+      "hints of vehicle": "sound_tag='Vehicle'"
+    }
+  },
+  {
+    "song_id": 54,
+    "title": "Psaltery Piece",
+    "artist": "Howie Mitchell",
+    "genre": "Folk",
+    "prompt": "Album art evoking dim, low-lit tones, a hushed, delicate presence, a shadowed emotional cast, drifting, spacious motion, hints of keyboard (musical), the ring of struck piano strings. Abstract, textural album art. No faces, no text, no literal band-photo imagery.",
+    "trace": {
+      "dim, low-lit tones": "brightness=1341.5 -> low",
+      "a hushed, delicate presence": "energy=0.1267 -> low",
+      "a shadowed emotional cast": "key=G# minor",
+      "drifting, spacious motion": "tempo_bpm=89 -> low",
+      "hints of keyboard (musical)": "sound_tag='Keyboard (musical)'",
+      "the ring of struck piano strings": "sound_tag='Piano'"
+    }
+  },
+  {
+    "song_id": 55,
+    "title": "19. Male Fantasy",
+    "artist": "Jonah Rapino",
+    "genre": "Folk",
+    "prompt": "Album art evoking shrouded in shadow, quiet and restrained, a somber, minor-key undertone, measured, even movement, hints of mandolin, hints of ukulele. Abstract, textural album art. No faces, no text, no literal band-photo imagery.",
+    "trace": {
+      "shrouded in shadow": "brightness=1497.5 -> low",
+      "quiet and restrained": "energy=0.1173 -> low",
+      "a somber, minor-key undertone": "key=B minor",
+      "measured, even movement": "tempo_bpm=172 -> mid",
+      "hints of mandolin": "sound_tag='Mandolin'",
+      "hints of ukulele": "sound_tag='Ukulele'"
+    }
+  },
+  {
+    "song_id": 56,
+    "title": "Hold Fast",
+    "artist": "Zachary Cale",
+    "genre": "Folk",
+    "prompt": "Album art evoking shrouded in shadow, a hushed, delicate presence, a shadowed emotional cast, measured, even movement, string-driven texture, plucked string detail. Abstract, textural album art. No faces, no text, no literal band-photo imagery.",
+    "trace": {
+      "shrouded in shadow": "brightness=1185.9 -> low",
+      "a hushed, delicate presence": "energy=0.0747 -> low",
+      "a shadowed emotional cast": "key=F# minor",
+      "measured, even movement": "tempo_bpm=136 -> mid",
+      "string-driven texture": "sound_tag='Guitar'",
+      "plucked string detail": "sound_tag='Plucked string instrument'"
+    }
+  },
+  {
+    "song_id": 57,
+    "title": "Hey, Marie.",
+    "artist": "Zach Fleury",
+    "genre": "Folk",
+    "prompt": "Album art evoking shrouded in shadow, measured and even in force, an optimistic emotional cast, languid, floating movement, hints of happy music, hints of singing. Abstract, textural album art. No faces, no text, no literal band-photo imagery.",
+    "trace": {
+      "shrouded in shadow": "brightness=1233.7 -> low",
+      "measured and even in force": "energy=0.2282 -> mid",
+      "an optimistic emotional cast": "key=F major",
+      "languid, floating movement": "tempo_bpm=108 -> low",
+      "hints of happy music": "sound_tag='Happy music'",
+      "hints of singing": "sound_tag='Singing'"
+    }
+  },
+  {
+    "song_id": 58,
+    "title": "Graceless Lady",
+    "artist": "Big Blood",
+    "genre": "Folk",
+    "prompt": "Album art evoking dim, low-lit tones, a steady, grounded intensity, an optimistic emotional cast, languid, floating movement, hints of singing, hints of christian music. Abstract, textural album art. No faces, no text, no literal band-photo imagery.",
+    "trace": {
+      "dim, low-lit tones": "brightness=1586.5 -> low",
+      "a steady, grounded intensity": "energy=0.2174 -> mid",
+      "an optimistic emotional cast": "key=B major",
+      "languid, floating movement": "tempo_bpm=108 -> low",
+      "hints of singing": "sound_tag='Singing'",
+      "hints of christian music": "sound_tag='Christian music'"
+    }
+  },
+  {
+    "song_id": 59,
+    "title": "John Henry",
+    "artist": "Foghorn Stringband",
+    "genre": "Folk",
+    "prompt": "Album art evoking balanced, natural tones, a steady, grounded intensity, an optimistic emotional cast, measured, even movement, hints of bluegrass, a rootsy, twanging character. Abstract, textural album art. No faces, no text, no literal band-photo imagery.",
+    "trace": {
+      "balanced, natural tones": "brightness=2164.1 -> mid",
+      "a steady, grounded intensity": "energy=0.1833 -> mid",
+      "an optimistic emotional cast": "key=A major",
+      "measured, even movement": "tempo_bpm=129 -> mid",
+      "hints of bluegrass": "sound_tag='Bluegrass'",
+      "a rootsy, twanging character": "sound_tag='Country'"
+    }
+  },
+  {
+    "song_id": 60,
+    "title": "l arrivee",
+    "artist": "Titan",
+    "genre": "Folk",
+    "prompt": "Album art evoking a dark, brooding palette, measured and even in force, a shadowed emotional cast, a slow, unhurried pace, hints of siren, hints of police car (siren). Abstract, textural album art. No faces, no text, no literal band-photo imagery.",
+    "trace": {
+      "a dark, brooding palette": "brightness=1280.5 -> low",
+      "measured and even in force": "energy=0.2163 -> mid",
+      "a shadowed emotional cast": "key=E minor",
+      "a slow, unhurried pace": "tempo_bpm=86 -> low",
+      "hints of siren": "sound_tag='Siren'",
+      "hints of police car (siren)": "sound_tag='Police car (siren)'"
+    }
+  },
+  {
+    "song_id": 61,
+    "title": "Night Without Sleep",
+    "artist": "David Mumford",
+    "genre": "Folk",
+    "prompt": "Album art evoking muted and murky hues, quiet and restrained, a shadowed emotional cast, a slow, unhurried pace, rural, string-driven warmth, hints of independent music. Abstract, textural album art. No faces, no text, no literal band-photo imagery.",
+    "trace": {
+      "muted and murky hues": "brightness=1434.2 -> low",
+      "quiet and restrained": "energy=0.1163 -> low",
+      "a shadowed emotional cast": "key=G minor",
+      "a slow, unhurried pace": "tempo_bpm=108 -> low",
+      "rural, string-driven warmth": "sound_tag='Country'",
+      "hints of independent music": "sound_tag='Independent music'"
+    }
+  },
+  {
+    "song_id": 62,
+    "title": "Life on Earth",
+    "artist": "Mary Caroline",
+    "genre": "Folk",
+    "prompt": "Album art evoking dim, low-lit tones, quiet and restrained, an open, uplifted mood, measured, even movement, rural, string-driven warmth, hints of christmas music. Abstract, textural album art. No faces, no text, no literal band-photo imagery.",
+    "trace": {
+      "dim, low-lit tones": "brightness=1579.0 -> low",
+      "quiet and restrained": "energy=0.1599 -> low",
+      "an open, uplifted mood": "key=D major",
+      "measured, even movement": "tempo_bpm=117 -> mid",
+      "rural, string-driven warmth": "sound_tag='Country'",
+      "hints of christmas music": "sound_tag='Christmas music'"
+    }
+  },
+  {
+    "song_id": 63,
+    "title": "Week One",
+    "artist": "Ben von Wildenhaus",
+    "genre": "Folk",
+    "prompt": "Album art evoking muted and murky hues, a hushed, delicate presence, a wistful, introspective mood, measured, even movement, string-driven texture, hints of effects unit. Abstract, textural album art. No faces, no text, no literal band-photo imagery.",
+    "trace": {
+      "muted and murky hues": "brightness=525.8 -> low",
+      "a hushed, delicate presence": "energy=0.0528 -> low",
+      "a wistful, introspective mood": "key=G minor",
+      "measured, even movement": "tempo_bpm=123 -> mid",
+      "string-driven texture": "sound_tag='Guitar'",
+      "hints of effects unit": "sound_tag='Effects unit'"
+    }
+  },
+  {
+    "song_id": 64,
+    "title": "Methylchloroisothiazolinone (No Vocals)",
+    "artist": "Josh Woodward",
+    "genre": "Folk",
+    "prompt": "Album art evoking an even, neutral palette, a steady, grounded intensity, a shadowed emotional cast, measured, even movement, hints of grunge, hints of progressive rock. Abstract, textural album art. No faces, no text, no literal band-photo imagery.",
+    "trace": {
+      "an even, neutral palette": "brightness=2167.2 -> mid",
+      "a steady, grounded intensity": "energy=0.1798 -> mid",
+      "a shadowed emotional cast": "key=A# minor",
+      "measured, even movement": "tempo_bpm=136 -> mid",
+      "hints of grunge": "sound_tag='Grunge'",
+      "hints of progressive rock": "sound_tag='Progressive rock'"
+    }
+  },
+  {
+    "song_id": 65,
+    "title": "Dust Devils",
+    "artist": "Michael Chapman",
+    "genre": "Folk",
+    "prompt": "Album art evoking muted and murky hues, measured and even in force, a wistful, introspective mood, a steady, walking pace, string-driven texture, fine, articulated string texture. Abstract, textural album art. No faces, no text, no literal band-photo imagery.",
+    "trace": {
+      "muted and murky hues": "brightness=918.7 -> low",
+      "measured and even in force": "energy=0.2148 -> mid",
+      "a wistful, introspective mood": "key=G minor",
+      "a steady, walking pace": "tempo_bpm=117 -> mid",
+      "string-driven texture": "sound_tag='Guitar'",
+      "fine, articulated string texture": "sound_tag='Plucked string instrument'"
+    }
+  },
+  {
+    "song_id": 66,
+    "title": "I Don't Care",
+    "artist": "Mary Lorson",
+    "genre": "Folk",
+    "prompt": "Album art evoking balanced, natural tones, a hushed, delicate presence, a warm, major-key brightness, a steady, walking pace, string-driven texture, hints of singing. Abstract, textural album art. No faces, no text, no literal band-photo imagery.",
+    "trace": {
+      "balanced, natural tones": "brightness=1691.7 -> mid",
+      "a hushed, delicate presence": "energy=0.0905 -> low",
+      "a warm, major-key brightness": "key=C major",
+      "a steady, walking pace": "tempo_bpm=144 -> mid",
+      "string-driven texture": "sound_tag='Guitar'",
+      "hints of singing": "sound_tag='Singing'"
+    }
+  },
+  {
+    "song_id": 67,
+    "title": "Good Old Colony Days",
+    "artist": "Three Jolly Rogues",
+    "genre": "Folk",
+    "prompt": "Album art evoking shrouded in shadow, quiet and restrained, a warm, major-key brightness, drifting, spacious motion, hints of whistling, hints of flute. Abstract, textural album art. No faces, no text, no literal band-photo imagery.",
+    "trace": {
+      "shrouded in shadow": "brightness=1434.1 -> low",
+      "quiet and restrained": "energy=0.0631 -> low",
+      "a warm, major-key brightness": "key=C major",
+      "drifting, spacious motion": "tempo_bpm=103 -> low",
+      "hints of whistling": "sound_tag='Whistling'",
+      "hints of flute": "sound_tag='Flute'"
+    }
+  },
+  {
+    "song_id": 68,
+    "title": "Steamengeene",
+    "artist": "My Bubba & Mi",
+    "genre": "Folk",
+    "prompt": "Album art evoking muted and murky hues, soft-edged and understated, an optimistic emotional cast, a steady, walking pace, the grain of a real guitar, hints of ukulele. Abstract, textural album art. No faces, no text, no literal band-photo imagery.",
+    "trace": {
+      "muted and murky hues": "brightness=1454.6 -> low",
+      "soft-edged and understated": "energy=0.1446 -> low",
+      "an optimistic emotional cast": "key=F major",
+      "a steady, walking pace": "tempo_bpm=129 -> mid",
+      "the grain of a real guitar": "sound_tag='Guitar'",
+      "hints of ukulele": "sound_tag='Ukulele'"
+    }
+  },
+  {
+    "song_id": 69,
+    "title": "una vez mas",
+    "artist": "Onda bid\u00f3n",
+    "genre": "Folk",
+    "prompt": "Album art evoking neither bright nor dark, a steady, grounded intensity, a somber, minor-key undertone, a steady, walking pace, hints of jingle, tinkle, hints of jingle bell. Abstract, textural album art. No faces, no text, no literal band-photo imagery.",
+    "trace": {
+      "neither bright nor dark": "brightness=1920.6 -> mid",
+      "a steady, grounded intensity": "energy=0.2506 -> mid",
+      "a somber, minor-key undertone": "key=A minor",
+      "a steady, walking pace": "tempo_bpm=129 -> mid",
+      "hints of jingle, tinkle": "sound_tag='Jingle, tinkle'",
+      "hints of jingle bell": "sound_tag='Jingle bell'"
+    }
+  },
+  {
+    "song_id": 70,
+    "title": "Source and the Sound",
+    "artist": "Laura Stevenson and the Cans",
+    "genre": "Folk",
+    "prompt": "Album art evoking balanced, natural tones, measured and even in force, an optimistic emotional cast, drifting, spacious motion, hints of singing, hints of female singing. Abstract, textural album art. No faces, no text, no literal band-photo imagery.",
+    "trace": {
+      "balanced, natural tones": "brightness=1821.0 -> mid",
+      "measured and even in force": "energy=0.1757 -> mid",
+      "an optimistic emotional cast": "key=C# major",
+      "drifting, spacious motion": "tempo_bpm=96 -> low",
+      "hints of singing": "sound_tag='Singing'",
+      "hints of female singing": "sound_tag='Female singing'"
+    }
+  },
+  {
+    "song_id": 71,
+    "title": "River",
+    "artist": "Mary Lorson",
+    "genre": "Folk",
+    "prompt": "Album art evoking a dark, brooding palette, soft-edged and understated, an optimistic emotional cast, a steady, walking pace, string-driven texture, plucked string detail. Abstract, textural album art. No faces, no text, no literal band-photo imagery.",
+    "trace": {
+      "a dark, brooding palette": "brightness=1372.5 -> low",
+      "soft-edged and understated": "energy=0.0632 -> low",
+      "an optimistic emotional cast": "key=G major",
+      "a steady, walking pace": "tempo_bpm=117 -> mid",
+      "string-driven texture": "sound_tag='Guitar'",
+      "plucked string detail": "sound_tag='Plucked string instrument'"
+    }
+  },
+  {
+    "song_id": 72,
+    "title": "'Preese 'Preese",
+    "artist": "Big Blood",
+    "genre": "Folk",
+    "prompt": "Album art evoking shrouded in shadow, a steady, grounded intensity, a warm, major-key brightness, languid, floating movement, hints of singing, hints of psychedelic rock. Abstract, textural album art. No faces, no text, no literal band-photo imagery.",
+    "trace": {
+      "shrouded in shadow": "brightness=1412.8 -> low",
+      "a steady, grounded intensity": "energy=0.1826 -> mid",
+      "a warm, major-key brightness": "key=E major",
+      "languid, floating movement": "tempo_bpm=112 -> low",
+      "hints of singing": "sound_tag='Singing'",
+      "hints of psychedelic rock": "sound_tag='Psychedelic rock'"
+    }
+  },
+  {
+    "song_id": 73,
+    "title": "Catalini",
+    "artist": "Ava Zandieh",
+    "genre": "Folk",
+    "prompt": "Album art evoking a dark, brooding palette, quiet and restrained, a shadowed emotional cast, drifting, spacious motion, hints of music for children, hints of singing. Abstract, textural album art. No faces, no text, no literal band-photo imagery.",
+    "trace": {
+      "a dark, brooding palette": "brightness=1611.8 -> low",
+      "quiet and restrained": "energy=0.0944 -> low",
+      "a shadowed emotional cast": "key=F minor",
+      "drifting, spacious motion": "tempo_bpm=89 -> low",
+      "hints of music for children": "sound_tag='Music for children'",
+      "hints of singing": "sound_tag='Singing'"
+    }
+  },
+  {
+    "song_id": 74,
+    "title": "Autumn Flow",
+    "artist": "Lior",
+    "genre": "Folk",
+    "prompt": "Album art evoking shrouded in shadow, a hushed, delicate presence, an open, uplifted mood, drifting, spacious motion, warm, wooden acoustic tone, the grain of a real guitar. Abstract, textural album art. No faces, no text, no literal band-photo imagery.",
+    "trace": {
+      "shrouded in shadow": "brightness=1194.2 -> low",
+      "a hushed, delicate presence": "energy=0.1078 -> low",
+      "an open, uplifted mood": "key=F major",
+      "drifting, spacious motion": "tempo_bpm=112 -> low",
+      "warm, wooden acoustic tone": "sound_tag='Acoustic guitar'",
+      "the grain of a real guitar": "sound_tag='Guitar'"
+    }
+  },
+  {
+    "song_id": 75,
+    "title": "Huna Cosm",
+    "artist": "MV + EE",
+    "genre": "Folk",
+    "prompt": "Album art evoking muted and murky hues, soft-edged and understated, a wistful, introspective mood, urgent, driving motion, the grain of a real guitar, hints of effects unit. Abstract, textural album art. No faces, no text, no literal band-photo imagery.",
+    "trace": {
+      "muted and murky hues": "brightness=859.6 -> low",
+      "soft-edged and understated": "energy=0.0736 -> low",
+      "a wistful, introspective mood": "key=F minor",
+      "urgent, driving motion": "tempo_bpm=258 -> high",
+      "the grain of a real guitar": "sound_tag='Guitar'",
+      "hints of effects unit": "sound_tag='Effects unit'"
+    }
+  },
+  {
+    "song_id": 76,
+    "title": "Takeover",
+    "artist": "Kellee Maize",
+    "genre": "Hip-Hop",
+    "prompt": "Album art evoking a bright, sunlit palette, measured and even in force, a warm, major-key brightness, a steady, walking pace, a rapped vocal drive, a hip-hop groove. Abstract, textural album art. No faces, no text, no literal band-photo imagery.",
+    "trace": {
+      "a bright, sunlit palette": "brightness=3010.1 -> high",
+      "measured and even in force": "energy=0.2937 -> mid",
+      "a warm, major-key brightness": "key=A major",
+      "a steady, walking pace": "tempo_bpm=129 -> mid",
+      "a rapped vocal drive": "sound_tag='Rapping'",
+      "a hip-hop groove": "sound_tag='Hip hop music'"
+    }
+  },
+  {
+    "song_id": 77,
+    "title": "Sleep.",
+    "artist": "Black Ant",
+    "genre": "Hip-Hop",
+    "prompt": "Album art evoking a dark, brooding palette, a powerful, driving intensity, a somber, minor-key undertone, a steady, walking pace, electronic, machine-made texture, percussive textures. Abstract, textural album art. No faces, no text, no literal band-photo imagery.",
+    "trace": {
+      "a dark, brooding palette": "brightness=1199.3 -> low",
+      "a powerful, driving intensity": "energy=0.4358 -> high",
+      "a somber, minor-key undertone": "key=D# minor",
+      "a steady, walking pace": "tempo_bpm=152 -> mid",
+      "electronic, machine-made texture": "sound_tag='Electronic music'",
+      "percussive textures": "sound_tag='Drum'"
+    }
+  },
+  {
+    "song_id": 78,
+    "title": "Pulso (Por Stray)",
+    "artist": "Pulso",
+    "genre": "Hip-Hop",
+    "prompt": "Album art evoking balanced, natural tones, a steady, grounded intensity, a wistful, introspective mood, languid, floating movement, hints of lullaby. Abstract, textural album art. No faces, no text, no literal band-photo imagery.",
+    "trace": {
+      "balanced, natural tones": "brightness=2257.8 -> mid",
+      "a steady, grounded intensity": "energy=0.2122 -> mid",
+      "a wistful, introspective mood": "key=B minor",
+      "languid, floating movement": "tempo_bpm=78 -> low",
+      "hints of lullaby": "sound_tag='Lullaby'"
+    }
+  },
+  {
+    "song_id": 79,
+    "title": "3 Rocks Blessed",
+    "artist": "D\u00e4lek",
+    "genre": "Hip-Hop",
+    "prompt": "Album art evoking balanced, natural tones, a hushed, delicate presence, a wistful, introspective mood, a steady, walking pace, rhythmic, spoken cadence, a hip-hop groove. Abstract, textural album art. No faces, no text, no literal band-photo imagery.",
+    "trace": {
+      "balanced, natural tones": "brightness=2542.0 -> mid",
+      "a hushed, delicate presence": "energy=0.1545 -> low",
+      "a wistful, introspective mood": "key=E minor",
+      "a steady, walking pace": "tempo_bpm=152 -> mid",
+      "rhythmic, spoken cadence": "sound_tag='Rapping'",
+      "a hip-hop groove": "sound_tag='Hip hop music'"
+    }
+  },
+  {
+    "song_id": 80,
+    "title": "AM Set Instrumental     {Both Nice}",
+    "artist": "6th Sense",
+    "genre": "Hip-Hop",
+    "prompt": "Album art evoking an even, neutral palette, a hushed, delicate presence, a shadowed emotional cast, languid, floating movement, synthetic production, hints of drum and bass. Abstract, textural album art. No faces, no text, no literal band-photo imagery.",
+    "trace": {
+      "an even, neutral palette": "brightness=2515.8 -> mid",
+      "a hushed, delicate presence": "energy=0.1361 -> low",
+      "a shadowed emotional cast": "key=F minor",
+      "languid, floating movement": "tempo_bpm=99 -> low",
+      "synthetic production": "sound_tag='Electronic music'",
+      "hints of drum and bass": "sound_tag='Drum and bass'"
+    }
+  },
+  {
+    "song_id": 81,
+    "title": "Bloc Party (Instrumental)",
+    "artist": "Cheese N Pot-C",
+    "genre": "Hip-Hop",
+    "prompt": "Album art evoking crisp and shimmering light, a hushed, delicate presence, a shadowed emotional cast, languid, floating movement, synthetic production, hints of dubstep. Abstract, textural album art. No faces, no text, no literal band-photo imagery.",
+    "trace": {
+      "crisp and shimmering light": "brightness=3679.8 -> high",
+      "a hushed, delicate presence": "energy=0.1063 -> low",
+      "a shadowed emotional cast": "key=G minor",
+      "languid, floating movement": "tempo_bpm=99 -> low",
+      "synthetic production": "sound_tag='Electronic music'",
+      "hints of dubstep": "sound_tag='Dubstep'"
+    }
+  },
+  {
+    "song_id": 82,
+    "title": "WitchCraft",
+    "artist": "BoyHoodBuchi",
+    "genre": "Hip-Hop",
+    "prompt": "Album art evoking balanced, natural tones, a powerful, driving intensity, an optimistic emotional cast, measured, even movement, hints of mantra, hints of chant. Abstract, textural album art. No faces, no text, no literal band-photo imagery.",
+    "trace": {
+      "balanced, natural tones": "brightness=2370.5 -> mid",
+      "a powerful, driving intensity": "energy=0.3309 -> high",
+      "an optimistic emotional cast": "key=A# major",
+      "measured, even movement": "tempo_bpm=129 -> mid",
+      "hints of mantra": "sound_tag='Mantra'",
+      "hints of chant": "sound_tag='Chant'"
+    }
+  },
+  {
+    "song_id": 83,
+    "title": "Clock",
+    "artist": "Sun Sunych",
+    "genre": "Hip-Hop",
+    "prompt": "Album art evoking an even, neutral palette, measured and even in force, an open, uplifted mood, a steady, walking pace, a rapped vocal drive, a hip-hop groove. Abstract, textural album art. No faces, no text, no literal band-photo imagery.",
+    "trace": {
+      "an even, neutral palette": "brightness=2334.8 -> mid",
+      "measured and even in force": "energy=0.2973 -> mid",
+      "an open, uplifted mood": "key=D major",
+      "a steady, walking pace": "tempo_bpm=172 -> mid",
+      "a rapped vocal drive": "sound_tag='Rapping'",
+      "a hip-hop groove": "sound_tag='Hip hop music'"
+    }
+  },
+  {
+    "song_id": 84,
+    "title": "Head Cold",
+    "artist": "Tha Silent Partner",
+    "genre": "Hip-Hop",
+    "prompt": "Album art evoking a dark, brooding palette, forceful and dense, a wistful, introspective mood, a steady, walking pace. Abstract, textural album art. No faces, no text, no literal band-photo imagery.",
+    "trace": {
+      "a dark, brooding palette": "brightness=1239.7 -> low",
+      "forceful and dense": "energy=0.3395 -> high",
+      "a wistful, introspective mood": "key=F minor",
+      "a steady, walking pace": "tempo_bpm=144 -> mid"
+    }
+  },
+  {
+    "song_id": 85,
+    "title": "Lights, it was you and I",
+    "artist": "SK",
+    "genre": "Hip-Hop",
+    "prompt": "Album art evoking balanced, natural tones, soft-edged and understated, an optimistic emotional cast, a steady, walking pace, beat-driven, rhythmic drive, rhythmic, spoken cadence. Abstract, textural album art. No faces, no text, no literal band-photo imagery.",
+    "trace": {
+      "balanced, natural tones": "brightness=2624.0 -> mid",
+      "soft-edged and understated": "energy=0.1473 -> low",
+      "an optimistic emotional cast": "key=A# major",
+      "a steady, walking pace": "tempo_bpm=117 -> mid",
+      "beat-driven, rhythmic drive": "sound_tag='Hip hop music'",
+      "rhythmic, spoken cadence": "sound_tag='Rapping'"
+    }
+  },
+  {
+    "song_id": 86,
+    "title": "Mama Said Knock You L33T",
+    "artist": "The Hate Noise",
+    "genre": "Hip-Hop",
+    "prompt": "Album art evoking balanced, natural tones, bold, saturated energy, a warm, major-key brightness, a steady, walking pace, hints of reggae, hints of didgeridoo. Abstract, textural album art. No faces, no text, no literal band-photo imagery.",
+    "trace": {
+      "balanced, natural tones": "brightness=1924.4 -> mid",
+      "bold, saturated energy": "energy=0.3851 -> high",
+      "a warm, major-key brightness": "key=A# major",
+      "a steady, walking pace": "tempo_bpm=123 -> mid",
+      "hints of reggae": "sound_tag='Reggae'",
+      "hints of didgeridoo": "sound_tag='Didgeridoo'"
+    }
+  },
+  {
+    "song_id": 87,
+    "title": "Domino's",
+    "artist": "Alaclair Ensemble",
+    "genre": "Hip-Hop",
+    "prompt": "Album art evoking balanced, natural tones, bold, saturated energy, a somber, minor-key undertone, languid, floating movement, rhythmic, spoken cadence, beat-driven, rhythmic drive. Abstract, textural album art. No faces, no text, no literal band-photo imagery.",
+    "trace": {
+      "balanced, natural tones": "brightness=2816.0 -> mid",
+      "bold, saturated energy": "energy=0.3649 -> high",
+      "a somber, minor-key undertone": "key=E minor",
+      "languid, floating movement": "tempo_bpm=96 -> low",
+      "rhythmic, spoken cadence": "sound_tag='Rapping'",
+      "beat-driven, rhythmic drive": "sound_tag='Hip hop music'"
+    }
+  },
+  {
+    "song_id": 88,
+    "title": "Let Me Spell You This (016 Tess Dis Champion Mixx)",
+    "artist": "The Impossebulls",
+    "genre": "Hip-Hop",
+    "prompt": "Album art evoking an even, neutral palette, a steady, grounded intensity, a warm, major-key brightness, a slow, unhurried pace, rhythmic, spoken cadence, a hip-hop groove. Abstract, textural album art. No faces, no text, no literal band-photo imagery.",
+    "trace": {
+      "an even, neutral palette": "brightness=2523.7 -> mid",
+      "a steady, grounded intensity": "energy=0.1893 -> mid",
+      "a warm, major-key brightness": "key=A# major",
+      "a slow, unhurried pace": "tempo_bpm=89 -> low",
+      "rhythmic, spoken cadence": "sound_tag='Rapping'",
+      "a hip-hop groove": "sound_tag='Hip hop music'"
+    }
+  },
+  {
+    "song_id": 89,
+    "title": "raiz latina",
+    "artist": "Chicken Jones",
+    "genre": "Hip-Hop",
+    "prompt": "Album art evoking balanced, natural tones, measured and even in force, a somber, minor-key undertone, drifting, spacious motion, hints of funk, hints of soul music. Abstract, textural album art. No faces, no text, no literal band-photo imagery.",
+    "trace": {
+      "balanced, natural tones": "brightness=2571.3 -> mid",
+      "measured and even in force": "energy=0.2268 -> mid",
+      "a somber, minor-key undertone": "key=G minor",
+      "drifting, spacious motion": "tempo_bpm=96 -> low",
+      "hints of funk": "sound_tag='Funk'",
+      "hints of soul music": "sound_tag='Soul music'"
+    }
+  },
+  {
+    "song_id": 90,
+    "title": "Ate Ten Instrumental     {Both Nice}",
+    "artist": "6th Sense",
+    "genre": "Hip-Hop",
+    "prompt": "Album art evoking sharp, glinting highlights, soft-edged and understated, an open, uplifted mood, drifting, spacious motion, string-driven texture, fine, articulated string texture. Abstract, textural album art. No faces, no text, no literal band-photo imagery.",
+    "trace": {
+      "sharp, glinting highlights": "brightness=3012.0 -> high",
+      "soft-edged and understated": "energy=0.1369 -> low",
+      "an open, uplifted mood": "key=D major",
+      "drifting, spacious motion": "tempo_bpm=96 -> low",
+      "string-driven texture": "sound_tag='Guitar'",
+      "fine, articulated string texture": "sound_tag='Plucked string instrument'"
+    }
+  },
+  {
+    "song_id": 91,
+    "title": "Press Rewind featuring Kyle Jason",
+    "artist": "C-Doc",
+    "genre": "Hip-Hop",
+    "prompt": "Album art evoking balanced, natural tones, a steady, grounded intensity, a shadowed emotional cast, languid, floating movement, hints of rhythm and blues, hints of soul music. Abstract, textural album art. No faces, no text, no literal band-photo imagery.",
+    "trace": {
+      "balanced, natural tones": "brightness=1932.4 -> mid",
+      "a steady, grounded intensity": "energy=0.2824 -> mid",
+      "a shadowed emotional cast": "key=G minor",
+      "languid, floating movement": "tempo_bpm=92 -> low",
+      "hints of rhythm and blues": "sound_tag='Rhythm and blues'",
+      "hints of soul music": "sound_tag='Soul music'"
+    }
+  },
+  {
+    "song_id": 92,
+    "title": "God's Radio Hell",
+    "artist": "The Impossebulls",
+    "genre": "Hip-Hop",
+    "prompt": "Album art evoking an even, neutral palette, measured and even in force, a shadowed emotional cast, a slow, unhurried pace, a rapped vocal drive, a hip-hop groove. Abstract, textural album art. No faces, no text, no literal band-photo imagery.",
+    "trace": {
+      "an even, neutral palette": "brightness=2166.8 -> mid",
+      "measured and even in force": "energy=0.2417 -> mid",
+      "a shadowed emotional cast": "key=D minor",
+      "a slow, unhurried pace": "tempo_bpm=99 -> low",
+      "a rapped vocal drive": "sound_tag='Rapping'",
+      "a hip-hop groove": "sound_tag='Hip hop music'"
+    }
+  },
+  {
+    "song_id": 93,
+    "title": "Stronger Living Feat Wordsmith",
+    "artist": "CuzOH! Black Feat. Wordsmith",
+    "genre": "Hip-Hop",
+    "prompt": "Album art evoking an even, neutral palette, measured and even in force, a somber, minor-key undertone, a slow, unhurried pace, beat-driven, rhythmic drive, rhythmic, spoken cadence. Abstract, textural album art. No faces, no text, no literal band-photo imagery.",
+    "trace": {
+      "an even, neutral palette": "brightness=2505.3 -> mid",
+      "measured and even in force": "energy=0.2748 -> mid",
+      "a somber, minor-key undertone": "key=A minor",
+      "a slow, unhurried pace": "tempo_bpm=89 -> low",
+      "beat-driven, rhythmic drive": "sound_tag='Hip hop music'",
+      "rhythmic, spoken cadence": "sound_tag='Rapping'"
+    }
+  },
+  {
+    "song_id": 94,
+    "title": "sollerod fascists",
+    "artist": "Coin Locker Kid",
+    "genre": "Hip-Hop",
+    "prompt": "Album art evoking neither bright nor dark, forceful and dense, an open, uplifted mood, measured, even movement, hints of angry music. Abstract, textural album art. No faces, no text, no literal band-photo imagery.",
+    "trace": {
+      "neither bright nor dark": "brightness=2029.0 -> mid",
+      "forceful and dense": "energy=0.3369 -> high",
+      "an open, uplifted mood": "key=E major",
+      "measured, even movement": "tempo_bpm=172 -> mid",
+      "hints of angry music": "sound_tag='Angry music'"
+    }
+  },
+  {
+    "song_id": 95,
+    "title": "GoodLookN",
+    "artist": "Tha Silent Partner",
+    "genre": "Hip-Hop",
+    "prompt": "Album art evoking neither bright nor dark, a steady, grounded intensity, a wistful, introspective mood, a steady, walking pace. Abstract, textural album art. No faces, no text, no literal band-photo imagery.",
+    "trace": {
+      "neither bright nor dark": "brightness=1796.4 -> mid",
+      "a steady, grounded intensity": "energy=0.2307 -> mid",
+      "a wistful, introspective mood": "key=A minor",
+      "a steady, walking pace": "tempo_bpm=161 -> mid"
+    }
+  },
+  {
+    "song_id": 96,
+    "title": "Vintage (Party Rock Instrumental)",
+    "artist": "C-Doc",
+    "genre": "Hip-Hop",
+    "prompt": "Album art evoking an even, neutral palette, measured and even in force, a shadowed emotional cast, drifting, spacious motion, hints of funk, percussive textures. Abstract, textural album art. No faces, no text, no literal band-photo imagery.",
+    "trace": {
+      "an even, neutral palette": "brightness=1832.2 -> mid",
+      "measured and even in force": "energy=0.2420 -> mid",
+      "a shadowed emotional cast": "key=C# minor",
+      "drifting, spacious motion": "tempo_bpm=96 -> low",
+      "hints of funk": "sound_tag='Funk'",
+      "percussive textures": "sound_tag='Drum'"
+    }
+  },
+  {
+    "song_id": 97,
+    "title": "Everpresent Future",
+    "artist": "Super Galactic Expansive",
+    "genre": "Hip-Hop",
+    "prompt": "Album art evoking balanced, natural tones, measured and even in force, a warm, major-key brightness, a slow, unhurried pace, rhythmic, spoken cadence, a hip-hop groove. Abstract, textural album art. No faces, no text, no literal band-photo imagery.",
+    "trace": {
+      "balanced, natural tones": "brightness=2088.7 -> mid",
+      "measured and even in force": "energy=0.2724 -> mid",
+      "a warm, major-key brightness": "key=D# major",
+      "a slow, unhurried pace": "tempo_bpm=96 -> low",
+      "rhythmic, spoken cadence": "sound_tag='Rapping'",
+      "a hip-hop groove": "sound_tag='Hip hop music'"
+    }
+  },
+  {
+    "song_id": 98,
+    "title": "Motivation",
+    "artist": "Lushlife",
+    "genre": "Hip-Hop",
+    "prompt": "Album art evoking an even, neutral palette, soft-edged and understated, an open, uplifted mood, drifting, spacious motion, hints of bird, hints of outside, rural or natural. Abstract, textural album art. No faces, no text, no literal band-photo imagery.",
+    "trace": {
+      "an even, neutral palette": "brightness=1661.6 -> mid",
+      "soft-edged and understated": "energy=0.1366 -> low",
+      "an open, uplifted mood": "key=G# major",
+      "drifting, spacious motion": "tempo_bpm=89 -> low",
+      "hints of bird": "sound_tag='Bird'",
+      "hints of outside, rural or natural": "sound_tag='Outside, rural or natural'"
+    }
+  },
+  {
+    "song_id": 99,
+    "title": "Just a Feelin'",
+    "artist": "Majik Most",
+    "genre": "Hip-Hop",
+    "prompt": "Album art evoking crisp and shimmering light, a hushed, delicate presence, a somber, minor-key undertone, languid, floating movement, a hip-hop groove, rhythmic, spoken cadence. Abstract, textural album art. No faces, no text, no literal band-photo imagery.",
+    "trace": {
+      "crisp and shimmering light": "brightness=2922.7 -> high",
+      "a hushed, delicate presence": "energy=0.1011 -> low",
+      "a somber, minor-key undertone": "key=E minor",
+      "languid, floating movement": "tempo_bpm=92 -> low",
+      "a hip-hop groove": "sound_tag='Hip hop music'",
+      "rhythmic, spoken cadence": "sound_tag='Rapping'"
+    }
+  },
+  {
+    "song_id": 100,
+    "title": "Escape Tune",
+    "artist": "Height With Friends",
+    "genre": "Hip-Hop",
+    "prompt": "Album art evoking balanced, natural tones, a hushed, delicate presence, a wistful, introspective mood, a steady, walking pace, hints of punk rock, hints of rock and roll. Abstract, textural album art. No faces, no text, no literal band-photo imagery.",
+    "trace": {
+      "balanced, natural tones": "brightness=2501.0 -> mid",
+      "a hushed, delicate presence": "energy=0.1316 -> low",
+      "a wistful, introspective mood": "key=A# minor",
+      "a steady, walking pace": "tempo_bpm=172 -> mid",
+      "hints of punk rock": "sound_tag='Punk rock'",
+      "hints of rock and roll": "sound_tag='Rock and roll'"
+    }
+  },
+  {
+    "song_id": 101,
+    "title": "Demalion - Copper Halls",
+    "artist": "Blue Dot Sessions",
+    "genre": "Instrumental",
+    "prompt": "Album art evoking dim, low-lit tones, soft-edged and understated, a warm, major-key brightness, drifting, spacious motion, resonant piano tones, hints of keyboard (musical). Abstract, textural album art. No faces, no text, no literal band-photo imagery.",
+    "trace": {
+      "dim, low-lit tones": "brightness=514.2 -> low",
+      "soft-edged and understated": "energy=0.1373 -> low",
+      "a warm, major-key brightness": "key=F major",
+      "drifting, spacious motion": "tempo_bpm=89 -> low",
+      "resonant piano tones": "sound_tag='Piano'",
+      "hints of keyboard (musical)": "sound_tag='Keyboard (musical)'"
+    }
+  },
+  {
+    "song_id": 102,
+    "title": "Dream Sequence With Percussion",
+    "artist": "Ryan Cullinane",
+    "genre": "Instrumental",
+    "prompt": "Album art evoking dim, low-lit tones, soft-edged and understated, a shadowed emotional cast, measured, even movement, a wide, ambient wash, electronic, machine-made texture. Abstract, textural album art. No faces, no text, no literal band-photo imagery.",
+    "trace": {
+      "dim, low-lit tones": "brightness=787.5 -> low",
+      "soft-edged and understated": "energy=0.1185 -> low",
+      "a shadowed emotional cast": "key=F# minor",
+      "measured, even movement": "tempo_bpm=129 -> mid",
+      "a wide, ambient wash": "sound_tag='Ambient music'",
+      "electronic, machine-made texture": "sound_tag='Electronic music'"
+    }
+  },
+  {
+    "song_id": 103,
+    "title": "Remember (We Are Divine, We Are Immortal)",
+    "artist": "Ars Sonor",
+    "genre": "Instrumental",
+    "prompt": "Album art evoking muted and murky hues, soft-edged and understated, a shadowed emotional cast, a steady, walking pace, hints of scary music, a wide, ambient wash. Abstract, textural album art. No faces, no text, no literal band-photo imagery.",
+    "trace": {
+      "muted and murky hues": "brightness=1231.7 -> low",
+      "soft-edged and understated": "energy=0.0764 -> low",
+      "a shadowed emotional cast": "key=D minor",
+      "a steady, walking pace": "tempo_bpm=123 -> mid",
+      "hints of scary music": "sound_tag='Scary music'",
+      "a wide, ambient wash": "sound_tag='Ambient music'"
+    }
+  },
+  {
+    "song_id": 104,
+    "title": "Rain 2",
+    "artist": "V\u00e4gsk\u00e4l",
+    "genre": "Instrumental",
+    "prompt": "Album art evoking shrouded in shadow, quiet and restrained, a shadowed emotional cast, a slow, unhurried pace, hints of throbbing, hints of hum. Abstract, textural album art. No faces, no text, no literal band-photo imagery.",
+    "trace": {
+      "shrouded in shadow": "brightness=850.7 -> low",
+      "quiet and restrained": "energy=0.0938 -> low",
+      "a shadowed emotional cast": "key=D minor",
+      "a slow, unhurried pace": "tempo_bpm=59 -> low",
+      "hints of throbbing": "sound_tag='Throbbing'",
+      "hints of hum": "sound_tag='Hum'"
+    }
+  },
+  {
+    "song_id": 105,
+    "title": "This is based upon a true story",
+    "artist": "Plusplus",
+    "genre": "Instrumental",
+    "prompt": "Album art evoking a dark, brooding palette, soft-edged and understated, an open, uplifted mood, a steady, walking pace, string-driven texture, fine, articulated string texture. Abstract, textural album art. No faces, no text, no literal band-photo imagery.",
+    "trace": {
+      "a dark, brooding palette": "brightness=1537.3 -> low",
+      "soft-edged and understated": "energy=0.1251 -> low",
+      "an open, uplifted mood": "key=D major",
+      "a steady, walking pace": "tempo_bpm=136 -> mid",
+      "string-driven texture": "sound_tag='Guitar'",
+      "fine, articulated string texture": "sound_tag='Plucked string instrument'"
+    }
+  },
+  {
+    "song_id": 106,
+    "title": "To Absent Friends",
+    "artist": "Squire Tuck",
+    "genre": "Instrumental",
+    "prompt": "Album art evoking muted and murky hues, a steady, grounded intensity, an optimistic emotional cast, languid, floating movement, string-driven texture, plucked string detail. Abstract, textural album art. No faces, no text, no literal band-photo imagery.",
+    "trace": {
+      "muted and murky hues": "brightness=1005.6 -> low",
+      "a steady, grounded intensity": "energy=0.2001 -> mid",
+      "an optimistic emotional cast": "key=G major",
+      "languid, floating movement": "tempo_bpm=112 -> low",
+      "string-driven texture": "sound_tag='Guitar'",
+      "plucked string detail": "sound_tag='Plucked string instrument'"
+    }
+  },
+  {
+    "song_id": 107,
+    "title": "Alarm",
+    "artist": "Jahzzar",
+    "genre": "Instrumental",
+    "prompt": "Album art evoking balanced, natural tones, measured and even in force, a warm, major-key brightness, measured, even movement, hints of progressive rock, hints of heavy metal. Abstract, textural album art. No faces, no text, no literal band-photo imagery.",
+    "trace": {
+      "balanced, natural tones": "brightness=1979.9 -> mid",
+      "measured and even in force": "energy=0.1898 -> mid",
+      "a warm, major-key brightness": "key=E major",
+      "measured, even movement": "tempo_bpm=161 -> mid",
+      "hints of progressive rock": "sound_tag='Progressive rock'",
+      "hints of heavy metal": "sound_tag='Heavy metal'"
+    }
+  },
+  {
+    "song_id": 108,
+    "title": "Hots For Brooklyn Instrumental",
+    "artist": "Ryan Cullinane",
+    "genre": "Instrumental",
+    "prompt": "Album art evoking balanced, natural tones, a steady, grounded intensity, a shadowed emotional cast, drifting, spacious motion, hints of electronica, hints of drum machine. Abstract, textural album art. No faces, no text, no literal band-photo imagery.",
+    "trace": {
+      "balanced, natural tones": "brightness=2056.0 -> mid",
+      "a steady, grounded intensity": "energy=0.2681 -> mid",
+      "a shadowed emotional cast": "key=D minor",
+      "drifting, spacious motion": "tempo_bpm=96 -> low",
+      "hints of electronica": "sound_tag='Electronica'",
+      "hints of drum machine": "sound_tag='Drum machine'"
+    }
+  },
+  {
+    "song_id": 109,
+    "title": "Circles of Black and Red",
+    "artist": "Kevin Hartnell",
+    "genre": "Instrumental",
+    "prompt": "Album art evoking an even, neutral palette, quiet and restrained, a warm, major-key brightness, measured, even movement, hints of video game music, hints of funk. Abstract, textural album art. No faces, no text, no literal band-photo imagery.",
+    "trace": {
+      "an even, neutral palette": "brightness=2373.9 -> mid",
+      "quiet and restrained": "energy=0.1549 -> low",
+      "a warm, major-key brightness": "key=D# major",
+      "measured, even movement": "tempo_bpm=117 -> mid",
+      "hints of video game music": "sound_tag='Video game music'",
+      "hints of funk": "sound_tag='Funk'"
+    }
+  },
+  {
+    "song_id": 110,
+    "title": "Little Peace at Christmas",
+    "artist": "Squire Tuck",
+    "genre": "Instrumental",
+    "prompt": "Album art evoking muted and murky hues, soft-edged and understated, an open, uplifted mood, measured, even movement, string-driven texture, fine, articulated string texture. Abstract, textural album art. No faces, no text, no literal band-photo imagery.",
+    "trace": {
+      "muted and murky hues": "brightness=1407.0 -> low",
+      "soft-edged and understated": "energy=0.1320 -> low",
+      "an open, uplifted mood": "key=D major",
+      "measured, even movement": "tempo_bpm=136 -> mid",
+      "string-driven texture": "sound_tag='Guitar'",
+      "fine, articulated string texture": "sound_tag='Plucked string instrument'"
+    }
+  },
+  {
+    "song_id": 111,
+    "title": "Prelude 1",
+    "artist": "Rod Hamilton",
+    "genre": "Instrumental",
+    "prompt": "Album art evoking dim, low-lit tones, a hushed, delicate presence, a warm, major-key brightness, a steady, walking pace, hints of marimba, xylophone, hints of tubular bells. Abstract, textural album art. No faces, no text, no literal band-photo imagery.",
+    "trace": {
+      "dim, low-lit tones": "brightness=948.2 -> low",
+      "a hushed, delicate presence": "energy=0.0577 -> low",
+      "a warm, major-key brightness": "key=C# major",
+      "a steady, walking pace": "tempo_bpm=161 -> mid",
+      "hints of marimba, xylophone": "sound_tag='Marimba, xylophone'",
+      "hints of tubular bells": "sound_tag='Tubular bells'"
+    }
+  },
+  {
+    "song_id": 112,
+    "title": "Autumn Fields",
+    "artist": "Lee Rosevere",
+    "genre": "Instrumental",
+    "prompt": "Album art evoking muted and murky hues, soft-edged and understated, an optimistic emotional cast, languid, floating movement, the ring of struck piano strings, hints of keyboard (musical). Abstract, textural album art. No faces, no text, no literal band-photo imagery.",
+    "trace": {
+      "muted and murky hues": "brightness=723.1 -> low",
+      "soft-edged and understated": "energy=0.1047 -> low",
+      "an optimistic emotional cast": "key=D major",
+      "languid, floating movement": "tempo_bpm=112 -> low",
+      "the ring of struck piano strings": "sound_tag='Piano'",
+      "hints of keyboard (musical)": "sound_tag='Keyboard (musical)'"
+    }
+  },
+  {
+    "song_id": 113,
+    "title": "Running From An Evil Force",
+    "artist": "Mystified",
+    "genre": "Instrumental",
+    "prompt": "Album art evoking balanced, natural tones, soft-edged and understated, a shadowed emotional cast, drifting, spacious motion, hints of throbbing, hints of hum. Abstract, textural album art. No faces, no text, no literal band-photo imagery.",
+    "trace": {
+      "balanced, natural tones": "brightness=1700.1 -> mid",
+      "soft-edged and understated": "energy=0.1348 -> low",
+      "a shadowed emotional cast": "key=F# minor",
+      "drifting, spacious motion": "tempo_bpm=60 -> low",
+      "hints of throbbing": "sound_tag='Throbbing'",
+      "hints of hum": "sound_tag='Hum'"
+    }
+  },
+  {
+    "song_id": 114,
+    "title": "The Frequency Shift",
+    "artist": "Ars Sonor",
+    "genre": "Instrumental",
+    "prompt": "Album art evoking dim, low-lit tones, soft-edged and understated, an open, uplifted mood, drifting, spacious motion, soft, atmospheric layers, hints of scary music. Abstract, textural album art. No faces, no text, no literal band-photo imagery.",
+    "trace": {
+      "dim, low-lit tones": "brightness=842.0 -> low",
+      "soft-edged and understated": "energy=0.0813 -> low",
+      "an open, uplifted mood": "key=G major",
+      "drifting, spacious motion": "tempo_bpm=96 -> low",
+      "soft, atmospheric layers": "sound_tag='New-age music'",
+      "hints of scary music": "sound_tag='Scary music'"
+    }
+  },
+  {
+    "song_id": 115,
+    "title": "Jeemo",
+    "artist": "Janneh",
+    "genre": "Instrumental",
+    "prompt": "Album art evoking an even, neutral palette, quiet and restrained, a somber, minor-key undertone, a steady, walking pace, hints of rub, hints of toothbrush. Abstract, textural album art. No faces, no text, no literal band-photo imagery.",
+    "trace": {
+      "an even, neutral palette": "brightness=1842.7 -> mid",
+      "quiet and restrained": "energy=0.0899 -> low",
+      "a somber, minor-key undertone": "key=G minor",
+      "a steady, walking pace": "tempo_bpm=117 -> mid",
+      "hints of rub": "sound_tag='Rub'",
+      "hints of toothbrush": "sound_tag='Toothbrush'"
+    }
+  },
+  {
+    "song_id": 116,
+    "title": "Leap Second",
+    "artist": "Doctor Turtle",
+    "genre": "Instrumental",
+    "prompt": "Album art evoking a dark, brooding palette, quiet and restrained, an optimistic emotional cast, a steady, walking pace, the grain of a real guitar, unamplified string warmth. Abstract, textural album art. No faces, no text, no literal band-photo imagery.",
+    "trace": {
+      "a dark, brooding palette": "brightness=1089.1 -> low",
+      "quiet and restrained": "energy=0.1046 -> low",
+      "an optimistic emotional cast": "key=G major",
+      "a steady, walking pace": "tempo_bpm=129 -> mid",
+      "the grain of a real guitar": "sound_tag='Guitar'",
+      "unamplified string warmth": "sound_tag='Acoustic guitar'"
+    }
+  },
+  {
+    "song_id": 117,
+    "title": "First Step Inside",
+    "artist": "David Szesztay",
+    "genre": "Instrumental",
+    "prompt": "Album art evoking dim, low-lit tones, quiet and restrained, a somber, minor-key undertone, a slow, unhurried pace, string-driven texture, hints of effects unit. Abstract, textural album art. No faces, no text, no literal band-photo imagery.",
+    "trace": {
+      "dim, low-lit tones": "brightness=879.2 -> low",
+      "quiet and restrained": "energy=0.0975 -> low",
+      "a somber, minor-key undertone": "key=E minor",
+      "a slow, unhurried pace": "tempo_bpm=72 -> low",
+      "string-driven texture": "sound_tag='Guitar'",
+      "hints of effects unit": "sound_tag='Effects unit'"
+    }
+  },
+  {
+    "song_id": 118,
+    "title": "That Old Harpoon",
+    "artist": "Gillicuddy",
+    "genre": "Instrumental",
+    "prompt": "Album art evoking dim, low-lit tones, a hushed, delicate presence, an open, uplifted mood, languid, floating movement, string-driven texture, unamplified string warmth. Abstract, textural album art. No faces, no text, no literal band-photo imagery.",
+    "trace": {
+      "dim, low-lit tones": "brightness=990.2 -> low",
+      "a hushed, delicate presence": "energy=0.1217 -> low",
+      "an open, uplifted mood": "key=G major",
+      "languid, floating movement": "tempo_bpm=112 -> low",
+      "string-driven texture": "sound_tag='Guitar'",
+      "unamplified string warmth": "sound_tag='Acoustic guitar'"
+    }
+  },
+  {
+    "song_id": 119,
+    "title": "Saying Goodbye In The Rain (piano)",
+    "artist": "Jelsonic",
+    "genre": "Instrumental",
+    "prompt": "Album art evoking a dark, brooding palette, quiet and restrained, an optimistic emotional cast, languid, floating movement, the ring of struck piano strings, hints of electric piano. Abstract, textural album art. No faces, no text, no literal band-photo imagery.",
+    "trace": {
+      "a dark, brooding palette": "brightness=501.3 -> low",
+      "quiet and restrained": "energy=0.0728 -> low",
+      "an optimistic emotional cast": "key=A major",
+      "languid, floating movement": "tempo_bpm=103 -> low",
+      "the ring of struck piano strings": "sound_tag='Piano'",
+      "hints of electric piano": "sound_tag='Electric piano'"
+    }
+  },
+  {
+    "song_id": 120,
+    "title": "Step One",
+    "artist": "Fatal Injection",
+    "genre": "Instrumental",
+    "prompt": "Album art evoking neither bright nor dark, a steady, grounded intensity, an open, uplifted mood, measured, even movement, the grain of a real guitar, fine, articulated string texture. Abstract, textural album art. No faces, no text, no literal band-photo imagery.",
+    "trace": {
+      "neither bright nor dark": "brightness=1765.2 -> mid",
+      "a steady, grounded intensity": "energy=0.1857 -> mid",
+      "an open, uplifted mood": "key=A major",
+      "measured, even movement": "tempo_bpm=123 -> mid",
+      "the grain of a real guitar": "sound_tag='Guitar'",
+      "fine, articulated string texture": "sound_tag='Plucked string instrument'"
+    }
+  },
+  {
+    "song_id": 121,
+    "title": "The Dragon",
+    "artist": "Albert Glasser",
+    "genre": "Instrumental",
+    "prompt": "Album art evoking shrouded in shadow, quiet and restrained, a shadowed emotional cast, measured, even movement, hints of theremin, hints of double bass. Abstract, textural album art. No faces, no text, no literal band-photo imagery.",
+    "trace": {
+      "shrouded in shadow": "brightness=1083.7 -> low",
+      "quiet and restrained": "energy=0.0437 -> low",
+      "a shadowed emotional cast": "key=B minor",
+      "measured, even movement": "tempo_bpm=117 -> mid",
+      "hints of theremin": "sound_tag='Theremin'",
+      "hints of double bass": "sound_tag='Double bass'"
+    }
+  },
+  {
+    "song_id": 122,
+    "title": "Alien Mayor Theme",
+    "artist": "Mystified",
+    "genre": "Instrumental",
+    "prompt": "Album art evoking neither bright nor dark, quiet and restrained, an optimistic emotional cast, measured, even movement, electronic, machine-made texture, hints of didgeridoo. Abstract, textural album art. No faces, no text, no literal band-photo imagery.",
+    "trace": {
+      "neither bright nor dark": "brightness=2133.2 -> mid",
+      "quiet and restrained": "energy=0.1166 -> low",
+      "an optimistic emotional cast": "key=A major",
+      "measured, even movement": "tempo_bpm=117 -> mid",
+      "electronic, machine-made texture": "sound_tag='Electronic music'",
+      "hints of didgeridoo": "sound_tag='Didgeridoo'"
+    }
+  },
+  {
+    "song_id": 123,
+    "title": "Hope",
+    "artist": "Joao Picoito",
+    "genre": "Instrumental",
+    "prompt": "Album art evoking balanced, natural tones, measured and even in force, an open, uplifted mood, measured, even movement, hints of progressive rock, hints of rock music. Abstract, textural album art. No faces, no text, no literal band-photo imagery.",
+    "trace": {
+      "balanced, natural tones": "brightness=2387.4 -> mid",
+      "measured and even in force": "energy=0.2021 -> mid",
+      "an open, uplifted mood": "key=D major",
+      "measured, even movement": "tempo_bpm=123 -> mid",
+      "hints of progressive rock": "sound_tag='Progressive rock'",
+      "hints of rock music": "sound_tag='Rock music'"
+    }
+  },
+  {
+    "song_id": 124,
+    "title": "Yes She Can",
+    "artist": "Marcos H. Bolanos",
+    "genre": "Instrumental",
+    "prompt": "Album art evoking a dark, brooding palette, soft-edged and understated, an open, uplifted mood, a steady, walking pace, resonant piano tones, hints of electric piano. Abstract, textural album art. No faces, no text, no literal band-photo imagery.",
+    "trace": {
+      "a dark, brooding palette": "brightness=767.8 -> low",
+      "soft-edged and understated": "energy=0.1226 -> low",
+      "an open, uplifted mood": "key=D major",
+      "a steady, walking pace": "tempo_bpm=136 -> mid",
+      "resonant piano tones": "sound_tag='Piano'",
+      "hints of electric piano": "sound_tag='Electric piano'"
+    }
+  },
+  {
+    "song_id": 125,
+    "title": "Unfinished Business",
+    "artist": "Squire Tuck",
+    "genre": "Instrumental",
+    "prompt": "Album art evoking dim, low-lit tones, a steady, grounded intensity, a shadowed emotional cast, measured, even movement, plucked string detail, string-driven texture. Abstract, textural album art. No faces, no text, no literal band-photo imagery.",
+    "trace": {
+      "dim, low-lit tones": "brightness=953.0 -> low",
+      "a steady, grounded intensity": "energy=0.2634 -> mid",
+      "a shadowed emotional cast": "key=B minor",
+      "measured, even movement": "tempo_bpm=129 -> mid",
+      "plucked string detail": "sound_tag='Plucked string instrument'",
+      "string-driven texture": "sound_tag='Guitar'"
+    }
+  },
+  {
+    "song_id": 126,
+    "title": "Emina",
+    "artist": "Gogofski",
+    "genre": "International",
+    "prompt": "Album art evoking neither bright nor dark, quiet and restrained, a shadowed emotional cast, languid, floating movement, hints of accordion, hints of singing. Abstract, textural album art. No faces, no text, no literal band-photo imagery.",
+    "trace": {
+      "neither bright nor dark": "brightness=2501.1 -> mid",
+      "quiet and restrained": "energy=0.0727 -> low",
+      "a shadowed emotional cast": "key=A# minor",
+      "languid, floating movement": "tempo_bpm=108 -> low",
+      "hints of accordion": "sound_tag='Accordion'",
+      "hints of singing": "sound_tag='Singing'"
+    }
+  },
+  {
+    "song_id": 127,
+    "title": "Snosti ti Dojdov",
+    "artist": "Niva",
+    "genre": "International",
+    "prompt": "Album art evoking balanced, natural tones, a steady, grounded intensity, an open, uplifted mood, a slow, unhurried pace, hints of folk music, hints of singing. Abstract, textural album art. No faces, no text, no literal band-photo imagery.",
+    "trace": {
+      "balanced, natural tones": "brightness=2788.7 -> mid",
+      "a steady, grounded intensity": "energy=0.1934 -> mid",
+      "an open, uplifted mood": "key=D major",
+      "a slow, unhurried pace": "tempo_bpm=60 -> low",
+      "hints of folk music": "sound_tag='Folk music'",
+      "hints of singing": "sound_tag='Singing'"
+    }
+  },
+  {
+    "song_id": 128,
+    "title": "-Misket",
+    "artist": "Turku, Nomads of the Silk Road",
+    "genre": "International",
+    "prompt": "Album art evoking balanced, natural tones, a hushed, delicate presence, a shadowed emotional cast, measured, even movement, hints of folk music, hints of traditional music. Abstract, textural album art. No faces, no text, no literal band-photo imagery.",
+    "trace": {
+      "balanced, natural tones": "brightness=2811.6 -> mid",
+      "a hushed, delicate presence": "energy=0.1113 -> low",
+      "a shadowed emotional cast": "key=G minor",
+      "measured, even movement": "tempo_bpm=152 -> mid",
+      "hints of folk music": "sound_tag='Folk music'",
+      "hints of traditional music": "sound_tag='Traditional music'"
+    }
+  },
+  {
+    "song_id": 129,
+    "title": "Mairi's Wedding",
+    "artist": "Sl\u00e1inte",
+    "genre": "International",
+    "prompt": "Album art evoking neither bright nor dark, soft-edged and understated, a warm, major-key brightness, a steady, walking pace, hints of bluegrass, hints of violin, fiddle. Abstract, textural album art. No faces, no text, no literal band-photo imagery.",
+    "trace": {
+      "neither bright nor dark": "brightness=1998.2 -> mid",
+      "soft-edged and understated": "energy=0.1053 -> low",
+      "a warm, major-key brightness": "key=F major",
+      "a steady, walking pace": "tempo_bpm=117 -> mid",
+      "hints of bluegrass": "sound_tag='Bluegrass'",
+      "hints of violin, fiddle": "sound_tag='Violin, fiddle'"
+    }
+  },
+  {
+    "song_id": 130,
+    "title": "Restaurant Concert, Song 1",
+    "artist": "Demiran \u0106erimovi\u0107 and His Orkestar",
+    "genre": "International",
+    "prompt": "Album art evoking neither bright nor dark, a hushed, delicate presence, a warm, major-key brightness, measured, even movement, hints of trombone, the shine of brass. Abstract, textural album art. No faces, no text, no literal band-photo imagery.",
+    "trace": {
+      "neither bright nor dark": "brightness=2147.2 -> mid",
+      "a hushed, delicate presence": "energy=0.0878 -> low",
+      "a warm, major-key brightness": "key=A# major",
+      "measured, even movement": "tempo_bpm=152 -> mid",
+      "hints of trombone": "sound_tag='Trombone'",
+      "the shine of brass": "sound_tag='Brass instrument'"
+    }
+  },
+  {
+    "song_id": 131,
+    "title": "7th Sea Dub in Twilight",
+    "artist": "Ras Amerlock meets Professor Balthazar",
+    "genre": "International",
+    "prompt": "Album art evoking a dark, brooding palette, measured and even in force, an optimistic emotional cast, a steady, walking pace, hints of effects unit, string-driven texture. Abstract, textural album art. No faces, no text, no literal band-photo imagery.",
+    "trace": {
+      "a dark, brooding palette": "brightness=1454.0 -> low",
+      "measured and even in force": "energy=0.2305 -> mid",
+      "an optimistic emotional cast": "key=G major",
+      "a steady, walking pace": "tempo_bpm=144 -> mid",
+      "hints of effects unit": "sound_tag='Effects unit'",
+      "string-driven texture": "sound_tag='Guitar'"
+    }
+  },
+  {
+    "song_id": 132,
+    "title": "Au royaume de la money",
+    "artist": "Unity Vibration",
+    "genre": "International",
+    "prompt": "Album art evoking crisp and shimmering light, a steady, grounded intensity, a wistful, introspective mood, a slow, unhurried pace, hints of reggae, hints of music of africa. Abstract, textural album art. No faces, no text, no literal band-photo imagery.",
+    "trace": {
+      "crisp and shimmering light": "brightness=3630.9 -> high",
+      "a steady, grounded intensity": "energy=0.2002 -> mid",
+      "a wistful, introspective mood": "key=F# minor",
+      "a slow, unhurried pace": "tempo_bpm=86 -> low",
+      "hints of reggae": "sound_tag='Reggae'",
+      "hints of music of africa": "sound_tag='Music of Africa'"
+    }
+  },
+  {
+    "song_id": 133,
+    "title": "Dospatsko",
+    "artist": "The Rosen Sisters",
+    "genre": "International",
+    "prompt": "Album art evoking an even, neutral palette, measured and even in force, a warm, major-key brightness, drifting, spacious motion, fine, articulated string texture, the grain of a real guitar. Abstract, textural album art. No faces, no text, no literal band-photo imagery.",
+    "trace": {
+      "an even, neutral palette": "brightness=1893.1 -> mid",
+      "measured and even in force": "energy=0.2142 -> mid",
+      "a warm, major-key brightness": "key=A major",
+      "drifting, spacious motion": "tempo_bpm=103 -> low",
+      "fine, articulated string texture": "sound_tag='Plucked string instrument'",
+      "the grain of a real guitar": "sound_tag='Guitar'"
+    }
+  },
+  {
+    "song_id": 134,
+    "title": "Paris Ballade",
+    "artist": "Dana Boul\u00e9",
+    "genre": "International",
+    "prompt": "Album art evoking muted and murky hues, soft-edged and understated, an open, uplifted mood, a steady, walking pace, hints of accordion, hints of video game music. Abstract, textural album art. No faces, no text, no literal band-photo imagery.",
+    "trace": {
+      "muted and murky hues": "brightness=1466.4 -> low",
+      "soft-edged and understated": "energy=0.0706 -> low",
+      "an open, uplifted mood": "key=G major",
+      "a steady, walking pace": "tempo_bpm=144 -> mid",
+      "hints of accordion": "sound_tag='Accordion'",
+      "hints of video game music": "sound_tag='Video game music'"
+    }
+  },
+  {
+    "song_id": 135,
+    "title": "Prodzo Selo",
+    "artist": "Zlatne Uste Balkan Brass Band",
+    "genre": "International",
+    "prompt": "Album art evoking a dark, brooding palette, measured and even in force, a wistful, introspective mood, drifting, spacious motion, bright, blaring brass, hints of trombone. Abstract, textural album art. No faces, no text, no literal band-photo imagery.",
+    "trace": {
+      "a dark, brooding palette": "brightness=1371.5 -> low",
+      "measured and even in force": "energy=0.1930 -> mid",
+      "a wistful, introspective mood": "key=D minor",
+      "drifting, spacious motion": "tempo_bpm=112 -> low",
+      "bright, blaring brass": "sound_tag='Brass instrument'",
+      "hints of trombone": "sound_tag='Trombone'"
+    }
+  },
+  {
+    "song_id": 136,
+    "title": "Piece de Tarita",
+    "artist": "Eastern Watershed Klezmer Quartet",
+    "genre": "International",
+    "prompt": "Album art evoking neither bright nor dark, a hushed, delicate presence, an optimistic emotional cast, a steady, walking pace, hints of trombone, the shine of brass. Abstract, textural album art. No faces, no text, no literal band-photo imagery.",
+    "trace": {
+      "neither bright nor dark": "brightness=1921.0 -> mid",
+      "a hushed, delicate presence": "energy=0.0950 -> low",
+      "an optimistic emotional cast": "key=D major",
+      "a steady, walking pace": "tempo_bpm=144 -> mid",
+      "hints of trombone": "sound_tag='Trombone'",
+      "the shine of brass": "sound_tag='Brass instrument'"
+    }
+  },
+  {
+    "song_id": 137,
+    "title": "No lyrics",
+    "artist": "In De Nadfin",
+    "genre": "International",
+    "prompt": "Album art evoking balanced, natural tones, a steady, grounded intensity, a wistful, introspective mood, urgent, driving motion, hints of fowl, hints of turkey. Abstract, textural album art. No faces, no text, no literal band-photo imagery.",
+    "trace": {
+      "balanced, natural tones": "brightness=2083.5 -> mid",
+      "a steady, grounded intensity": "energy=0.2296 -> mid",
+      "a wistful, introspective mood": "key=E minor",
+      "urgent, driving motion": "tempo_bpm=199 -> high",
+      "hints of fowl": "sound_tag='Fowl'",
+      "hints of turkey": "sound_tag='Turkey'"
+    }
+  },
+  {
+    "song_id": 138,
+    "title": "[interview]",
+    "artist": "Zlatne Uste Balkan Brass Band",
+    "genre": "International",
+    "prompt": "Album art evoking balanced, natural tones, a hushed, delicate presence, a wistful, introspective mood, measured, even movement, hints of narration, monologue, hints of conversation. Abstract, textural album art. No faces, no text, no literal band-photo imagery.",
+    "trace": {
+      "balanced, natural tones": "brightness=1745.6 -> mid",
+      "a hushed, delicate presence": "energy=0.0806 -> low",
+      "a wistful, introspective mood": "key=A minor",
+      "measured, even movement": "tempo_bpm=117 -> mid",
+      "hints of narration, monologue": "sound_tag='Narration, monologue'",
+      "hints of conversation": "sound_tag='Conversation'"
+    }
+  },
+  {
+    "song_id": 139,
+    "title": "Nina Olga Vodka",
+    "artist": "Polka Madre",
+    "genre": "International",
+    "prompt": "Album art evoking balanced, natural tones, soft-edged and understated, an optimistic emotional cast, measured, even movement, hints of ska, hints of swing music. Abstract, textural album art. No faces, no text, no literal band-photo imagery.",
+    "trace": {
+      "balanced, natural tones": "brightness=1651.8 -> mid",
+      "soft-edged and understated": "energy=0.0998 -> low",
+      "an optimistic emotional cast": "key=F major",
+      "measured, even movement": "tempo_bpm=123 -> mid",
+      "hints of ska": "sound_tag='Ska'",
+      "hints of swing music": "sound_tag='Swing music'"
+    }
+  },
+  {
+    "song_id": 140,
+    "title": "Different Feelings",
+    "artist": "StrangeZero",
+    "genre": "International",
+    "prompt": "Album art evoking balanced, natural tones, quiet and restrained, a wistful, introspective mood, a steady, walking pace, electronic, machine-made texture, hints of electronica. Abstract, textural album art. No faces, no text, no literal band-photo imagery.",
+    "trace": {
+      "balanced, natural tones": "brightness=2365.2 -> mid",
+      "quiet and restrained": "energy=0.1019 -> low",
+      "a wistful, introspective mood": "key=A minor",
+      "a steady, walking pace": "tempo_bpm=117 -> mid",
+      "electronic, machine-made texture": "sound_tag='Electronic music'",
+      "hints of electronica": "sound_tag='Electronica'"
+    }
+  },
+  {
+    "song_id": 141,
+    "title": "Digital system",
+    "artist": "Garage firm",
+    "genre": "International",
+    "prompt": "Album art evoking neither bright nor dark, a steady, grounded intensity, a shadowed emotional cast, measured, even movement, hints of reggae, hints of drum machine. Abstract, textural album art. No faces, no text, no literal band-photo imagery.",
+    "trace": {
+      "neither bright nor dark": "brightness=1906.7 -> mid",
+      "a steady, grounded intensity": "energy=0.2379 -> mid",
+      "a shadowed emotional cast": "key=F# minor",
+      "measured, even movement": "tempo_bpm=172 -> mid",
+      "hints of reggae": "sound_tag='Reggae'",
+      "hints of drum machine": "sound_tag='Drum machine'"
+    }
+  },
+  {
+    "song_id": 142,
+    "title": "Chacha Dub",
+    "artist": "DuBoLoGy",
+    "genre": "International",
+    "prompt": "Album art evoking neither bright nor dark, measured and even in force, an open, uplifted mood, measured, even movement, synthetic production, cold synthesizer tones. Abstract, textural album art. No faces, no text, no literal band-photo imagery.",
+    "trace": {
+      "neither bright nor dark": "brightness=2386.8 -> mid",
+      "measured and even in force": "energy=0.2440 -> mid",
+      "an open, uplifted mood": "key=D major",
+      "measured, even movement": "tempo_bpm=152 -> mid",
+      "synthetic production": "sound_tag='Electronic music'",
+      "cold synthesizer tones": "sound_tag='Synthesizer'"
+    }
+  },
+  {
+    "song_id": 143,
+    "title": "Ibish Aga",
+    "artist": "Black Sea Hotel",
+    "genre": "International",
+    "prompt": "Album art evoking balanced, natural tones, quiet and restrained, an open, uplifted mood, a slow, unhurried pace, hints of a capella, hints of singing. Abstract, textural album art. No faces, no text, no literal band-photo imagery.",
+    "trace": {
+      "balanced, natural tones": "brightness=1930.4 -> mid",
+      "quiet and restrained": "energy=0.0907 -> low",
+      "an open, uplifted mood": "key=G# major",
+      "a slow, unhurried pace": "tempo_bpm=92 -> low",
+      "hints of a capella": "sound_tag='A capella'",
+      "hints of singing": "sound_tag='Singing'"
+    }
+  },
+  {
+    "song_id": 144,
+    "title": "Atento",
+    "artist": "La Ine\u0301dita",
+    "genre": "International",
+    "prompt": "Album art evoking an even, neutral palette, a steady, grounded intensity, a warm, major-key brightness, a steady, walking pace, percussive textures, kit-driven percussion. Abstract, textural album art. No faces, no text, no literal band-photo imagery.",
+    "trace": {
+      "an even, neutral palette": "brightness=1732.8 -> mid",
+      "a steady, grounded intensity": "energy=0.1699 -> mid",
+      "a warm, major-key brightness": "key=F# major",
+      "a steady, walking pace": "tempo_bpm=144 -> mid",
+      "percussive textures": "sound_tag='Drum'",
+      "kit-driven percussion": "sound_tag='Drum kit'"
+    }
+  },
+  {
+    "song_id": 145,
+    "title": "Malka Moma",
+    "artist": "Black Sea Hotel",
+    "genre": "International",
+    "prompt": "Album art evoking an even, neutral palette, bold, saturated energy, a somber, minor-key undertone, measured, even movement, hints of a capella, hints of vocal music. Abstract, textural album art. No faces, no text, no literal band-photo imagery.",
+    "trace": {
+      "an even, neutral palette": "brightness=1913.9 -> mid",
+      "bold, saturated energy": "energy=0.3717 -> high",
+      "a somber, minor-key undertone": "key=F minor",
+      "measured, even movement": "tempo_bpm=185 -> mid",
+      "hints of a capella": "sound_tag='A capella'",
+      "hints of vocal music": "sound_tag='Vocal music'"
+    }
+  },
+  {
+    "song_id": 146,
+    "title": "Tchakare Kanyembe track 03",
+    "artist": "Tchakare Kanyembe",
+    "genre": "International",
+    "prompt": "Album art evoking dim, low-lit tones, quiet and restrained, a shadowed emotional cast, drifting, spacious motion, hints of swing music, hints of ska. Abstract, textural album art. No faces, no text, no literal band-photo imagery.",
+    "trace": {
+      "dim, low-lit tones": "brightness=1388.7 -> low",
+      "quiet and restrained": "energy=0.1190 -> low",
+      "a shadowed emotional cast": "key=G minor",
+      "drifting, spacious motion": "tempo_bpm=108 -> low",
+      "hints of swing music": "sound_tag='Swing music'",
+      "hints of ska": "sound_tag='Ska'"
+    }
+  },
+  {
+    "song_id": 147,
+    "title": "Ne Si Jo Prodavaj Chiflikot",
+    "artist": "Gogofski",
+    "genre": "International",
+    "prompt": "Album art evoking neither bright nor dark, soft-edged and understated, a somber, minor-key undertone, measured, even movement, hints of accordion, hints of yodeling. Abstract, textural album art. No faces, no text, no literal band-photo imagery.",
+    "trace": {
+      "neither bright nor dark": "brightness=2117.1 -> mid",
+      "soft-edged and understated": "energy=0.0626 -> low",
+      "a somber, minor-key undertone": "key=D minor",
+      "measured, even movement": "tempo_bpm=152 -> mid",
+      "hints of accordion": "sound_tag='Accordion'",
+      "hints of yodeling": "sound_tag='Yodeling'"
+    }
+  },
+  {
+    "song_id": 148,
+    "title": "The Beast Inside",
+    "artist": "303db",
+    "genre": "International",
+    "prompt": "Album art evoking an even, neutral palette, a steady, grounded intensity, a shadowed emotional cast, measured, even movement, synthetic production, hints of drum and bass. Abstract, textural album art. No faces, no text, no literal band-photo imagery.",
+    "trace": {
+      "an even, neutral palette": "brightness=2619.6 -> mid",
+      "a steady, grounded intensity": "energy=0.2299 -> mid",
+      "a shadowed emotional cast": "key=D# minor",
+      "measured, even movement": "tempo_bpm=185 -> mid",
+      "synthetic production": "sound_tag='Electronic music'",
+      "hints of drum and bass": "sound_tag='Drum and bass'"
+    }
+  },
+  {
+    "song_id": 149,
+    "title": "Tsymbaly Solo",
+    "artist": "Koliadnyky of Kryvorivnia",
+    "genre": "International",
+    "prompt": "Album art evoking balanced, natural tones, quiet and restrained, a warm, major-key brightness, measured, even movement, hints of zither, hints of mandolin. Abstract, textural album art. No faces, no text, no literal band-photo imagery.",
+    "trace": {
+      "balanced, natural tones": "brightness=2672.3 -> mid",
+      "quiet and restrained": "energy=0.1387 -> low",
+      "a warm, major-key brightness": "key=C major",
+      "measured, even movement": "tempo_bpm=185 -> mid",
+      "hints of zither": "sound_tag='Zither'",
+      "hints of mandolin": "sound_tag='Mandolin'"
+    }
+  },
+  {
+    "song_id": 150,
+    "title": "H\u00fczzam Kanun Taksim",
+    "artist": "Ehl-i Keyif",
+    "genre": "International",
+    "prompt": "Album art evoking an even, neutral palette, a hushed, delicate presence, an open, uplifted mood, a steady, walking pace, hints of mandolin, hints of zither. Abstract, textural album art. No faces, no text, no literal band-photo imagery.",
+    "trace": {
+      "an even, neutral palette": "brightness=1738.2 -> mid",
+      "a hushed, delicate presence": "energy=0.0898 -> low",
+      "an open, uplifted mood": "key=A major",
+      "a steady, walking pace": "tempo_bpm=123 -> mid",
+      "hints of mandolin": "sound_tag='Mandolin'",
+      "hints of zither": "sound_tag='Zither'"
+    }
+  },
+  {
+    "song_id": 151,
+    "title": "Beam Chaser",
+    "artist": "Phemale",
+    "genre": "Pop",
+    "prompt": "Album art evoking neither bright nor dark, measured and even in force, a shadowed emotional cast, languid, floating movement. Abstract, textural album art. No faces, no text, no literal band-photo imagery.",
+    "trace": {
+      "neither bright nor dark": "brightness=1907.8 -> mid",
+      "measured and even in force": "energy=0.2258 -> mid",
+      "a shadowed emotional cast": "key=F# minor",
+      "languid, floating movement": "tempo_bpm=92 -> low"
+    }
+  },
+  {
+    "song_id": 152,
+    "title": "Spanish BEEEYYAAACHHH",
+    "artist": "Malaventura",
+    "genre": "Pop",
+    "prompt": "Album art evoking an even, neutral palette, a steady, grounded intensity, a wistful, introspective mood, a steady, walking pace, a full drum kit's presence, percussive textures. Abstract, textural album art. No faces, no text, no literal band-photo imagery.",
+    "trace": {
+      "an even, neutral palette": "brightness=2587.3 -> mid",
+      "a steady, grounded intensity": "energy=0.1683 -> mid",
+      "a wistful, introspective mood": "key=A minor",
+      "a steady, walking pace": "tempo_bpm=152 -> mid",
+      "a full drum kit's presence": "sound_tag='Drum kit'",
+      "percussive textures": "sound_tag='Drum'"
+    }
+  },
+  {
+    "song_id": 153,
+    "title": "Jump Rope",
+    "artist": "Gingerlys",
+    "genre": "Pop",
+    "prompt": "Album art evoking an even, neutral palette, a steady, grounded intensity, an open, uplifted mood, drifting, spacious motion, hints of psychedelic rock, hints of independent music. Abstract, textural album art. No faces, no text, no literal band-photo imagery.",
+    "trace": {
+      "an even, neutral palette": "brightness=1758.9 -> mid",
+      "a steady, grounded intensity": "energy=0.2505 -> mid",
+      "an open, uplifted mood": "key=C# major",
+      "drifting, spacious motion": "tempo_bpm=89 -> low",
+      "hints of psychedelic rock": "sound_tag='Psychedelic rock'",
+      "hints of independent music": "sound_tag='Independent music'"
+    }
+  },
+  {
+    "song_id": 154,
+    "title": "....like bacon sundays",
+    "artist": "luc",
+    "genre": "Pop",
+    "prompt": "Album art evoking balanced, natural tones, measured and even in force, a warm, major-key brightness, a steady, walking pace, hints of flamenco, string-driven texture. Abstract, textural album art. No faces, no text, no literal band-photo imagery.",
+    "trace": {
+      "balanced, natural tones": "brightness=2196.4 -> mid",
+      "measured and even in force": "energy=0.2244 -> mid",
+      "a warm, major-key brightness": "key=C# major",
+      "a steady, walking pace": "tempo_bpm=161 -> mid",
+      "hints of flamenco": "sound_tag='Flamenco'",
+      "string-driven texture": "sound_tag='Guitar'"
+    }
+  },
+  {
+    "song_id": 155,
+    "title": "Back On The Train",
+    "artist": "Frozen Houses",
+    "genre": "Pop",
+    "prompt": "Album art evoking neither bright nor dark, measured and even in force, a shadowed emotional cast, measured, even movement, rural, string-driven warmth, hints of bluegrass. Abstract, textural album art. No faces, no text, no literal band-photo imagery.",
+    "trace": {
+      "neither bright nor dark": "brightness=1736.0 -> mid",
+      "measured and even in force": "energy=0.2634 -> mid",
+      "a shadowed emotional cast": "key=G minor",
+      "measured, even movement": "tempo_bpm=129 -> mid",
+      "rural, string-driven warmth": "sound_tag='Country'",
+      "hints of bluegrass": "sound_tag='Bluegrass'"
+    }
+  },
+  {
+    "song_id": 156,
+    "title": "Bad Apples",
+    "artist": "Phemale",
+    "genre": "Pop",
+    "prompt": "Album art evoking muted and murky hues, measured and even in force, an optimistic emotional cast, a steady, walking pace, hints of rock music, hints of singing. Abstract, textural album art. No faces, no text, no literal band-photo imagery.",
+    "trace": {
+      "muted and murky hues": "brightness=1426.4 -> low",
+      "measured and even in force": "energy=0.2427 -> mid",
+      "an optimistic emotional cast": "key=G# major",
+      "a steady, walking pace": "tempo_bpm=136 -> mid",
+      "hints of rock music": "sound_tag='Rock music'",
+      "hints of singing": "sound_tag='Singing'"
+    }
+  },
+  {
+    "song_id": 157,
+    "title": "wuzzah monster",
+    "artist": "Boonesboro",
+    "genre": "Pop",
+    "prompt": "Album art evoking neither bright nor dark, a hushed, delicate presence, an open, uplifted mood, a steady, walking pace, hints of singing, hints of psychedelic rock. Abstract, textural album art. No faces, no text, no literal band-photo imagery.",
+    "trace": {
+      "neither bright nor dark": "brightness=1766.6 -> mid",
+      "a hushed, delicate presence": "energy=0.1391 -> low",
+      "an open, uplifted mood": "key=F major",
+      "a steady, walking pace": "tempo_bpm=117 -> mid",
+      "hints of singing": "sound_tag='Singing'",
+      "hints of psychedelic rock": "sound_tag='Psychedelic rock'"
+    }
+  },
+  {
+    "song_id": 158,
+    "title": "Malta",
+    "artist": "Superhumanoids",
+    "genre": "Pop",
+    "prompt": "Album art evoking neither bright nor dark, a steady, grounded intensity, an open, uplifted mood, a steady, walking pace, synthetic production, hints of techno. Abstract, textural album art. No faces, no text, no literal band-photo imagery.",
+    "trace": {
+      "neither bright nor dark": "brightness=2298.1 -> mid",
+      "a steady, grounded intensity": "energy=0.2628 -> mid",
+      "an open, uplifted mood": "key=F major",
+      "a steady, walking pace": "tempo_bpm=152 -> mid",
+      "synthetic production": "sound_tag='Electronic music'",
+      "hints of techno": "sound_tag='Techno'"
+    }
+  },
+  {
+    "song_id": 159,
+    "title": "With the Summer",
+    "artist": "Oh Yeah, the Future",
+    "genre": "Pop",
+    "prompt": "Album art evoking an even, neutral palette, forceful and dense, an optimistic emotional cast, measured, even movement, hints of grunge, hints of rock music. Abstract, textural album art. No faces, no text, no literal band-photo imagery.",
+    "trace": {
+      "an even, neutral palette": "brightness=2239.4 -> mid",
+      "forceful and dense": "energy=0.3847 -> high",
+      "an optimistic emotional cast": "key=A major",
+      "measured, even movement": "tempo_bpm=136 -> mid",
+      "hints of grunge": "sound_tag='Grunge'",
+      "hints of rock music": "sound_tag='Rock music'"
+    }
+  },
+  {
+    "song_id": 160,
+    "title": "Whole Lot Of Louvre",
+    "artist": "Total Unicorn",
+    "genre": "Pop",
+    "prompt": "Album art evoking shrouded in shadow, bold, saturated energy, a warm, major-key brightness, drifting, spacious motion, electronic, machine-made texture, beat-driven, rhythmic drive. Abstract, textural album art. No faces, no text, no literal band-photo imagery.",
+    "trace": {
+      "shrouded in shadow": "brightness=1592.2 -> low",
+      "bold, saturated energy": "energy=0.3316 -> high",
+      "a warm, major-key brightness": "key=F# major",
+      "drifting, spacious motion": "tempo_bpm=99 -> low",
+      "electronic, machine-made texture": "sound_tag='Electronic music'",
+      "beat-driven, rhythmic drive": "sound_tag='Hip hop music'"
+    }
+  },
+  {
+    "song_id": 161,
+    "title": "City Lights",
+    "artist": "Skeleton Hands",
+    "genre": "Pop",
+    "prompt": "Album art evoking neither bright nor dark, quiet and restrained, an optimistic emotional cast, a steady, walking pace, hints of trance music, electronic, machine-made texture. Abstract, textural album art. No faces, no text, no literal band-photo imagery.",
+    "trace": {
+      "neither bright nor dark": "brightness=1890.5 -> mid",
+      "quiet and restrained": "energy=0.1239 -> low",
+      "an optimistic emotional cast": "key=E major",
+      "a steady, walking pace": "tempo_bpm=123 -> mid",
+      "hints of trance music": "sound_tag='Trance music'",
+      "electronic, machine-made texture": "sound_tag='Electronic music'"
+    }
+  },
+  {
+    "song_id": 162,
+    "title": "B08 Mario",
+    "artist": "Mom Jeans",
+    "genre": "Pop",
+    "prompt": "Album art evoking balanced, natural tones, a steady, grounded intensity, a shadowed emotional cast, a steady, walking pace, hints of grunge, hints of rock and roll. Abstract, textural album art. No faces, no text, no literal band-photo imagery.",
+    "trace": {
+      "balanced, natural tones": "brightness=2384.8 -> mid",
+      "a steady, grounded intensity": "energy=0.1957 -> mid",
+      "a shadowed emotional cast": "key=B minor",
+      "a steady, walking pace": "tempo_bpm=123 -> mid",
+      "hints of grunge": "sound_tag='Grunge'",
+      "hints of rock and roll": "sound_tag='Rock and roll'"
+    }
+  },
+  {
+    "song_id": 163,
+    "title": "Ambulance",
+    "artist": "Coco Morier",
+    "genre": "Pop",
+    "prompt": "Album art evoking neither bright nor dark, soft-edged and understated, a warm, major-key brightness, a steady, walking pace, hints of singing, hints of jingle bell. Abstract, textural album art. No faces, no text, no literal band-photo imagery.",
+    "trace": {
+      "neither bright nor dark": "brightness=1903.3 -> mid",
+      "soft-edged and understated": "energy=0.1358 -> low",
+      "a warm, major-key brightness": "key=C# major",
+      "a steady, walking pace": "tempo_bpm=117 -> mid",
+      "hints of singing": "sound_tag='Singing'",
+      "hints of jingle bell": "sound_tag='Jingle bell'"
+    }
+  },
+  {
+    "song_id": 164,
+    "title": "Dites 33",
+    "artist": "Manuel Duval",
+    "genre": "Pop",
+    "prompt": "Album art evoking shrouded in shadow, measured and even in force, a warm, major-key brightness, measured, even movement, synthetic production, cold synthesizer tones. Abstract, textural album art. No faces, no text, no literal band-photo imagery.",
+    "trace": {
+      "shrouded in shadow": "brightness=1581.6 -> low",
+      "measured and even in force": "energy=0.2645 -> mid",
+      "a warm, major-key brightness": "key=C# major",
+      "measured, even movement": "tempo_bpm=117 -> mid",
+      "synthetic production": "sound_tag='Electronic music'",
+      "cold synthesizer tones": "sound_tag='Synthesizer'"
+    }
+  },
+  {
+    "song_id": 165,
+    "title": "nitemare",
+    "artist": "The Carnys",
+    "genre": "Pop",
+    "prompt": "Album art evoking balanced, natural tones, a steady, grounded intensity, a shadowed emotional cast, measured, even movement, hints of independent music, a full drum kit's presence. Abstract, textural album art. No faces, no text, no literal band-photo imagery.",
+    "trace": {
+      "balanced, natural tones": "brightness=2533.1 -> mid",
+      "a steady, grounded intensity": "energy=0.2195 -> mid",
+      "a shadowed emotional cast": "key=F minor",
+      "measured, even movement": "tempo_bpm=152 -> mid",
+      "hints of independent music": "sound_tag='Independent music'",
+      "a full drum kit's presence": "sound_tag='Drum kit'"
+    }
+  },
+  {
+    "song_id": 166,
+    "title": "Waiting Until Then",
+    "artist": "Ready for Men",
+    "genre": "Pop",
+    "prompt": "Album art evoking balanced, natural tones, measured and even in force, a wistful, introspective mood, a steady, walking pace, hints of sampler, hints of funk. Abstract, textural album art. No faces, no text, no literal band-photo imagery.",
+    "trace": {
+      "balanced, natural tones": "brightness=2567.2 -> mid",
+      "measured and even in force": "energy=0.1689 -> mid",
+      "a wistful, introspective mood": "key=D# minor",
+      "a steady, walking pace": "tempo_bpm=117 -> mid",
+      "hints of sampler": "sound_tag='Sampler'",
+      "hints of funk": "sound_tag='Funk'"
+    }
+  },
+  {
+    "song_id": 167,
+    "title": "Destroy She Says",
+    "artist": "ZOE.LEELA",
+    "genre": "Pop",
+    "prompt": "Album art evoking balanced, natural tones, a steady, grounded intensity, a wistful, introspective mood, measured, even movement, synthetic production, hints of afrobeat. Abstract, textural album art. No faces, no text, no literal band-photo imagery.",
+    "trace": {
+      "balanced, natural tones": "brightness=1661.4 -> mid",
+      "a steady, grounded intensity": "energy=0.3072 -> mid",
+      "a wistful, introspective mood": "key=E minor",
+      "measured, even movement": "tempo_bpm=123 -> mid",
+      "synthetic production": "sound_tag='Electronic music'",
+      "hints of afrobeat": "sound_tag='Afrobeat'"
+    }
+  },
+  {
+    "song_id": 168,
+    "title": "Harmony To My Heartbeat",
+    "artist": "Sally Seltmann",
+    "genre": "Pop",
+    "prompt": "Album art evoking neither bright nor dark, a steady, grounded intensity, an optimistic emotional cast, measured, even movement, hints of lullaby, the ring of struck piano strings. Abstract, textural album art. No faces, no text, no literal band-photo imagery.",
+    "trace": {
+      "neither bright nor dark": "brightness=1702.4 -> mid",
+      "a steady, grounded intensity": "energy=0.2493 -> mid",
+      "an optimistic emotional cast": "key=C major",
+      "measured, even movement": "tempo_bpm=123 -> mid",
+      "hints of lullaby": "sound_tag='Lullaby'",
+      "the ring of struck piano strings": "sound_tag='Piano'"
+    }
+  },
+  {
+    "song_id": 169,
+    "title": "Catfishes",
+    "artist": "Poland",
+    "genre": "Pop",
+    "prompt": "Album art evoking an even, neutral palette, a steady, grounded intensity, an optimistic emotional cast, a steady, walking pace, hints of whack, thwack, hints of smash, crash. Abstract, textural album art. No faces, no text, no literal band-photo imagery.",
+    "trace": {
+      "an even, neutral palette": "brightness=1712.0 -> mid",
+      "a steady, grounded intensity": "energy=0.2857 -> mid",
+      "an optimistic emotional cast": "key=F major",
+      "a steady, walking pace": "tempo_bpm=117 -> mid",
+      "hints of whack, thwack": "sound_tag='Whack, thwack'",
+      "hints of smash, crash": "sound_tag='Smash, crash'"
+    }
+  },
+  {
+    "song_id": 170,
+    "title": "Island Grows",
+    "artist": "Airships",
+    "genre": "Pop",
+    "prompt": "Album art evoking a bright, sunlit palette, measured and even in force, a warm, major-key brightness, a steady, walking pace, hints of singing, hints of vocal music. Abstract, textural album art. No faces, no text, no literal band-photo imagery.",
+    "trace": {
+      "a bright, sunlit palette": "brightness=3294.8 -> high",
+      "measured and even in force": "energy=0.2431 -> mid",
+      "a warm, major-key brightness": "key=B major",
+      "a steady, walking pace": "tempo_bpm=123 -> mid",
+      "hints of singing": "sound_tag='Singing'",
+      "hints of vocal music": "sound_tag='Vocal music'"
+    }
+  },
+  {
+    "song_id": 171,
+    "title": "B07 Ya Dumb Bitch",
+    "artist": "Mom Jeans",
+    "genre": "Pop",
+    "prompt": "Album art evoking neither bright nor dark, measured and even in force, a warm, major-key brightness, a slow, unhurried pace, hints of punk rock, hints of grunge. Abstract, textural album art. No faces, no text, no literal band-photo imagery.",
+    "trace": {
+      "neither bright nor dark": "brightness=2486.5 -> mid",
+      "measured and even in force": "energy=0.1978 -> mid",
+      "a warm, major-key brightness": "key=F# major",
+      "a slow, unhurried pace": "tempo_bpm=92 -> low",
+      "hints of punk rock": "sound_tag='Punk rock'",
+      "hints of grunge": "sound_tag='Grunge'"
+    }
+  },
+  {
+    "song_id": 172,
+    "title": "Let's Go Dutch",
+    "artist": "Soft Serve",
+    "genre": "Pop",
+    "prompt": "Album art evoking a dark, brooding palette, quiet and restrained, a somber, minor-key undertone, measured, even movement, hints of keyboard (musical), the ring of struck piano strings. Abstract, textural album art. No faces, no text, no literal band-photo imagery.",
+    "trace": {
+      "a dark, brooding palette": "brightness=1613.5 -> low",
+      "quiet and restrained": "energy=0.1151 -> low",
+      "a somber, minor-key undertone": "key=G# minor",
+      "measured, even movement": "tempo_bpm=123 -> mid",
+      "hints of keyboard (musical)": "sound_tag='Keyboard (musical)'",
+      "the ring of struck piano strings": "sound_tag='Piano'"
+    }
+  },
+  {
+    "song_id": 173,
+    "title": "Refazendo",
+    "artist": "Boogarins",
+    "genre": "Pop",
+    "prompt": "Album art evoking an even, neutral palette, measured and even in force, an optimistic emotional cast, languid, floating movement, hints of psychedelic rock, hints of rock music. Abstract, textural album art. No faces, no text, no literal band-photo imagery.",
+    "trace": {
+      "an even, neutral palette": "brightness=2084.1 -> mid",
+      "measured and even in force": "energy=0.2298 -> mid",
+      "an optimistic emotional cast": "key=E major",
+      "languid, floating movement": "tempo_bpm=96 -> low",
+      "hints of psychedelic rock": "sound_tag='Psychedelic rock'",
+      "hints of rock music": "sound_tag='Rock music'"
+    }
+  },
+  {
+    "song_id": 174,
+    "title": "Alien Pops Trilogy (featuring Midas)",
+    "artist": "FortyOne",
+    "genre": "Pop",
+    "prompt": "Album art evoking balanced, natural tones, a powerful, driving intensity, a somber, minor-key undertone, measured, even movement, hints of narration, monologue, hints of heart sounds, heartbeat. Abstract, textural album art. No faces, no text, no literal band-photo imagery.",
+    "trace": {
+      "balanced, natural tones": "brightness=2114.3 -> mid",
+      "a powerful, driving intensity": "energy=0.3761 -> high",
+      "a somber, minor-key undertone": "key=C# minor",
+      "measured, even movement": "tempo_bpm=129 -> mid",
+      "hints of narration, monologue": "sound_tag='Narration, monologue'",
+      "hints of heart sounds, heartbeat": "sound_tag='Heart sounds, heartbeat'"
+    }
+  },
+  {
+    "song_id": 175,
+    "title": "Humus",
+    "artist": "Unthunk",
+    "genre": "Pop",
+    "prompt": "Album art evoking muted and murky hues, quiet and restrained, an open, uplifted mood, languid, floating movement, hints of wood block, hints of cowbell. Abstract, textural album art. No faces, no text, no literal band-photo imagery.",
+    "trace": {
+      "muted and murky hues": "brightness=1166.9 -> low",
+      "quiet and restrained": "energy=0.1324 -> low",
+      "an open, uplifted mood": "key=F major",
+      "languid, floating movement": "tempo_bpm=83 -> low",
+      "hints of wood block": "sound_tag='Wood block'",
+      "hints of cowbell": "sound_tag='Cowbell'"
+    }
+  },
+  {
+    "song_id": 176,
+    "title": "Gonzo",
+    "artist": "Jahzzar",
+    "genre": "Rock",
+    "prompt": "Album art evoking balanced, natural tones, a steady, grounded intensity, a somber, minor-key undertone, a slow, unhurried pace, hints of progressive rock, hints of heavy metal. Abstract, textural album art. No faces, no text, no literal band-photo imagery.",
+    "trace": {
+      "balanced, natural tones": "brightness=2506.9 -> mid",
+      "a steady, grounded intensity": "energy=0.1644 -> mid",
+      "a somber, minor-key undertone": "key=E minor",
+      "a slow, unhurried pace": "tempo_bpm=99 -> low",
+      "hints of progressive rock": "sound_tag='Progressive rock'",
+      "hints of heavy metal": "sound_tag='Heavy metal'"
+    }
+  },
+  {
+    "song_id": 177,
+    "title": "Beggin' Dogs",
+    "artist": "Obits",
+    "genre": "Rock",
+    "prompt": "Album art evoking dim, low-lit tones, measured and even in force, a wistful, introspective mood, languid, floating movement, hints of rock music, hints of punk rock. Abstract, textural album art. No faces, no text, no literal band-photo imagery.",
+    "trace": {
+      "dim, low-lit tones": "brightness=1342.3 -> low",
+      "measured and even in force": "energy=0.2328 -> mid",
+      "a wistful, introspective mood": "key=G minor",
+      "languid, floating movement": "tempo_bpm=89 -> low",
+      "hints of rock music": "sound_tag='Rock music'",
+      "hints of punk rock": "sound_tag='Punk rock'"
+    }
+  },
+  {
+    "song_id": 178,
+    "title": "Beautiful Day",
+    "artist": "TIGERBERRY",
+    "genre": "Rock",
+    "prompt": "Album art evoking balanced, natural tones, measured and even in force, a shadowed emotional cast, a slow, unhurried pace, hints of grunge, hints of rock music. Abstract, textural album art. No faces, no text, no literal band-photo imagery.",
+    "trace": {
+      "balanced, natural tones": "brightness=2331.9 -> mid",
+      "measured and even in force": "energy=0.3090 -> mid",
+      "a shadowed emotional cast": "key=D minor",
+      "a slow, unhurried pace": "tempo_bpm=86 -> low",
+      "hints of grunge": "sound_tag='Grunge'",
+      "hints of rock music": "sound_tag='Rock music'"
+    }
+  },
+  {
+    "song_id": 179,
+    "title": "Ballada Bezbo\u017cna",
+    "artist": "Metalmorphosis",
+    "genre": "Rock",
+    "prompt": "Album art evoking sharp, glinting highlights, a steady, grounded intensity, a somber, minor-key undertone, a slow, unhurried pace, hints of heavy metal, kit-driven percussion. Abstract, textural album art. No faces, no text, no literal band-photo imagery.",
+    "trace": {
+      "sharp, glinting highlights": "brightness=2900.1 -> high",
+      "a steady, grounded intensity": "energy=0.2940 -> mid",
+      "a somber, minor-key undertone": "key=B minor",
+      "a slow, unhurried pace": "tempo_bpm=99 -> low",
+      "hints of heavy metal": "sound_tag='Heavy metal'",
+      "kit-driven percussion": "sound_tag='Drum kit'"
+    }
+  },
+  {
+    "song_id": 180,
+    "title": "BlackBox Red at Vondelbunker",
+    "artist": "BlackBox Red",
+    "genre": "Rock",
+    "prompt": "Album art evoking balanced, natural tones, quiet and restrained, an optimistic emotional cast, a slow, unhurried pace, hints of rock and roll, hints of rock music. Abstract, textural album art. No faces, no text, no literal band-photo imagery.",
+    "trace": {
+      "balanced, natural tones": "brightness=1800.6 -> mid",
+      "quiet and restrained": "energy=0.1426 -> low",
+      "an optimistic emotional cast": "key=E major",
+      "a slow, unhurried pace": "tempo_bpm=86 -> low",
+      "hints of rock and roll": "sound_tag='Rock and roll'",
+      "hints of rock music": "sound_tag='Rock music'"
+    }
+  },
+  {
+    "song_id": 181,
+    "title": "La nature se d\u00e9cha\u00eene",
+    "artist": "Taulard",
+    "genre": "Rock",
+    "prompt": "Album art evoking neither bright nor dark, a steady, grounded intensity, an open, uplifted mood, drifting, spacious motion, the pulse of real drums, a full drum kit's presence. Abstract, textural album art. No faces, no text, no literal band-photo imagery.",
+    "trace": {
+      "neither bright nor dark": "brightness=2370.1 -> mid",
+      "a steady, grounded intensity": "energy=0.2369 -> mid",
+      "an open, uplifted mood": "key=B major",
+      "drifting, spacious motion": "tempo_bpm=108 -> low",
+      "the pulse of real drums": "sound_tag='Drum'",
+      "a full drum kit's presence": "sound_tag='Drum kit'"
+    }
+  },
+  {
+    "song_id": 182,
+    "title": "Slender Man",
+    "artist": "Voodoo Puppets",
+    "genre": "Rock",
+    "prompt": "Album art evoking crisp and shimmering light, measured and even in force, an open, uplifted mood, a steady, walking pace, hints of heavy metal, hints of angry music. Abstract, textural album art. No faces, no text, no literal band-photo imagery.",
+    "trace": {
+      "crisp and shimmering light": "brightness=2856.4 -> high",
+      "measured and even in force": "energy=0.2799 -> mid",
+      "an open, uplifted mood": "key=F# major",
+      "a steady, walking pace": "tempo_bpm=136 -> mid",
+      "hints of heavy metal": "sound_tag='Heavy metal'",
+      "hints of angry music": "sound_tag='Angry music'"
+    }
+  },
+  {
+    "song_id": 183,
+    "title": "Not That Kind Of Girl",
+    "artist": "Bad Party",
+    "genre": "Rock",
+    "prompt": "Album art evoking balanced, natural tones, forceful and dense, a shadowed emotional cast, a steady, walking pace, hints of techno, hints of angry music. Abstract, textural album art. No faces, no text, no literal band-photo imagery.",
+    "trace": {
+      "balanced, natural tones": "brightness=2557.0 -> mid",
+      "forceful and dense": "energy=0.3931 -> high",
+      "a shadowed emotional cast": "key=G minor",
+      "a steady, walking pace": "tempo_bpm=136 -> mid",
+      "hints of techno": "sound_tag='Techno'",
+      "hints of angry music": "sound_tag='Angry music'"
+    }
+  },
+  {
+    "song_id": 184,
+    "title": "Cold Water",
+    "artist": "Old Time Relijun",
+    "genre": "Rock",
+    "prompt": "Album art evoking an even, neutral palette, a steady, grounded intensity, an open, uplifted mood, measured, even movement, hints of psychedelic rock, hints of rock music. Abstract, textural album art. No faces, no text, no literal band-photo imagery.",
+    "trace": {
+      "an even, neutral palette": "brightness=2002.3 -> mid",
+      "a steady, grounded intensity": "energy=0.2524 -> mid",
+      "an open, uplifted mood": "key=D major",
+      "measured, even movement": "tempo_bpm=144 -> mid",
+      "hints of psychedelic rock": "sound_tag='Psychedelic rock'",
+      "hints of rock music": "sound_tag='Rock music'"
+    }
+  },
+  {
+    "song_id": 185,
+    "title": "Tokugiri Star",
+    "artist": "Peelander-Z",
+    "genre": "Rock",
+    "prompt": "Album art evoking balanced, natural tones, a steady, grounded intensity, an open, uplifted mood, measured, even movement, hints of rock music, hints of punk rock. Abstract, textural album art. No faces, no text, no literal band-photo imagery.",
+    "trace": {
+      "balanced, natural tones": "brightness=2436.6 -> mid",
+      "a steady, grounded intensity": "energy=0.2014 -> mid",
+      "an open, uplifted mood": "key=A major",
+      "measured, even movement": "tempo_bpm=123 -> mid",
+      "hints of rock music": "sound_tag='Rock music'",
+      "hints of punk rock": "sound_tag='Punk rock'"
+    }
+  },
+  {
+    "song_id": 186,
+    "title": "Rose of Los Angeles",
+    "artist": "Michael Gira",
+    "genre": "Rock",
+    "prompt": "Album art evoking a dark, brooding palette, soft-edged and understated, a wistful, introspective mood, measured, even movement. Abstract, textural album art. No faces, no text, no literal band-photo imagery.",
+    "trace": {
+      "a dark, brooding palette": "brightness=1547.3 -> low",
+      "soft-edged and understated": "energy=0.1578 -> low",
+      "a wistful, introspective mood": "key=D# minor",
+      "measured, even movement": "tempo_bpm=117 -> mid"
+    }
+  },
+  {
+    "song_id": 187,
+    "title": "Mr. Yawning Infinity Chasm/SuperInfinity",
+    "artist": "The Sun Through A Telescope",
+    "genre": "Rock",
+    "prompt": "Album art evoking a dark, brooding palette, measured and even in force, an optimistic emotional cast, a slow, unhurried pace, a wide, ambient wash, electronic, machine-made texture. Abstract, textural album art. No faces, no text, no literal band-photo imagery.",
+    "trace": {
+      "a dark, brooding palette": "brightness=1627.7 -> low",
+      "measured and even in force": "energy=0.2300 -> mid",
+      "an optimistic emotional cast": "key=B major",
+      "a slow, unhurried pace": "tempo_bpm=86 -> low",
+      "a wide, ambient wash": "sound_tag='Ambient music'",
+      "electronic, machine-made texture": "sound_tag='Electronic music'"
+    }
+  },
+  {
+    "song_id": 188,
+    "title": "Snowy Parts of Scandinavia",
+    "artist": "Kinski",
+    "genre": "Rock",
+    "prompt": "Album art evoking dim, low-lit tones, a hushed, delicate presence, an open, uplifted mood, a steady, walking pace, hints of psychedelic rock, hints of progressive rock. Abstract, textural album art. No faces, no text, no literal band-photo imagery.",
+    "trace": {
+      "dim, low-lit tones": "brightness=1243.2 -> low",
+      "a hushed, delicate presence": "energy=0.1410 -> low",
+      "an open, uplifted mood": "key=D major",
+      "a steady, walking pace": "tempo_bpm=144 -> mid",
+      "hints of psychedelic rock": "sound_tag='Psychedelic rock'",
+      "hints of progressive rock": "sound_tag='Progressive rock'"
+    }
+  },
+  {
+    "song_id": 189,
+    "title": "SELF EXPLORER",
+    "artist": "North Cape Lights",
+    "genre": "Rock",
+    "prompt": "Album art evoking an even, neutral palette, bold, saturated energy, a wistful, introspective mood, a steady, walking pace, hints of angry music. Abstract, textural album art. No faces, no text, no literal band-photo imagery.",
+    "trace": {
+      "an even, neutral palette": "brightness=2656.8 -> mid",
+      "bold, saturated energy": "energy=0.4351 -> high",
+      "a wistful, introspective mood": "key=B minor",
+      "a steady, walking pace": "tempo_bpm=152 -> mid",
+      "hints of angry music": "sound_tag='Angry music'"
+    }
+  },
+  {
+    "song_id": 190,
+    "title": "Zombie Spy",
+    "artist": "The Vivisectors",
+    "genre": "Rock",
+    "prompt": "Album art evoking balanced, natural tones, forceful and dense, a wistful, introspective mood, measured, even movement, hints of psychedelic rock, the grain of a real guitar. Abstract, textural album art. No faces, no text, no literal band-photo imagery.",
+    "trace": {
+      "balanced, natural tones": "brightness=2180.2 -> mid",
+      "forceful and dense": "energy=0.4387 -> high",
+      "a wistful, introspective mood": "key=E minor",
+      "measured, even movement": "tempo_bpm=152 -> mid",
+      "hints of psychedelic rock": "sound_tag='Psychedelic rock'",
+      "the grain of a real guitar": "sound_tag='Guitar'"
+    }
+  },
+  {
+    "song_id": 191,
+    "title": "crucial",
+    "artist": "springtide",
+    "genre": "Rock",
+    "prompt": "Album art evoking neither bright nor dark, a steady, grounded intensity, a warm, major-key brightness, measured, even movement, hints of grunge, hints of independent music. Abstract, textural album art. No faces, no text, no literal band-photo imagery.",
+    "trace": {
+      "neither bright nor dark": "brightness=2415.7 -> mid",
+      "a steady, grounded intensity": "energy=0.2278 -> mid",
+      "a warm, major-key brightness": "key=D major",
+      "measured, even movement": "tempo_bpm=144 -> mid",
+      "hints of grunge": "sound_tag='Grunge'",
+      "hints of independent music": "sound_tag='Independent music'"
+    }
+  },
+  {
+    "song_id": 192,
+    "title": "Thanks A Million",
+    "artist": "Let Me Crazy",
+    "genre": "Rock",
+    "prompt": "Album art evoking an even, neutral palette, a hushed, delicate presence, an open, uplifted mood, measured, even movement, hints of heavy metal, hints of rock music. Abstract, textural album art. No faces, no text, no literal band-photo imagery.",
+    "trace": {
+      "an even, neutral palette": "brightness=1832.2 -> mid",
+      "a hushed, delicate presence": "energy=0.1636 -> low",
+      "an open, uplifted mood": "key=D# major",
+      "measured, even movement": "tempo_bpm=136 -> mid",
+      "hints of heavy metal": "sound_tag='Heavy metal'",
+      "hints of rock music": "sound_tag='Rock music'"
+    }
+  },
+  {
+    "song_id": 193,
+    "title": "Plumy Tale",
+    "artist": "Dumbo Gets Mad",
+    "genre": "Rock",
+    "prompt": "Album art evoking neither bright nor dark, measured and even in force, a somber, minor-key undertone, drifting, spacious motion, hints of grunge, hints of rock music. Abstract, textural album art. No faces, no text, no literal band-photo imagery.",
+    "trace": {
+      "neither bright nor dark": "brightness=2121.7 -> mid",
+      "measured and even in force": "energy=0.2927 -> mid",
+      "a somber, minor-key undertone": "key=G minor",
+      "drifting, spacious motion": "tempo_bpm=96 -> low",
+      "hints of grunge": "sound_tag='Grunge'",
+      "hints of rock music": "sound_tag='Rock music'"
+    }
+  },
+  {
+    "song_id": 194,
+    "title": "Delusion 6",
+    "artist": "pHoaming Edison",
+    "genre": "Rock",
+    "prompt": "Album art evoking shrouded in shadow, a steady, grounded intensity, a warm, major-key brightness, measured, even movement, hints of psychedelic rock, hints of progressive rock. Abstract, textural album art. No faces, no text, no literal band-photo imagery.",
+    "trace": {
+      "shrouded in shadow": "brightness=1618.0 -> low",
+      "a steady, grounded intensity": "energy=0.2168 -> mid",
+      "a warm, major-key brightness": "key=D major",
+      "measured, even movement": "tempo_bpm=123 -> mid",
+      "hints of psychedelic rock": "sound_tag='Psychedelic rock'",
+      "hints of progressive rock": "sound_tag='Progressive rock'"
+    }
+  },
+  {
+    "song_id": 195,
+    "title": "Come On Down",
+    "artist": "Waylon Thornton",
+    "genre": "Rock",
+    "prompt": "Album art evoking neither bright nor dark, a powerful, driving intensity, an open, uplifted mood, languid, floating movement, hints of singing, hints of choir. Abstract, textural album art. No faces, no text, no literal band-photo imagery.",
+    "trace": {
+      "neither bright nor dark": "brightness=1905.9 -> mid",
+      "a powerful, driving intensity": "energy=0.3252 -> high",
+      "an open, uplifted mood": "key=E major",
+      "languid, floating movement": "tempo_bpm=112 -> low",
+      "hints of singing": "sound_tag='Singing'",
+      "hints of choir": "sound_tag='Choir'"
+    }
+  },
+  {
+    "song_id": 196,
+    "title": "Moon Pearls",
+    "artist": "M\u00e1rio Gajarsk\u00fd",
+    "genre": "Rock",
+    "prompt": "Album art evoking shrouded in shadow, a steady, grounded intensity, a wistful, introspective mood, measured, even movement, hints of inside, small room, the grain of a real guitar. Abstract, textural album art. No faces, no text, no literal band-photo imagery.",
+    "trace": {
+      "shrouded in shadow": "brightness=1489.0 -> low",
+      "a steady, grounded intensity": "energy=0.1821 -> mid",
+      "a wistful, introspective mood": "key=A minor",
+      "measured, even movement": "tempo_bpm=185 -> mid",
+      "hints of inside, small room": "sound_tag='Inside, small room'",
+      "the grain of a real guitar": "sound_tag='Guitar'"
+    }
+  },
+  {
+    "song_id": 197,
+    "title": "Exodus Journey",
+    "artist": "Starseed",
+    "genre": "Rock",
+    "prompt": "Album art evoking radiant and luminous, a steady, grounded intensity, a somber, minor-key undertone, a steady, walking pace, hints of heavy metal, hints of punk rock. Abstract, textural album art. No faces, no text, no literal band-photo imagery.",
+    "trace": {
+      "radiant and luminous": "brightness=3399.5 -> high",
+      "a steady, grounded intensity": "energy=0.1992 -> mid",
+      "a somber, minor-key undertone": "key=A# minor",
+      "a steady, walking pace": "tempo_bpm=161 -> mid",
+      "hints of heavy metal": "sound_tag='Heavy metal'",
+      "hints of punk rock": "sound_tag='Punk rock'"
+    }
+  },
+  {
+    "song_id": 198,
+    "title": "Digital Stimulation",
+    "artist": "The Units",
+    "genre": "Rock",
+    "prompt": "Album art evoking radiant and luminous, measured and even in force, a somber, minor-key undertone, languid, floating movement, kit-driven percussion, the pulse of real drums. Abstract, textural album art. No faces, no text, no literal band-photo imagery.",
+    "trace": {
+      "radiant and luminous": "brightness=4061.2 -> high",
+      "measured and even in force": "energy=0.2710 -> mid",
+      "a somber, minor-key undertone": "key=G# minor",
+      "languid, floating movement": "tempo_bpm=83 -> low",
+      "kit-driven percussion": "sound_tag='Drum kit'",
+      "the pulse of real drums": "sound_tag='Drum'"
+    }
+  },
+  {
+    "song_id": 199,
+    "title": "Il Re del Surf",
+    "artist": "I Re della Spiaggia",
+    "genre": "Rock",
+    "prompt": "Album art evoking a bright, sunlit palette, bold, saturated energy, a wistful, introspective mood, drifting, spacious motion, hints of rock and roll, hints of rock music. Abstract, textural album art. No faces, no text, no literal band-photo imagery.",
+    "trace": {
+      "a bright, sunlit palette": "brightness=2872.9 -> high",
+      "bold, saturated energy": "energy=0.3726 -> high",
+      "a wistful, introspective mood": "key=F minor",
+      "drifting, spacious motion": "tempo_bpm=92 -> low",
+      "hints of rock and roll": "sound_tag='Rock and roll'",
+      "hints of rock music": "sound_tag='Rock music'"
+    }
+  },
+  {
+    "song_id": 200,
+    "title": "Firecracker",
+    "artist": "Half Japanese",
+    "genre": "Rock",
+    "prompt": "Album art evoking balanced, natural tones, quiet and restrained, a shadowed emotional cast, a steady, walking pace, hints of swing music, hints of orchestra. Abstract, textural album art. No faces, no text, no literal band-photo imagery.",
+    "trace": {
+      "balanced, natural tones": "brightness=2225.9 -> mid",
+      "quiet and restrained": "energy=0.1427 -> low",
+      "a shadowed emotional cast": "key=E minor",
+      "a steady, walking pace": "tempo_bpm=129 -> mid",
+      "hints of swing music": "sound_tag='Swing music'",
+      "hints of orchestra": "sound_tag='Orchestra'"
+    }
+  },
+  {
+    "song_id": 201,
+    "title": "Terminally in Love With You",
+    "artist": "Shy Kids",
+    "genre": "Pop",
+    "prompt": "Album art evoking balanced, natural tones, measured and even in force, a warm, major-key brightness, a steady, walking pace, hints of singing, hints of choir. Abstract, textural album art. No faces, no text, no literal band-photo imagery.",
+    "trace": {
+      "balanced, natural tones": "brightness=1780.0 -> mid",
+      "measured and even in force": "energy=0.1663 -> mid",
+      "a warm, major-key brightness": "key=E major",
+      "a steady, walking pace": "tempo_bpm=152 -> mid",
+      "hints of singing": "sound_tag='Singing'",
+      "hints of choir": "sound_tag='Choir'"
+    }
+  },
+  {
+    "song_id": 202,
+    "title": "Ave",
+    "artist": "PC-ONE",
+    "genre": "Experimental",
+    "prompt": "Album art evoking an even, neutral palette, soft-edged and understated, a warm, major-key brightness, drifting, spacious motion, the grain of a real guitar, plucked string detail. Abstract, textural album art. No faces, no text, no literal band-photo imagery.",
+    "trace": {
+      "an even, neutral palette": "brightness=1833.0 -> mid",
+      "soft-edged and understated": "energy=0.0882 -> low",
+      "a warm, major-key brightness": "key=G major",
+      "drifting, spacious motion": "tempo_bpm=92 -> low",
+      "the grain of a real guitar": "sound_tag='Guitar'",
+      "plucked string detail": "sound_tag='Plucked string instrument'"
+    }
+  },
+  {
+    "song_id": 203,
+    "title": "Elektra (You Were Such Fun)",
+    "artist": "Red Crickets",
+    "genre": "Pop",
+    "prompt": "Album art evoking balanced, natural tones, a steady, grounded intensity, a warm, major-key brightness, languid, floating movement, hints of independent music, hints of singing. Abstract, textural album art. No faces, no text, no literal band-photo imagery.",
+    "trace": {
+      "balanced, natural tones": "brightness=1810.2 -> mid",
+      "a steady, grounded intensity": "energy=0.2109 -> mid",
+      "a warm, major-key brightness": "key=G major",
+      "languid, floating movement": "tempo_bpm=86 -> low",
+      "hints of independent music": "sound_tag='Independent music'",
+      "hints of singing": "sound_tag='Singing'"
+    }
+  },
+  {
+    "song_id": 204,
+    "title": "Mr. Person",
+    "artist": "The Mystery Artist",
+    "genre": "Rock",
+    "prompt": "Album art evoking an even, neutral palette, a steady, grounded intensity, a shadowed emotional cast, a slow, unhurried pace, hints of psychedelic rock, hints of independent music. Abstract, textural album art. No faces, no text, no literal band-photo imagery.",
+    "trace": {
+      "an even, neutral palette": "brightness=2120.4 -> mid",
+      "a steady, grounded intensity": "energy=0.2273 -> mid",
+      "a shadowed emotional cast": "key=A minor",
+      "a slow, unhurried pace": "tempo_bpm=86 -> low",
+      "hints of psychedelic rock": "sound_tag='Psychedelic rock'",
+      "hints of independent music": "sound_tag='Independent music'"
+    }
+  },
+  {
+    "song_id": 205,
+    "title": "Ordinary Girl",
+    "artist": "The Pink Tiles",
+    "genre": "Rock",
+    "prompt": "Album art evoking an even, neutral palette, measured and even in force, an optimistic emotional cast, a steady, walking pace, hints of singing, hints of grunge. Abstract, textural album art. No faces, no text, no literal band-photo imagery.",
+    "trace": {
+      "an even, neutral palette": "brightness=2280.5 -> mid",
+      "measured and even in force": "energy=0.3226 -> mid",
+      "an optimistic emotional cast": "key=D major",
+      "a steady, walking pace": "tempo_bpm=161 -> mid",
+      "hints of singing": "sound_tag='Singing'",
+      "hints of grunge": "sound_tag='Grunge'"
+    }
+  },
+  {
+    "song_id": 206,
+    "title": "Plasma",
+    "artist": "Redmann",
+    "genre": "Electronic",
+    "prompt": "Album art evoking shrouded in shadow, a steady, grounded intensity, a warm, major-key brightness, a steady, walking pace, hints of trance music, electronic, machine-made texture. Abstract, textural album art. No faces, no text, no literal band-photo imagery.",
+    "trace": {
+      "shrouded in shadow": "brightness=1352.7 -> low",
+      "a steady, grounded intensity": "energy=0.1920 -> mid",
+      "a warm, major-key brightness": "key=D major",
+      "a steady, walking pace": "tempo_bpm=136 -> mid",
+      "hints of trance music": "sound_tag='Trance music'",
+      "electronic, machine-made texture": "sound_tag='Electronic music'"
+    }
+  },
+  {
+    "song_id": 207,
+    "title": "Mad Honey",
+    "artist": "DubRaJah",
+    "genre": "International",
+    "prompt": "Album art evoking dim, low-lit tones, soft-edged and understated, a somber, minor-key undertone, a steady, walking pace, synthetic production, hints of throbbing. Abstract, textural album art. No faces, no text, no literal band-photo imagery.",
+    "trace": {
+      "dim, low-lit tones": "brightness=1589.2 -> low",
+      "soft-edged and understated": "energy=0.1623 -> low",
+      "a somber, minor-key undertone": "key=E minor",
+      "a steady, walking pace": "tempo_bpm=117 -> mid",
+      "synthetic production": "sound_tag='Electronic music'",
+      "hints of throbbing": "sound_tag='Throbbing'"
+    }
+  },
+  {
+    "song_id": 208,
+    "title": "A Friendly Noose",
+    "artist": "Big Blood",
+    "genre": "Folk",
+    "prompt": "Album art evoking a dark, brooding palette, soft-edged and understated, an open, uplifted mood, a steady, walking pace, hints of singing, hints of siren. Abstract, textural album art. No faces, no text, no literal band-photo imagery.",
+    "trace": {
+      "a dark, brooding palette": "brightness=1402.4 -> low",
+      "soft-edged and understated": "energy=0.1590 -> low",
+      "an open, uplifted mood": "key=C major",
+      "a steady, walking pace": "tempo_bpm=152 -> mid",
+      "hints of singing": "sound_tag='Singing'",
+      "hints of siren": "sound_tag='Siren'"
+    }
+  },
+  {
+    "song_id": 209,
+    "title": "300 Days In July",
+    "artist": "Pete Galub",
+    "genre": "Pop",
+    "prompt": "Album art evoking shrouded in shadow, a steady, grounded intensity, an optimistic emotional cast, measured, even movement, a sliding, metallic string whine, hints of singing. Abstract, textural album art. No faces, no text, no literal band-photo imagery.",
+    "trace": {
+      "shrouded in shadow": "brightness=1450.8 -> low",
+      "a steady, grounded intensity": "energy=0.2833 -> mid",
+      "an optimistic emotional cast": "key=D major",
+      "measured, even movement": "tempo_bpm=136 -> mid",
+      "a sliding, metallic string whine": "sound_tag='Steel guitar, slide guitar'",
+      "hints of singing": "sound_tag='Singing'"
+    }
+  },
+  {
+    "song_id": 210,
+    "title": "something brewing",
+    "artist": "Coin Locker Kid",
+    "genre": "Hip-Hop",
+    "prompt": "Album art evoking muted and murky hues, a steady, grounded intensity, a shadowed emotional cast, measured, even movement, a resonant metallic strike, percussive textures. Abstract, textural album art. No faces, no text, no literal band-photo imagery.",
+    "trace": {
+      "muted and murky hues": "brightness=1628.6 -> low",
+      "a steady, grounded intensity": "energy=0.2204 -> mid",
+      "a shadowed emotional cast": "key=A# minor",
+      "measured, even movement": "tempo_bpm=123 -> mid",
+      "a resonant metallic strike": "sound_tag='Gong'",
+      "percussive textures": "sound_tag='Drum'"
+    }
+  },
+  {
+    "song_id": 211,
+    "title": "Unless",
+    "artist": "Nisi Period",
+    "genre": "Rock",
+    "prompt": "Album art evoking a dark, brooding palette, a steady, grounded intensity, a somber, minor-key undertone, drifting, spacious motion, diffuse, atmospheric texture, electronic, machine-made texture. Abstract, textural album art. No faces, no text, no literal band-photo imagery.",
+    "trace": {
+      "a dark, brooding palette": "brightness=1550.5 -> low",
+      "a steady, grounded intensity": "energy=0.2196 -> mid",
+      "a somber, minor-key undertone": "key=D minor",
+      "drifting, spacious motion": "tempo_bpm=112 -> low",
+      "diffuse, atmospheric texture": "sound_tag='Ambient music'",
+      "electronic, machine-made texture": "sound_tag='Electronic music'"
+    }
+  },
+  {
+    "song_id": 212,
+    "title": "Lovedropper",
+    "artist": "Boy Friend",
+    "genre": "Rock",
+    "prompt": "Album art evoking an even, neutral palette, a steady, grounded intensity, an optimistic emotional cast, a steady, walking pace, hints of christian music, hints of singing. Abstract, textural album art. No faces, no text, no literal band-photo imagery.",
+    "trace": {
+      "an even, neutral palette": "brightness=2054.2 -> mid",
+      "a steady, grounded intensity": "energy=0.1940 -> mid",
+      "an optimistic emotional cast": "key=C major",
+      "a steady, walking pace": "tempo_bpm=172 -> mid",
+      "hints of christian music": "sound_tag='Christian music'",
+      "hints of singing": "sound_tag='Singing'"
+    }
+  },
+  {
+    "song_id": 213,
+    "title": "western chow yun-fat",
+    "artist": "This One",
+    "genre": "Hip-Hop",
+    "prompt": "Album art evoking dim, low-lit tones, measured and even in force, a somber, minor-key undertone, drifting, spacious motion, hints of funk, hints of blues. Abstract, textural album art. No faces, no text, no literal band-photo imagery.",
+    "trace": {
+      "dim, low-lit tones": "brightness=1267.8 -> low",
+      "measured and even in force": "energy=0.3127 -> mid",
+      "a somber, minor-key undertone": "key=A minor",
+      "drifting, spacious motion": "tempo_bpm=96 -> low",
+      "hints of funk": "sound_tag='Funk'",
+      "hints of blues": "sound_tag='Blues'"
+    }
+  },
+  {
+    "song_id": 214,
+    "title": "It's Okay, Roseanne",
+    "artist": "The Parish of Little Clifton",
+    "genre": "Pop",
+    "prompt": "Album art evoking neither bright nor dark, measured and even in force, a warm, major-key brightness, measured, even movement, synthetic production, hints of techno. Abstract, textural album art. No faces, no text, no literal band-photo imagery.",
+    "trace": {
+      "neither bright nor dark": "brightness=1780.1 -> mid",
+      "measured and even in force": "energy=0.2419 -> mid",
+      "a warm, major-key brightness": "key=G# major",
+      "measured, even movement": "tempo_bpm=123 -> mid",
+      "synthetic production": "sound_tag='Electronic music'",
+      "hints of techno": "sound_tag='Techno'"
+    }
+  },
+  {
+    "song_id": 215,
+    "title": "Sillable",
+    "artist": "UncleBibby",
+    "genre": "Electronic",
+    "prompt": "Album art evoking balanced, natural tones, soft-edged and understated, a wistful, introspective mood, a steady, walking pace, synthetic production, hints of house music. Abstract, textural album art. No faces, no text, no literal band-photo imagery.",
+    "trace": {
+      "balanced, natural tones": "brightness=1922.3 -> mid",
+      "soft-edged and understated": "energy=0.1556 -> low",
+      "a wistful, introspective mood": "key=B minor",
+      "a steady, walking pace": "tempo_bpm=117 -> mid",
+      "synthetic production": "sound_tag='Electronic music'",
+      "hints of house music": "sound_tag='House music'"
+    }
+  },
+  {
+    "song_id": 216,
+    "title": "The Drop (Gung Who Version)",
+    "artist": "Tickle",
+    "genre": "Hip-Hop",
+    "prompt": "Album art evoking balanced, natural tones, soft-edged and understated, an open, uplifted mood, languid, floating movement, a rapped vocal drive, beat-driven, rhythmic drive. Abstract, textural album art. No faces, no text, no literal band-photo imagery.",
+    "trace": {
+      "balanced, natural tones": "brightness=2057.6 -> mid",
+      "soft-edged and understated": "energy=0.0903 -> low",
+      "an open, uplifted mood": "key=F# major",
+      "languid, floating movement": "tempo_bpm=81 -> low",
+      "a rapped vocal drive": "sound_tag='Rapping'",
+      "beat-driven, rhythmic drive": "sound_tag='Hip hop music'"
+    }
+  },
+  {
+    "song_id": 217,
+    "title": "The Beast Is A Computer In Luxemburg",
+    "artist": "Fierbinteanu",
+    "genre": "Pop",
+    "prompt": "Album art evoking an even, neutral palette, quiet and restrained, an open, uplifted mood, measured, even movement, hints of soul music, hints of rhythm and blues. Abstract, textural album art. No faces, no text, no literal band-photo imagery.",
+    "trace": {
+      "an even, neutral palette": "brightness=2079.8 -> mid",
+      "quiet and restrained": "energy=0.1129 -> low",
+      "an open, uplifted mood": "key=D major",
+      "measured, even movement": "tempo_bpm=117 -> mid",
+      "hints of soul music": "sound_tag='Soul music'",
+      "hints of rhythm and blues": "sound_tag='Rhythm and blues'"
+    }
+  },
+  {
+    "song_id": 218,
+    "title": "Inspiration",
+    "artist": "Abunai!",
+    "genre": "Rock",
+    "prompt": "Album art evoking an even, neutral palette, quiet and restrained, an open, uplifted mood, measured, even movement, kit-driven percussion, hints of rock music. Abstract, textural album art. No faces, no text, no literal band-photo imagery.",
+    "trace": {
+      "an even, neutral palette": "brightness=2517.7 -> mid",
+      "quiet and restrained": "energy=0.1487 -> low",
+      "an open, uplifted mood": "key=D major",
+      "measured, even movement": "tempo_bpm=136 -> mid",
+      "kit-driven percussion": "sound_tag='Drum kit'",
+      "hints of rock music": "sound_tag='Rock music'"
+    }
+  },
+  {
+    "song_id": 219,
+    "title": "All I Am",
+    "artist": "Pete Galub",
+    "genre": "Pop",
+    "prompt": "Album art evoking neither bright nor dark, measured and even in force, an optimistic emotional cast, a steady, walking pace, string-driven texture, plucked string detail. Abstract, textural album art. No faces, no text, no literal band-photo imagery.",
+    "trace": {
+      "neither bright nor dark": "brightness=1740.3 -> mid",
+      "measured and even in force": "energy=0.2045 -> mid",
+      "an optimistic emotional cast": "key=G major",
+      "a steady, walking pace": "tempo_bpm=129 -> mid",
+      "string-driven texture": "sound_tag='Guitar'",
+      "plucked string detail": "sound_tag='Plucked string instrument'"
+    }
+  },
+  {
+    "song_id": 220,
+    "title": "Sam's Song",
+    "artist": "NaDa BaBa",
+    "genre": "Folk",
+    "prompt": "Album art evoking neither bright nor dark, a steady, grounded intensity, a shadowed emotional cast, a slow, unhurried pace, hints of didgeridoo. Abstract, textural album art. No faces, no text, no literal band-photo imagery.",
+    "trace": {
+      "neither bright nor dark": "brightness=2580.7 -> mid",
+      "a steady, grounded intensity": "energy=0.1668 -> mid",
+      "a shadowed emotional cast": "key=D minor",
+      "a slow, unhurried pace": "tempo_bpm=103 -> low",
+      "hints of didgeridoo": "sound_tag='Didgeridoo'"
+    }
+  },
+  {
+    "song_id": 221,
+    "title": "Spot Rockers",
+    "artist": "Cassette Tape Bandits",
+    "genre": "Hip-Hop",
+    "prompt": "Album art evoking balanced, natural tones, measured and even in force, a somber, minor-key undertone, measured, even movement, a rapped vocal drive, a hip-hop groove. Abstract, textural album art. No faces, no text, no literal band-photo imagery.",
+    "trace": {
+      "balanced, natural tones": "brightness=2604.8 -> mid",
+      "measured and even in force": "energy=0.2132 -> mid",
+      "a somber, minor-key undertone": "key=A# minor",
+      "measured, even movement": "tempo_bpm=129 -> mid",
+      "a rapped vocal drive": "sound_tag='Rapping'",
+      "a hip-hop groove": "sound_tag='Hip hop music'"
+    }
+  },
+  {
+    "song_id": 222,
+    "title": "Squinting at the Sun (radio edit)",
+    "artist": "Lee Rosevere",
+    "genre": "Electronic",
+    "prompt": "Album art evoking shrouded in shadow, quiet and restrained, a warm, major-key brightness, measured, even movement, a wide, ambient wash, soft, atmospheric layers. Abstract, textural album art. No faces, no text, no literal band-photo imagery.",
+    "trace": {
+      "shrouded in shadow": "brightness=526.9 -> low",
+      "quiet and restrained": "energy=0.0883 -> low",
+      "a warm, major-key brightness": "key=D# major",
+      "measured, even movement": "tempo_bpm=185 -> mid",
+      "a wide, ambient wash": "sound_tag='Ambient music'",
+      "soft, atmospheric layers": "sound_tag='New-age music'"
+    }
+  },
+  {
+    "song_id": 223,
+    "title": "Do Easy",
+    "artist": "Tasseomancy",
+    "genre": "Pop",
+    "prompt": "Album art evoking a dark, brooding palette, a hushed, delicate presence, a warm, major-key brightness, a slow, unhurried pace, gentle ambient washing, hints of lullaby. Abstract, textural album art. No faces, no text, no literal band-photo imagery.",
+    "trace": {
+      "a dark, brooding palette": "brightness=1346.6 -> low",
+      "a hushed, delicate presence": "energy=0.1591 -> low",
+      "a warm, major-key brightness": "key=C major",
+      "a slow, unhurried pace": "tempo_bpm=112 -> low",
+      "gentle ambient washing": "sound_tag='New-age music'",
+      "hints of lullaby": "sound_tag='Lullaby'"
+    }
+  },
+  {
+    "song_id": 224,
+    "title": "Cage (bonus)",
+    "artist": "Pilesar",
+    "genre": "Pop",
+    "prompt": "Album art evoking balanced, natural tones, a steady, grounded intensity, a warm, major-key brightness, a slow, unhurried pace, electronic, machine-made texture. Abstract, textural album art. No faces, no text, no literal band-photo imagery.",
+    "trace": {
+      "balanced, natural tones": "brightness=2382.6 -> mid",
+      "a steady, grounded intensity": "energy=0.1749 -> mid",
+      "a warm, major-key brightness": "key=C major",
+      "a slow, unhurried pace": "tempo_bpm=92 -> low",
+      "electronic, machine-made texture": "sound_tag='Electronic music'"
+    }
+  },
+  {
+    "song_id": 225,
+    "title": "In The Fall",
+    "artist": "Future Islands",
+    "genre": "Electronic",
+    "prompt": "Album art evoking neither bright nor dark, quiet and restrained, an open, uplifted mood, languid, floating movement, hints of independent music, hints of singing. Abstract, textural album art. No faces, no text, no literal band-photo imagery.",
+    "trace": {
+      "neither bright nor dark": "brightness=1882.7 -> mid",
+      "quiet and restrained": "energy=0.1174 -> low",
+      "an open, uplifted mood": "key=C major",
+      "languid, floating movement": "tempo_bpm=78 -> low",
+      "hints of independent music": "sound_tag='Independent music'",
+      "hints of singing": "sound_tag='Singing'"
+    }
+  },
+  {
+    "song_id": 226,
+    "title": "Ivory",
+    "artist": "Moon Veil",
+    "genre": "Electronic",
+    "prompt": "Album art evoking muted and murky hues, quiet and restrained, a shadowed emotional cast, languid, floating movement, a breathy brass wail, bright, blaring brass. Abstract, textural album art. No faces, no text, no literal band-photo imagery.",
+    "trace": {
+      "muted and murky hues": "brightness=1364.0 -> low",
+      "quiet and restrained": "energy=0.1608 -> low",
+      "a shadowed emotional cast": "key=D minor",
+      "languid, floating movement": "tempo_bpm=108 -> low",
+      "a breathy brass wail": "sound_tag='Saxophone'",
+      "bright, blaring brass": "sound_tag='Brass instrument'"
+    }
+  },
+  {
+    "song_id": 227,
+    "title": "To Drive the Cold Winter Away",
+    "artist": "Julianne Marx and Craig Olson",
+    "genre": "Experimental",
+    "prompt": "Album art evoking an even, neutral palette, soft-edged and understated, a wistful, introspective mood, a steady, walking pace, kit-driven percussion, percussive textures. Abstract, textural album art. No faces, no text, no literal band-photo imagery.",
+    "trace": {
+      "an even, neutral palette": "brightness=2021.3 -> mid",
+      "soft-edged and understated": "energy=0.1265 -> low",
+      "a wistful, introspective mood": "key=E minor",
+      "a steady, walking pace": "tempo_bpm=161 -> mid",
+      "kit-driven percussion": "sound_tag='Drum kit'",
+      "percussive textures": "sound_tag='Drum'"
+    }
+  },
+  {
+    "song_id": 228,
+    "title": "Cien Volando",
+    "artist": "Josh Woodward",
+    "genre": "Folk",
+    "prompt": "Album art evoking dim, low-lit tones, a steady, grounded intensity, an open, uplifted mood, measured, even movement, string-driven texture, plucked string detail. Abstract, textural album art. No faces, no text, no literal band-photo imagery.",
+    "trace": {
+      "dim, low-lit tones": "brightness=1392.0 -> low",
+      "a steady, grounded intensity": "energy=0.1685 -> mid",
+      "an open, uplifted mood": "key=F# major",
+      "measured, even movement": "tempo_bpm=129 -> mid",
+      "string-driven texture": "sound_tag='Guitar'",
+      "plucked string detail": "sound_tag='Plucked string instrument'"
+    }
+  },
+  {
+    "song_id": 229,
+    "title": "Not the 1s (prod. by Mexicans with Guns)",
+    "artist": "Not The 1s",
+    "genre": "Hip-Hop",
+    "prompt": "Album art evoking neither bright nor dark, forceful and dense, a somber, minor-key undertone, measured, even movement, a rapped vocal drive, a hip-hop groove. Abstract, textural album art. No faces, no text, no literal band-photo imagery.",
+    "trace": {
+      "neither bright nor dark": "brightness=2306.8 -> mid",
+      "forceful and dense": "energy=0.3461 -> high",
+      "a somber, minor-key undertone": "key=G# minor",
+      "measured, even movement": "tempo_bpm=129 -> mid",
+      "a rapped vocal drive": "sound_tag='Rapping'",
+      "a hip-hop groove": "sound_tag='Hip hop music'"
+    }
+  },
+  {
+    "song_id": 230,
+    "title": "Bridgewater Triangle",
+    "artist": "happiness in aeroplanes",
+    "genre": "Instrumental",
+    "prompt": "Album art evoking dim, low-lit tones, measured and even in force, an optimistic emotional cast, a steady, walking pace, diffuse, atmospheric texture, a resonant metallic strike. Abstract, textural album art. No faces, no text, no literal band-photo imagery.",
+    "trace": {
+      "dim, low-lit tones": "brightness=482.2 -> low",
+      "measured and even in force": "energy=0.1995 -> mid",
+      "an optimistic emotional cast": "key=F# major",
+      "a steady, walking pace": "tempo_bpm=123 -> mid",
+      "diffuse, atmospheric texture": "sound_tag='Ambient music'",
+      "a resonant metallic strike": "sound_tag='Gong'"
+    }
+  },
+  {
+    "song_id": 231,
+    "title": "Softer Place To Fall",
+    "artist": "Mark Fosson",
+    "genre": "Folk",
+    "prompt": "Album art evoking shrouded in shadow, forceful and dense, a warm, major-key brightness, measured, even movement, the grain of a real guitar, warm, wooden acoustic tone. Abstract, textural album art. No faces, no text, no literal band-photo imagery.",
+    "trace": {
+      "shrouded in shadow": "brightness=1408.4 -> low",
+      "forceful and dense": "energy=0.3432 -> high",
+      "a warm, major-key brightness": "key=D major",
+      "measured, even movement": "tempo_bpm=144 -> mid",
+      "the grain of a real guitar": "sound_tag='Guitar'",
+      "warm, wooden acoustic tone": "sound_tag='Acoustic guitar'"
+    }
+  },
+  {
+    "song_id": 232,
+    "title": "5am, Wabi Sabi",
+    "artist": "Project 5am",
+    "genre": "Electronic",
+    "prompt": "Album art evoking a bright, sunlit palette, quiet and restrained, a somber, minor-key undertone, a slow, unhurried pace, percussive textures, kit-driven percussion. Abstract, textural album art. No faces, no text, no literal band-photo imagery.",
+    "trace": {
+      "a bright, sunlit palette": "brightness=3446.0 -> high",
+      "quiet and restrained": "energy=0.0556 -> low",
+      "a somber, minor-key undertone": "key=C minor",
+      "a slow, unhurried pace": "tempo_bpm=96 -> low",
+      "percussive textures": "sound_tag='Drum'",
+      "kit-driven percussion": "sound_tag='Drum kit'"
+    }
+  },
+  {
+    "song_id": 233,
+    "title": "Freak of Nature (Time Out Dubb)",
+    "artist": "C-Doc",
+    "genre": "Hip-Hop",
+    "prompt": "Album art evoking neither bright nor dark, a steady, grounded intensity, an optimistic emotional cast, a slow, unhurried pace, beat-driven, rhythmic drive, rhythmic, spoken cadence. Abstract, textural album art. No faces, no text, no literal band-photo imagery.",
+    "trace": {
+      "neither bright nor dark": "brightness=2217.1 -> mid",
+      "a steady, grounded intensity": "energy=0.3210 -> mid",
+      "an optimistic emotional cast": "key=A# major",
+      "a slow, unhurried pace": "tempo_bpm=96 -> low",
+      "beat-driven, rhythmic drive": "sound_tag='Hip hop music'",
+      "rhythmic, spoken cadence": "sound_tag='Rapping'"
+    }
+  }
+]
