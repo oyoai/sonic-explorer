@@ -34,27 +34,15 @@ circular."""
 import streamlit as st
 
 from comparison_data import get_demo_pairs
-from components.plotting import concept_bubble_diagram, waveform_figure
-from resources import LOGO_PATH, get_repositories, nav_button, show_data_source_banner, show_logo
+from components.plotting import waveform_figure
+from resources import big_quote, get_repositories, hero_banner, nav_button, show_data_source_banner
 from sonic_explorer.analysis.waveform_preview import waveform_envelope
 from sonic_explorer.config import audio_path_for
 
 
-def _big_quote(text: str) -> None:
-    """A short, large, visually-set-apart line -- used for the two moments
-    on this page meant to land as a single idea, not a paragraph to read."""
-    st.markdown(f"## _{text}_")
-
-
 def render_overview() -> None:
     st.set_page_config(page_title="Sonic Explorer", layout="wide")
-
-    if LOGO_PATH.exists():
-        st.image(str(LOGO_PATH), width=420)
-    else:
-        st.title("Sonic Explorer")
-
-    show_logo()
+    hero_banner("overview")
     show_data_source_banner()
 
     song_repo, embedding_repo, _ = get_repositories()
@@ -64,15 +52,13 @@ def render_overview() -> None:
     metadata_pair, real_pair = (
         get_demo_pairs(song_repo, embedding_repo, len(all_songs)) if all_songs else (None, None)
     )
-
-    st.divider()
-
+    st.title("Overview")
     # -----------------------------------------------------------------------
     # Problem
     # -----------------------------------------------------------------------
     st.header("Problem")
-    st.subheader("The motivation behind this project came from a recurring experience:")
-    _big_quote('"I love this song, find me more like it."')
+    st.write("The motivation behind this project came from a recurring experience:")
+    big_quote('"I love this song, find me more like it."')
     st.write(
         "But the recommendations rarely captured the qualities that made the original song "
         "appealing to me."
@@ -84,7 +70,6 @@ def render_overview() -> None:
     # Existing solutions
     # -----------------------------------------------------------------------
     st.header("Existing solutions")
-    st.subheader("How do current systems identify related songs?")
     st.write(
         "Existing music discovery systems generally rely on two sources of information to "
         "estimate similarity:"
@@ -92,48 +77,28 @@ def render_overview() -> None:
 
     concept_cols = st.columns(2)
     with concept_cols[0]:
-        st.plotly_chart(
-            concept_bubble_diagram(
-                "Songs similar<br>to this song...", ["Album", "Artist", "Tags", "Genre", "Year"]
-            ),
-            width="stretch", key="concept_metadata",
-        )
-        st.caption(
-            "**Metadata-based approaches:** similarity determined using explicit song "
-            "attributes: genre, artist, tags, release year/era, album information."
-        )
+        st.image("streamlit_app/static/charts/mdata.png", width=400)
+        st.caption("'Songs similar to this song...'")
+        st.write("But shared metadata doesn't guarantee shared sound.")
     with concept_cols[1]:
-        st.plotly_chart(
-            concept_bubble_diagram(
-                "People who liked<br>this also liked...",
-                ["Other listeners", "Play history", "Ratings", "Purchases"],
-            ),
-            width="stretch", key="concept_collaborative",
-        )
-        st.caption(
-            "**Collaborative filtering:** similarity inferred from listener behavior: "
-            "listening history, ratings/likes, playlists, similar users' preferences."
-        )
+        st.image("streamlit_app/static/charts/cf.png", width=400)
+        st.caption("'Users who liked this song also liked...'")
+        st.write("And user preferences don't guarantee musical similarity.")
         st.info(
             "**Honest gap:** this library has no user-level listen/favorite/interaction data at "
             "all -- collaborative filtering is described here for a complete picture of the "
             "landscape, not something this project can build or compare against directly."
         )
 
-    st.write("But shared metadata doesn't guarantee shared sound.")
-
     if metadata_pair is not None and real_pair is not None:
-        st.caption(
-            "Below are two real pairs from this library: two songs tagged with the same genre "
-            "that sound nothing alike, and two songs from different genres that sound "
-            "remarkably similar."
+        st.write("")
+        st.write("")
+        a1, b1 = songs_by_id[metadata_pair.song_id_a], songs_by_id[metadata_pair.song_id_b]
+        st.markdown("#### Example: two songs with the same genre tag that sound completely different")
+        st.markdown(
+            f"Genre: {a1.genre_top} -- real audio similarity **{metadata_pair.audio_similarity:.2f}**"
         )
 
-        a1, b1 = songs_by_id[metadata_pair.song_id_a], songs_by_id[metadata_pair.song_id_b]
-        st.markdown(
-            f"**Same genre tag ({a1.genre_top}), sound different** -- real audio similarity "
-            f"**{metadata_pair.audio_similarity:.2f}**"
-        )
         row1 = st.columns(2)
         with row1[0]:
             st.plotly_chart(
@@ -148,10 +113,12 @@ def render_overview() -> None:
             )
             st.audio(str(audio_path_for(b1)))
 
+        st.write("")
         a2, b2 = songs_by_id[real_pair.song_id_a], songs_by_id[real_pair.song_id_b]
+        st.markdown("#### Example: two songs from different genres that sound remarkably similar")
         st.markdown(
-            f"**Different genres ({a2.genre_top} / {b2.genre_top}), sound similar** -- real "
-            f"audio similarity **{real_pair.audio_similarity:.2f}**"
+            f"Genres: {a2.genre_top} / {b2.genre_top} -- real audio similarity "
+            f"**{real_pair.audio_similarity:.2f}**"
         )
         row2 = st.columns(2)
         with row2[0]:
@@ -175,11 +142,11 @@ def render_overview() -> None:
     # Research question
     # -----------------------------------------------------------------------
     st.header("Research question")
-    _big_quote("Can we find songs that are actually similar to one another by sound?")
+    big_quote('"Can we find songs that are actually similar to one another <u>by sound</u>?"')
+    st.markdown("<br>", unsafe_allow_html=True)
+    st.markdown("<br>", unsafe_allow_html=True)
 
-    st.divider()
-
-    nav_button("See how it works →", "pages/0_Approach.py", key="nav_overview_to_approach")
+    nav_button("See the approach →", "pages/0_Approach.py", key="nav_overview_to_approach")
 
 
 OVERVIEW_PAGE = st.Page(render_overview, title="Overview", url_path="", default=True)

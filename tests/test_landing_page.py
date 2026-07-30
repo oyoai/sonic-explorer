@@ -42,23 +42,22 @@ def test_landing_page_problem_has_the_big_quote():
 def test_landing_page_research_question_has_the_big_quote():
     at = _run_landing()
     markdown_texts = " ".join(m.value for m in at.markdown)
-    assert "Can we find songs that are actually similar to one another by sound" in markdown_texts
+    assert "Can we find songs that are actually similar to one another" in markdown_texts
+    assert "by sound" in markdown_texts
 
 
 def test_landing_page_has_both_concept_diagrams_with_real_descriptive_captions():
     at = _run_landing()
     caption_texts = " ".join(c.value for c in at.caption)
-    assert "Metadata-based approaches" in caption_texts
-    assert "explicit song attributes" in caption_texts
-    assert "Collaborative filtering" in caption_texts
-    assert "listener behavior" in caption_texts
+    assert "Songs similar to this song" in caption_texts
+    assert "Users who liked this song also liked" in caption_texts
 
 
 def test_landing_page_discloses_missing_user_data_for_collaborative_filtering():
     at = _run_landing()
-    caption_texts = " ".join(c.value for c in at.caption)
-    assert "honest gap" in caption_texts.lower()
-    assert "user-level" in caption_texts.lower()
+    info_texts = " ".join(i.value for i in at.info)
+    assert "honest gap" in info_texts.lower()
+    assert "user-level" in info_texts.lower()
 
 
 def test_landing_page_no_longer_shows_spotify_screenshot_or_metadata_graph():
@@ -75,12 +74,12 @@ def test_landing_page_no_longer_shows_spotify_screenshot_or_metadata_graph():
 def test_landing_page_shows_two_real_pairs_with_real_similarity_scores_and_playback():
     at = _run_landing()
     markdown_texts = " ".join(m.value for m in at.markdown)
-    assert "sound different" in markdown_texts.lower()
-    assert "sound similar" in markdown_texts.lower()
+    assert "sound completely different" in markdown_texts.lower()
+    assert "sound remarkably similar" in markdown_texts.lower()
     # 4 songs total across the two pairs, each with its own audio player
     assert len(at.get("audio")) >= 4
 
 
 def test_landing_page_links_to_approach_next():
     at = _run_landing()
-    assert any(b.label.startswith("See how it works") for b in at.button)
+    assert any(b.label.startswith("See the approach") for b in at.button)
