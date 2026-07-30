@@ -6,6 +6,13 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 import streamlit as st
 
 from overview_page import OVERVIEW_PAGE
+from resources import inject_global_styles
+
+# Injected here, once, rather than duplicated per-page: Overview.py is the
+# real entry point every page's script execution routes through (st.navigation()
+# + pg.run() below execute the selected page's code within this same script
+# run), so a single call here reaches every page in the app.
+inject_global_styles()
 
 # ---------------------------------------------------------------------------
 # Navigation: Song X-Ray, Moment Matcher, and Ask the DJ are drill-down /

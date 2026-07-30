@@ -22,7 +22,7 @@ from sonic_explorer.retrieval.service import RetrievalService
 # solid white background -- the app is dark-theme-only (.streamlit/config.toml
 # sets base="dark"), so the original would render as a white box in the
 # sidebar. static/logo.png is kept as the untouched source asset.
-LOGO_PATH = Path(__file__).resolve().parent / "static" / "logo_transparent.png"
+LOGO_PATH = Path(__file__).resolve().parent / "static" / "logo.svg"
 
 
 def show_logo() -> None:
@@ -30,6 +30,241 @@ def show_logo() -> None:
     page, near the top, same as show_data_source_banner()."""
     if LOGO_PATH.exists():
         st.logo(str(LOGO_PATH), size="large")
+        # st.sidebar.caption("AI-powered music exploration")
+
+
+def inject_global_styles() -> None:
+    """Custom font/CSS styling, called once from Overview.py (the real entry
+    point every page's script execution routes through via st.navigation()
+    + pg.run()) so it applies everywhere -- previously three near-identical
+    copies of this same block were pasted into overview_page.py, pages/
+    0_Approach.py, and pages/7_Explore.py separately (with real drift between
+    them: different font choices, different .pull-quote weights), which is
+    exactly the kind of duplication a single shared call sidesteps. Content
+    is Overview's own version (Libre Baskerville pull-quotes, Montserrat
+    body) since that was the most recently revised of the three."""
+    st.markdown("""
+    <style>
+    @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@200;400;500;600&family=Playfair+Display:wght@700&family=Libre+Baskerville:ital,wght@0,400;0,700;1,400&display=swap');
+
+    h1, h2, h3, h4 {
+        font-family: 'Playfair Display', serif !important;
+        font-weight: 700;
+    }
+
+    input, p, .stMarkdown, body {
+        font-family: 'Montserrat', sans-serif !important;
+        font-weight: 200;
+    }
+
+    [data-testid="stTextInput"] input {
+        border-radius: 20px !important;
+        border: 1px solid rgba(255,255,255,0.3) !important;
+    }
+
+    /* Streamlit's default primaryColor (#FF4B4B, its brand red -- this app's
+       config.toml never overrides it) is what drives the red focus/hover
+       ring browsers show by default on a focused input; overriding it here
+       to a neutral white keeps the rest of the theme (buttons, sliders)
+       using the real primaryColor untouched, rather than changing that
+       theme-wide. */
+    [data-testid="stTextInput"] input:hover,
+    [data-testid="stTextInput"] input:focus {
+        border-color: rgba(255,255,255,0.8) !important;
+        box-shadow: 0 0 0 1px rgba(255,255,255,0.8) !important;
+    }
+
+    /* Was .st-emotion-cache-1bk7tlj -- an Emotion CSS-in-JS-generated class
+       name, not a stable public selector (these hashes can and do change on
+       any Streamlit version bump, since they're implementation details, not
+       an API). [data-testid="stButton"] is Streamlit's own documented,
+       stable hook for targeting buttons. */
+    [data-testid="stButton"] button {
+        border-radius: 20px !important;
+    }
+
+    [data-testid="stButton"] button:hover {
+        border-radius: 25px !important;
+    }
+
+    .pull-quote {
+        font-family: 'Libre Baskerville', serif !important;
+        font-style: italic;
+        font-weight: 400;
+        font-size: 27px;
+        border-left: 3.5px solid #A1A1A1;
+        padding-left: 19px;
+        margin: 0px 5px 10px 20px;
+    }
+
+    div[data-testid="stAlert"] {
+        font-size: 14px !important;
+        padding: 8px 12px !important;
+    }
+
+    div[data-testid="stAlert"] p {
+        font-size: 12px !important;
+    }
+
+    /* Streamlit reserves a large default top gap in .block-container (room
+       for its own toolbar -- the hamburger menu/Deploy button visible at
+       the top right, a fixed-position overlay, not part of normal document
+       flow) -- real dead space on content-dense pages like Explore, where
+       every panel is already fighting for vertical room. Content starts at
+       the actual top of the viewport now; the toolbar overlays on top of
+       it rather than reserving its own flow space, by explicit request.
+       Left/right trimmed the same way and for the same reason -- applied
+       globally (not just Explore) since that's the existing precedent this
+       rule already set for padding-top, and every page benefits from the
+       extra usable width, not just the panel-dense one that prompted it.
+
+       Two nested elements both apply their own padding/max-width, confirmed
+       directly in Streamlit's own shipped frontend bundle (not guessed):
+       an outer wrapper (data-testid="stMain", Emotion-styled with its own
+       dynamic isWideMode/showPadding-driven width/padding/max-width), and
+       the inner div.block-container[data-testid="stMainBlockContainer"]
+       (a separate styled() component, also with its own padding/max-width).
+       An earlier version of this rule only targeted the inner one -- looked
+       identical in devtools at a glance (both show padding/width/max-width
+       properties) but is a genuinely different DOM node, so overriding it
+       alone left the outer wrapper's own padding fully intact. Both call
+       through Emotion's styled() API, not plain CSS classes, but neither
+       compiles its own rule with !important (confirmed by grepping the
+       bundle) -- so !important here is sufficient to win regardless of
+       specificity or injection order, no special selector boosting needed,
+       once both real nodes are actually targeted. */
+    [data-testid="stMain"],
+    .block-container {
+        padding-top: 0rem !important;
+        padding-left: 1rem !important;
+        padding-right: 1rem !important;
+        max-width: initial !important;
+        min-width: auto !important;
+        width: 100% !important;
+    }
+
+    /* Explore's search box shows a red focus ring by default -- Streamlit's
+       default primaryColor (#FF4B4B, this app's .streamlit/config.toml
+       never overrides it) is what colors a focused input's border app-wide.
+       Scoped to just this one input via its own st-key- class rather than
+       changing primaryColor globally -- that would also recolor every
+       type="primary" button, slider, checkbox, etc. across the whole app,
+       a much bigger change than "make the search box's border white." */
+    .st-key-explore_search_input input:focus {
+        border-color: white !important;
+        box-shadow: 0 0 0 1px white !important;
+    }
+
+    /* Small inline pill badges -- Explore's Tempo/Key readouts
+       (.metric-badge), its one-genre-label-for-now tag (.tag-chip, see
+       CLAUDE.md-adjacent decision: real multi-genre/tag data exists in the
+       schema but was never backfilled into this DB, so this stays a single
+       label rather than faking chips the data doesn't support yet), and
+       Moment Matcher's "% match" readout (.match-badge, a distinct green so
+       it reads as a score rather than another neutral metadata fact). */
+    .metric-badge, .tag-chip, .match-badge {
+        display: inline-block;
+        border-radius: 12px;
+        padding: 2px 10px;
+        font-size: 12px;
+        font-weight: 500;
+        margin: 2px 4px 2px 0;
+    }
+
+    .metric-badge {
+        background: rgba(99,110,250,0.18);
+        border: 1px solid rgba(99,110,250,0.45);
+        color: #c7cbff;
+    }
+
+    .tag-chip {
+        background: rgba(255,255,255,0.08);
+        border: 1px solid rgba(255,255,255,0.25);
+        color: rgba(255,255,255,0.85);
+    }
+
+    .match-badge {
+        background: rgba(0,200,120,0.18);
+        border: 1px solid rgba(0,200,120,0.5);
+        color: #7CFCB4;
+    }
+    </style>
+    """, unsafe_allow_html=True)
+
+
+@st.cache_data(show_spinner=False)
+def _hero_graph_data(_song_repo, _embedding_repo, index_size: int):
+    """Real per-song positions + edges for the hero banner -- same
+    similarity-graph construction Explore's interactive graph uses (see
+    analysis/network_graph.py), computed once per session and shared by
+    every page's banner rather than recomputed per page load. Uses the
+    "sound" facet specifically since it's the one facet every song in the
+    library is guaranteed to have been embedded for (see spec's facet
+    rollout order), so the banner never silently comes up near-empty on a
+    partially-embedded library the way a rarer facet like sound_tags could."""
+    from sonic_explorer.analysis.network_graph import build_similarity_graph
+    from sonic_explorer.analysis.taste_map import mean_pool_song_vectors
+
+    vectors = mean_pool_song_vectors(_song_repo, _embedding_repo, facet_name="sound")
+    return build_similarity_graph(vectors)
+
+
+def hero_banner(key: str) -> None:
+    """Real-data page banner -- a muted, non-interactive rendering of the
+    library's actual sound-similarity graph (components.plotting.
+    network_hero_figure), called once near the top of every page. This
+    exists specifically as the "no generic AI-slop hero art" answer: rather
+    than a decorative stock image, every page quietly shows an honest (if
+    desaturated) picture of the real similarity structure the whole project
+    is about. Fails silently (renders nothing) rather than crashing a page
+    if the library has no songs/embeddings yet -- purely decorative, never
+    load-bearing. key must be unique per page (Streamlit requires a unique
+    key per plotly_chart on the same script run)."""
+    from components.plotting import network_hero_figure
+
+    song_repo, embedding_repo, _ = get_repositories()
+    try:
+        result = _hero_graph_data(song_repo, embedding_repo, embedding_repo.index_size("sound"))
+    except Exception:
+        return
+    if not result.nodes:
+        return
+
+    import pandas as pd
+
+    nodes_df = pd.DataFrame([{"song_id": n.song_id, "x": n.x, "y": n.y} for n in result.nodes])
+    fig = network_hero_figure(nodes_df, result.edges)
+    st.plotly_chart(fig, width="stretch", key=f"hero_{key}", config={"staticPlot": True})
+
+
+def facet_display_name(name: str) -> str:
+    """Human-readable facet name for display -- plain str.capitalize() alone
+    turns "sound_tags" into "Sound_tags" (capitalize() only touches the
+    first character, it doesn't know about underscores), a real, live bug
+    across every page that lists facet names this way. Replaces underscores
+    with spaces first, so "sound_tags" -> "Sound tags"."""
+    return name.replace("_", " ").capitalize()
+
+
+def badge(text: str, kind: str = "metric") -> str:
+    """HTML for one inline pill badge (see inject_global_styles' .metric-badge/
+    .tag-chip/.match-badge) -- returns markup for the caller to compose
+    several badges on one line via a single st.markdown(..., unsafe_allow_html=True)
+    call, rather than rendering (and this doesn't call st.markdown itself,
+    since Streamlit puts each st.markdown call on its own line/block)."""
+    css_class = {"metric": "metric-badge", "tag": "tag-chip", "match": "match-badge"}[kind]
+    return f'<span class="{css_class}">{text}</span>'
+
+
+def big_quote(text: str) -> None:
+    """A short, large, visually-set-apart line -- used for the handful of
+    moments across the app meant to land as a single idea, not a paragraph
+    to read. Shared (was three separate _big_quote() copies, only one of
+    which -- overview_page.py's -- was actually ever called)."""
+    st.markdown(
+        f'<div class="pull-quote">{text}</div>',
+        unsafe_allow_html=True,
+    )
 
 
 # Streamlit's dark-theme default background -- this app's .streamlit/config.toml
@@ -139,6 +374,25 @@ def get_explanation_client() -> ExplanationClient | None:
     import anthropic
 
     return ExplanationClient(anthropic.Anthropic(api_key=api_key))
+
+
+@st.cache_resource
+def get_nl_search_client():
+    """Raw anthropic.Anthropic client for llm/search.py's one-shot nl_search()
+    -- deliberately NOT get_agent()'s MusicAgent. Explore's search bar and
+    Ask the DJ are separate features (one-shot query-in/results-out vs. a
+    multi-turn conversation) that used to share MusicAgent directly, which
+    is exactly why a full conversational DJ reply used to leak into
+    Explore's search results. Same per-client-per-feature pattern
+    get_explanation_client()/get_rerank_client() already use -- no shared
+    client instance across features here either."""
+    api_key = _get_anthropic_api_key()
+    if not api_key:
+        return None
+
+    import anthropic
+
+    return anthropic.Anthropic(api_key=api_key)
 
 
 @st.cache_resource

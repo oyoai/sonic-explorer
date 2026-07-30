@@ -10,11 +10,109 @@ song_id is a silent no-op instead of crashing the page."""
 import sys
 from pathlib import Path
 
+import numpy as np
 import pandas as pd
+import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "streamlit_app"))
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from components.plotting import concept_bubble_diagram, extract_selected_song_id, library_waffle_grid, network_graph_figure
+from components.plotting import (  # noqa: E402
+    CHROMA_PITCH_LABELS,
+    chord_strip_figure,
+    chromagram_figure,
+    composite_fingerprint_thumbnail,
+    concept_bubble_diagram,
+    extract_selected_song_id,
+    filter_to_neighbors,
+    fingerprint_image_data_uri,
+    fingerprint_thumbnail,
+    fingerprint_thumbnail_image,
+    library_waffle_grid,
+    mel_spectrogram_figure,
+    network_graph_figure,
+    network_hero_figure,
+    taste_map_figure,
+    waveform_figure,
+)
+from sonic_explorer.analysis.key_chord import ChordSegment  # noqa: E402
+
+
+def test_fingerprint_thumbnail_image_returns_a_real_square_rgb_array():
+    """Real reported bug: small (~56px) fingerprint thumbnails rendered as
+    stretched rectangles via st.plotly_chart(), even with matching width/
+    height declared both in the figure and at the call site. Moved off
+    Plotly entirely for these small cases -- st.image() has simple,
+    well-established exact-pixel sizing a charting library doesn't
+    reliably guarantee at this size. This checks the actual array shape
+    st.image() will render, not a Plotly figure's declared (but apparently
+    unreliable) layout.width/height."""
+    fingerprint = np.random.rand(32, 32).astype(np.float32)
+
+    image = fingerprint_thumbnail_image(fingerprint)
+
+    assert image.shape == (32, 32, 3)
+    assert image.dtype == np.uint8
+    assert image.min() >= 0
+    assert image.max() <= 255
+
+
+def test_fingerprint_thumbnail_image_flips_vertically_to_match_origin_lower():
+    """fingerprint_thumbnail's px.imshow(..., origin="lower") puts row 0 at
+    the bottom (this app's math/audio convention everywhere else);
+    st.image() always puts row 0 at the top -- without an explicit flip,
+    the same song's list thumbnail and detail-view fingerprint would
+    visibly disagree with each other."""
+    fingerprint = np.zeros((4, 4), dtype=np.float32)
+    fingerprint[0, 0] = 1.0  # bright cell in the array's first (bottom, post-origin-lower) row
+
+    image = fingerprint_thumbnail_image(fingerprint)
+
+    # After the vertical flip, that bright cell must land in the LAST row
+    # of the rendered (top-down) image, not the first.
+    assert image[0, 0].sum() < image[-1, 0].sum()
+
+
+def test_fingerprint_image_data_uri_returns_a_valid_png_data_uri():
+    """Explore's Selected Song panel needs a real <img> tag (for a native
+    title= hover tooltip -- st.image() has no hover mechanism at all), so
+    this must be a real, decodable PNG data URI, not just an array."""
+    import base64
+    import io
+
+    from PIL import Image
+
+    fingerprint = np.random.rand(32, 32).astype(np.float32)
+
+    uri = fingerprint_image_data_uri(fingerprint)
+
+    assert uri.startswith("data:image/png;base64,")
+    encoded = uri.removeprefix("data:image/png;base64,")
+    decoded_bytes = base64.b64decode(encoded)
+    image = Image.open(io.BytesIO(decoded_bytes))
+    assert image.format == "PNG"
+    assert image.size == (32, 32)
+
+
+def test_fingerprint_image_data_uri_matches_fingerprint_thumbnail_image_pixels():
+    """Both the small list/result thumbnails (fingerprint_thumbnail_image)
+    and the Selected Song detail view (fingerprint_image_data_uri) must
+    draw from the identical pixel data -- the whole point of unifying onto
+    one image pipeline was fixing a real reported bug where the two looked
+    visibly different for the same song."""
+    import base64
+    import io
+
+    from PIL import Image
+
+    fingerprint = np.random.rand(8, 8).astype(np.float32)
+
+    expected_rgb = fingerprint_thumbnail_image(fingerprint)
+    uri = fingerprint_image_data_uri(fingerprint)
+    decoded_bytes = base64.b64decode(uri.removeprefix("data:image/png;base64,"))
+    actual_rgb = np.array(Image.open(io.BytesIO(decoded_bytes)).convert("RGB"))
+
+    np.testing.assert_array_equal(actual_rgb, expected_rgb)
 
 
 def test_network_graph_figure_customdata_round_trips_song_ids():
@@ -29,6 +127,231 @@ def test_network_graph_figure_customdata_round_trips_song_ids():
     customdata = list(node_trace.customdata)
     assert list(customdata[0])[0] == 101
     assert list(customdata[1])[0] == 202
+
+
+def test_network_graph_figure_uses_qualitative_palette_not_continuous_colorscale():
+    """Regression guard for a real reported bug: cluster ids are nominal/
+    categorical, not ordered -- coloring them with a sequential colorscale
+    (the old Viridis-on-cluster-id approach) made adjacent cluster numbers
+    look falsely similar and distant ones falsely opposed, reported as
+    "visually messy." Node color must be resolved to explicit qualitative
+    hex/rgb strings, one per node, not a numeric array + a colorscale."""
+    nodes_df = pd.DataFrame([
+        {"song_id": 101, "x": 0.0, "y": 0.0, "cluster": 0, "title": "A", "artist": "Artist A", "genre": "Rock"},
+        {"song_id": 202, "x": 1.0, "y": 1.0, "cluster": 1, "title": "B", "artist": "Artist B", "genre": "Jazz"},
+        {"song_id": 303, "x": 2.0, "y": 2.0, "cluster": 0, "title": "C", "artist": "Artist C", "genre": "Pop"},
+    ])
+
+    fig = network_graph_figure(nodes_df, edges=[])
+
+    node_trace = fig.data[1]
+    assert node_trace.marker.colorscale is None
+    colors = list(node_trace.marker.color)
+    assert all(isinstance(c, str) for c in colors)
+    assert colors[0] == colors[2]  # same cluster (0) -> same color
+    assert colors[0] != colors[1]  # different cluster (0 vs 1) -> different color
+
+
+def test_network_graph_figure_highlight_song_ids_widen_marker_and_ring():
+    """highlight_song_ids (search matches) must render distinctly from an
+    unhighlighted node -- larger marker, a visible ring -- separate from
+    selected_song_id's own white-ring styling."""
+    nodes_df = pd.DataFrame([
+        {"song_id": 101, "x": 0.0, "y": 0.0, "cluster": 0, "title": "A", "artist": "Artist A", "genre": "Rock"},
+        {"song_id": 202, "x": 1.0, "y": 1.0, "cluster": 1, "title": "B", "artist": "Artist B", "genre": "Jazz"},
+    ])
+
+    fig = network_graph_figure(nodes_df, edges=[], highlight_song_ids=[202])
+
+    node_trace = fig.data[1]
+    sizes = list(node_trace.marker.size)
+    line_widths = list(node_trace.marker.line.width)
+    assert sizes[1] > sizes[0]
+    assert line_widths[1] > 0
+    assert line_widths[0] == 0
+
+
+def test_network_graph_figure_nodes_have_real_hover_with_title_artist_genre():
+    """Reversed from an earlier "no hover, click only" design -- see the
+    function's own docstring for why. Edge trace stays hoverinfo="skip"
+    (only nodes are a meaningful hover target)."""
+    nodes_df = pd.DataFrame([
+        {"song_id": 101, "x": 0.0, "y": 0.0, "cluster": 0, "title": "A Song", "artist": "Artist A", "genre": "Rock"},
+    ])
+
+    fig = network_graph_figure(nodes_df, edges=[])
+
+    node_trace = fig.data[1]
+    assert node_trace.hoverinfo == "text"
+    assert node_trace.hovertext[0] == "A Song<br>Artist A · Rock"
+    assert fig.data[0].hoverinfo == "skip"
+
+
+def test_network_graph_figure_click_priority_disables_dragmode():
+    """Root cause of a real "clicking a node doesn't work reliably" report:
+    Plotly's default pan dragmode swallows a click that has any mouse
+    movement in it. click_priority=True must disable dragging outright
+    (dragmode=False) without touching hover/click itself; default (False)
+    must leave dragmode alone (None -- Plotly's own default) for callers
+    that never wire on_select (Results/App Walkthrough's static graphs)."""
+    nodes_df = pd.DataFrame([
+        {"song_id": 101, "x": 0.0, "y": 0.0, "cluster": 0, "title": "A", "artist": "Artist A", "genre": "Rock"},
+    ])
+
+    assert network_graph_figure(nodes_df, edges=[]).layout.dragmode is None
+    assert network_graph_figure(nodes_df, edges=[], click_priority=True).layout.dragmode is False
+
+
+def test_network_graph_figure_center_song_id_sets_axis_range():
+    """center_song_id + zoom_radius must zoom the axes to a window around
+    that node's position, not leave them auto-ranged over the whole graph."""
+    nodes_df = pd.DataFrame([
+        {"song_id": 101, "x": 0.0, "y": 0.0, "cluster": 0, "title": "A", "artist": "Artist A", "genre": "Rock"},
+        {"song_id": 202, "x": 10.0, "y": 10.0, "cluster": 1, "title": "B", "artist": "Artist B", "genre": "Jazz"},
+    ])
+
+    fig = network_graph_figure(nodes_df, edges=[], center_song_id=202, zoom_radius=1.0)
+
+    assert fig.layout.xaxis.range == (9.0, 11.0)
+    assert fig.layout.yaxis.range == (9.0, 11.0)
+
+
+def test_filter_to_neighbors_keeps_only_center_and_directly_connected_nodes():
+    from sonic_explorer.analysis.network_graph import GraphEdge
+
+    nodes_df = pd.DataFrame([
+        {"song_id": 1, "x": 0.0, "y": 0.0, "cluster": 0},
+        {"song_id": 2, "x": 1.0, "y": 1.0, "cluster": 0},
+        {"song_id": 3, "x": 2.0, "y": 2.0, "cluster": 1},
+        {"song_id": 4, "x": 3.0, "y": 3.0, "cluster": 1},  # not connected to 1 at all
+    ])
+    edges = [
+        GraphEdge(song_id_a=1, song_id_b=2, weight=0.9),
+        GraphEdge(song_id_a=3, song_id_b=1, weight=0.8),  # center on the "b" side
+        GraphEdge(song_id_a=2, song_id_b=3, weight=0.7),  # doesn't touch song 1 -- must be dropped
+    ]
+
+    filtered_nodes, filtered_edges = filter_to_neighbors(nodes_df, edges, center_song_id=1)
+
+    assert set(filtered_nodes["song_id"]) == {1, 2, 3}
+    assert len(filtered_edges) == 2
+    assert all(e.song_id_a == 1 or e.song_id_b == 1 for e in filtered_edges)
+
+
+def test_filter_to_neighbors_falls_back_to_full_graph_for_unknown_song_id():
+    nodes_df = pd.DataFrame([{"song_id": 1, "x": 0.0, "y": 0.0, "cluster": 0}])
+    filtered_nodes, filtered_edges = filter_to_neighbors(nodes_df, edges=[], center_song_id=999)
+
+    assert len(filtered_nodes) == 1
+    assert filtered_edges == []
+
+
+def test_taste_map_figure_customdata_round_trips_song_ids():
+    points_df = pd.DataFrame([
+        {"song_id": 101, "x": 0.0, "y": 0.0, "cluster": 0},
+        {"song_id": 202, "x": 1.0, "y": 1.0, "cluster": 1},
+    ])
+
+    fig = taste_map_figure(points_df)
+
+    customdata = list(fig.data[0].customdata)
+    assert list(customdata[0])[0] == 101
+    assert list(customdata[1])[0] == 202
+
+
+def test_taste_map_figure_marks_selected_song_with_a_ring():
+    points_df = pd.DataFrame([
+        {"song_id": 101, "x": 0.0, "y": 0.0, "cluster": 0},
+        {"song_id": 202, "x": 1.0, "y": 1.0, "cluster": 1},
+    ])
+
+    fig = taste_map_figure(points_df, selected_song_id=202)
+
+    widths = list(fig.data[0].marker.line.width)
+    assert widths == [0, 2.5]
+
+
+def test_taste_map_figure_has_no_edge_trace():
+    """Unlike network_graph_figure, PCA/ICA position is the real signal --
+    there's no k-NN edge data backing this projection, so drawing lines
+    would imply graph structure that doesn't exist here."""
+    points_df = pd.DataFrame([{"song_id": 101, "x": 0.0, "y": 0.0, "cluster": 0}])
+    fig = taste_map_figure(points_df)
+    assert len(fig.data) == 1
+
+
+def test_taste_map_figure_hover_is_conditional_on_metadata_columns():
+    """title/artist/genre are optional -- a caller without them (e.g. this
+    file's other taste_map_figure tests) gets hoverinfo="skip" rather than a
+    KeyError; a caller with them (Explore's real usage) gets a real tooltip,
+    same format network_graph_figure's node hover uses."""
+    bare_df = pd.DataFrame([{"song_id": 101, "x": 0.0, "y": 0.0, "cluster": 0}])
+    assert taste_map_figure(bare_df).data[0].hoverinfo == "skip"
+
+    meta_df = pd.DataFrame([
+        {"song_id": 101, "x": 0.0, "y": 0.0, "cluster": 0, "title": "A Song", "artist": "Artist A", "genre": "Rock"},
+    ])
+    fig = taste_map_figure(meta_df)
+    assert fig.data[0].hoverinfo == "text"
+    assert fig.data[0].hovertext[0] == "A Song<br>Artist A · Rock"
+
+
+def test_taste_map_figure_click_priority_disables_dragmode():
+    points_df = pd.DataFrame([{"song_id": 101, "x": 0.0, "y": 0.0, "cluster": 0}])
+    assert taste_map_figure(points_df).layout.dragmode is None
+    assert taste_map_figure(points_df, click_priority=True).layout.dragmode is False
+
+
+def test_network_hero_figure_has_no_axes_and_is_short():
+    """The page-banner variant must render as decoration -- no visible axes,
+    no legend, short/thin -- not a second copy of the interactive graph."""
+    nodes_df = pd.DataFrame([
+        {"song_id": 101, "x": 0.0, "y": 0.0},
+        {"song_id": 202, "x": 1.0, "y": 1.0},
+    ])
+
+    fig = network_hero_figure(nodes_df, edges=[])
+
+    assert fig.layout.xaxis.visible is False
+    assert fig.layout.yaxis.visible is False
+    assert fig.layout.height <= 150
+    for trace in fig.data:
+        assert trace.showlegend is False
+
+
+def test_network_hero_figure_uses_real_node_positions_not_placeholders():
+    """The banner must actually plot the real x/y positions handed to it --
+    confirming this isn't a hardcoded decorative shape unrelated to the
+    library's real similarity graph."""
+    nodes_df = pd.DataFrame([
+        {"song_id": 101, "x": 3.5, "y": -2.0},
+        {"song_id": 202, "x": -7.25, "y": 4.0},
+    ])
+
+    fig = network_hero_figure(nodes_df, edges=[])
+
+    node_trace = fig.data[1]
+    assert list(node_trace.x) == [3.5, -7.25]
+    assert list(node_trace.y) == [-2.0, 4.0]
+
+
+def test_fingerprint_thumbnail_declares_equal_width_and_height():
+    """Regression guard for a real reported bug: fingerprints rendered as
+    rectangles, not squares. structure_fingerprint() always returns a
+    genuinely square array -- px.imshow's own scaleanchor/constrain=domain
+    default is known to miscompute after a responsive container resize
+    (exactly what Streamlit's width="stretch" triggers), so the figure
+    must also self-declare an explicit width=height as a second, more
+    robust guarantee. Callers must additionally pass a fixed pixel width
+    (not "stretch") to st.plotly_chart() -- this only checks the figure's
+    own half of that fix."""
+    fig = fingerprint_thumbnail(np.random.rand(32, 32), title="", height=56)
+    assert fig.layout.width == fig.layout.height == 56
+
+
+def test_composite_fingerprint_thumbnail_declares_equal_width_and_height():
+    fig = composite_fingerprint_thumbnail(np.random.rand(32, 32, 3), height=260)
+    assert fig.layout.width == fig.layout.height == 260
 
 
 def test_extract_selected_song_id_happy_path():
@@ -99,10 +422,166 @@ def test_concept_bubble_diagram_center_bubble_is_separate_trace():
 
 
 def test_concept_bubble_diagram_satellites_are_evenly_spaced_around_center():
-    import numpy as np
-
     fig = concept_bubble_diagram("Center", ["A", "B", "C", "D"])
     satellite_trace = fig.data[1]
 
     distances = np.hypot(satellite_trace.x, satellite_trace.y)
     assert np.allclose(distances, 1.0)
+
+
+def test_chromagram_figure_x_axis_is_real_time_not_indices():
+    """x values are the real seek time, for display/hover purposes -- but
+    NOT for click-to-seek: go.Heatmap doesn't fire a plotly_selected event on
+    a plain click the way Bar/Scatter traces do, confirmed as the real cause
+    of a live "click the chromagram, nothing happens" bug report. Click-to-
+    seek lives on chord_strip_figure's Bar trace instead (see its tests)."""
+    chroma = np.random.rand(12, 5)
+    times = np.array([0.0, 1.2, 2.4, 3.6, 4.8])
+
+    fig = chromagram_figure(chroma, times)
+
+    heatmap_trace = fig.data[0]
+    assert list(heatmap_trace.x) == list(times)
+
+
+def test_chromagram_figure_y_axis_has_all_twelve_pitch_classes():
+    chroma = np.random.rand(12, 5)
+    times = np.arange(5, dtype=float)
+
+    fig = chromagram_figure(chroma, times)
+
+    assert list(fig.data[0].y) == CHROMA_PITCH_LABELS
+    assert len(CHROMA_PITCH_LABELS) == 12
+
+
+def test_chromagram_figure_z_values_round_trip_the_chroma_matrix():
+    chroma = np.arange(12 * 5, dtype=float).reshape(12, 5)
+    times = np.arange(5, dtype=float)
+
+    fig = chromagram_figure(chroma, times)
+
+    assert np.array_equal(np.array(fig.data[0].z), chroma)
+
+
+def test_chord_strip_figure_one_bar_per_segment():
+    segments = [
+        ChordSegment(start_sec=0.0, end_sec=2.0, label="C"),
+        ChordSegment(start_sec=2.0, end_sec=5.0, label="Am"),
+        ChordSegment(start_sec=5.0, end_sec=6.0, label="G"),
+    ]
+
+    fig = chord_strip_figure(segments)
+
+    bar_trace = fig.data[0]
+    assert list(bar_trace.base) == [0.0, 2.0, 5.0]
+    assert list(bar_trace.x) == [2.0, 3.0, 1.0]  # durations
+
+
+def test_chord_strip_figure_customdata_carries_each_segments_start_time():
+    """This is the real click-to-seek control (chromagram_figure's heatmap
+    isn't) -- customdata must carry each bar's start_sec so a click event's
+    point["customdata"][0] gives a real seek time, same pattern
+    network_graph_figure/Song X-Ray's structure timeline already use."""
+    segments = [
+        ChordSegment(start_sec=0.0, end_sec=2.0, label="C"),
+        ChordSegment(start_sec=2.0, end_sec=5.0, label="Am"),
+    ]
+
+    fig = chord_strip_figure(segments)
+
+    customdata = list(fig.data[0].customdata)
+    assert list(customdata[0])[0] == 0.0
+    assert list(customdata[1])[0] == 2.0
+
+
+def test_chord_strip_figure_short_segments_omit_inline_text():
+    """A sub-second segment can't legibly hold a text label -- must not try
+    to cram one in and overflow."""
+    segments = [
+        ChordSegment(start_sec=0.0, end_sec=0.5, label="C"),
+        ChordSegment(start_sec=0.5, end_sec=3.0, label="Am"),
+    ]
+
+    fig = chord_strip_figure(segments)
+
+    assert list(fig.data[0].text) == ["", "Am"]
+
+
+def test_chord_strip_figure_empty_segments_does_not_raise():
+    fig = chord_strip_figure([])
+    assert len(fig.data) == 0
+
+
+def test_mel_spectrogram_figure_x_axis_is_real_time():
+    mel_db = np.random.rand(64, 5) * -80
+    times = np.array([0.0, 1.2, 2.4, 3.6, 4.8])
+
+    fig = mel_spectrogram_figure(mel_db, times)
+
+    assert list(fig.data[0].x) == list(times)
+
+
+def test_mel_spectrogram_figure_y_axis_has_one_frequency_per_mel_bin():
+    mel_db = np.random.rand(64, 5) * -80
+    times = np.arange(5, dtype=float)
+
+    fig = mel_spectrogram_figure(mel_db, times)
+
+    assert len(fig.data[0].y) == 64
+    assert list(fig.data[0].y) == sorted(fig.data[0].y)  # mel frequencies are monotonically increasing
+
+
+def test_mel_spectrogram_figure_z_values_round_trip_the_mel_matrix():
+    mel_db = np.arange(64 * 5, dtype=float).reshape(64, 5)
+    times = np.arange(5, dtype=float)
+
+    fig = mel_spectrogram_figure(mel_db, times)
+
+    assert np.array_equal(np.array(fig.data[0].z), mel_db)
+
+
+def test_waveform_figure_plots_the_real_envelope():
+    envelope = np.array([0.1, 0.5, 0.9, 0.3])
+
+    fig = waveform_figure(envelope, duration_sec=4.0)
+
+    assert list(fig.data[0].y) == list(envelope)
+
+
+def test_waveform_figure_single_highlight_range_adds_one_shaded_region():
+    fig = waveform_figure(np.array([0.1, 0.2, 0.3]), duration_sec=3.0, highlight_range=(1.0, 2.0))
+
+    assert len(fig.layout.shapes) == 1
+    assert fig.layout.shapes[0].x0 == 1.0
+    assert fig.layout.shapes[0].x1 == 2.0
+
+
+def test_waveform_figure_highlight_ranges_adds_one_shaded_region_per_segment():
+    """Approach Step 1's real use case: each of the four sample window clips
+    gets its own shaded region on the full-song waveform, numbered to match
+    the players shown below it."""
+    envelope = np.zeros(10)
+    ranges = [(0.0, 2.5), (5.0, 7.5), (10.0, 12.5), (15.0, 17.5)]
+
+    fig = waveform_figure(envelope, duration_sec=20.0, highlight_ranges=ranges, highlight_labels=["1", "2", "3", "4"])
+
+    assert len(fig.layout.shapes) == 4
+    starts = sorted(shape.x0 for shape in fig.layout.shapes)
+    assert starts == [0.0, 5.0, 10.0, 15.0]
+
+
+def test_waveform_figure_highlight_ranges_cycles_colors():
+    """More than one region must not all render in the same color, or the
+    numbered labels would be the only way to tell them apart."""
+    envelope = np.zeros(10)
+    ranges = [(0.0, 1.0), (2.0, 3.0)]
+
+    fig = waveform_figure(envelope, duration_sec=10.0, highlight_ranges=ranges)
+
+    colors = {shape.fillcolor for shape in fig.layout.shapes}
+    assert len(colors) == 2
+
+
+def test_waveform_figure_no_highlights_by_default():
+    fig = waveform_figure(np.array([0.1, 0.2, 0.3]))
+    assert len(fig.layout.shapes) == 0
