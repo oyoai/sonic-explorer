@@ -205,7 +205,14 @@ if mode == "existing_song":
             if llm_client is None:
                 st.caption("Set ANTHROPIC_API_KEY to also get a plain-language explanation for each match.")
             if was_reranked:
-                st.caption("Results re-ranked for overall fit, not just raw similarity.")
+                st.caption(
+                    "Results re-ranked for overall fit, not just raw similarity.",
+                    help="An LLM re-ordered these candidates using its own judgment of the "
+                         "title/artist/genre pairing, not just the stage-1 cosine-similarity score -- "
+                         "a lower-scored candidate can outrank a higher-scored one if it's a more "
+                         "sensible match, and vice versa. It sees only text metadata for this, not "
+                         "additional audio analysis.",
+                )
 
             def _render_moment_match(match):
                 pct = max(0.0, match.score) * 100
