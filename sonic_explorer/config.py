@@ -35,6 +35,15 @@ DB_PATH = ARTIFACTS_DIR / "sonic_explorer.db"
 SOUND_INDEX_PATH = ARTIFACTS_DIR / "sound.index"
 STRUCTURE_INDEX_PATH = ARTIFACTS_DIR / "structure.index"
 
+# Persisted mean/std for harmony's post-hoc embedding whitening (see
+# analysis/embedding_whitening.py's module docstring for the real bug this
+# fixes) -- HarmonyFacet.embed() loads this if present and applies it so
+# every fresh embedding lands in the same space as what's already indexed.
+# Absent on a fresh checkout before scripts/whiten_harmony_index.py has
+# ever been run against that environment's data dir -- HarmonyFacet treats
+# that as "no whitening yet," not an error.
+HARMONY_WHITENER_PATH = ARTIFACTS_DIR / "harmony_whitener.npz"
+
 # Marker file written by scripts/seed_dev_data.py -- its presence means the UI is
 # currently pointed at synthetic placeholder data, not the real synced library.
 # Delete it (or just overwrite data/artifacts/ with the real sync) once real data lands.

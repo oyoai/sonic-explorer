@@ -9,9 +9,22 @@ vary, without re-extracting any audio features -- this operates purely on
 vectors already sitting in a FAISS index.
 
 Generic over any facet's embedding, not harmony-specific -- fit once on a
-corpus of same-facet vectors, then transform each vector independently."""
+corpus of same-facet vectors, then transform each vector independently.
+
+save()/load() exist because a fitted Whitener needs to outlive the one-off
+script that fits it (scripts/whiten_harmony_index.py) -- a real bug this
+fixed: that script fit a Whitener, used it to rebuild the FAISS index in
+place, then discarded the fitted object entirely. Any code computing a
+FRESH harmony embedding afterward (a live query, a new song being added, a
+robustness/perturbation test) had no way to reproduce the same transform,
+so it landed in a different (unwhitened) vector space than what's actually
+stored in the index -- silently, since nothing raised an error, scores were
+just meaningless. HarmonyFacet now loads and applies the persisted whitener
+itself (see facets/harmony.py), so this is the one place the transform is
+defined and the one place it's saved from."""
 
 from dataclasses import dataclass
+from pathlib import Path
 
 import numpy as np
 
@@ -27,6 +40,14 @@ class Whitener:
         if norm > 0:
             whitened = whitened / norm
         return whitened.astype(np.float32)
+
+    def save(self, path: Path) -> None:
+        np.savez(path, mean=self.mean, std=self.std)
+
+    @classmethod
+    def load(cls, path: Path) -> "Whitener":
+        data = np.load(path)
+        return cls(mean=data["mean"], std=data["std"])
 
 
 def fit_whitener(vectors: list[np.ndarray], eps: float = 1e-6) -> Whitener:

@@ -1,7 +1,7 @@
 import numpy as np
 import pytest
 
-from sonic_explorer.analysis.embedding_whitening import fit_whitener
+from sonic_explorer.analysis.embedding_whitening import Whitener, fit_whitener
 
 
 def test_whitening_increases_spread_of_collapsed_corpus():
@@ -46,3 +46,22 @@ def test_fit_whitener_handles_constant_dimension_without_dividing_by_zero():
     result = whitener.transform(np.array([2.0, 5.0]))
 
     assert np.all(np.isfinite(result))
+
+
+def test_save_and_load_round_trips_the_same_transform(tmp_path):
+    """Real regression coverage for a real bug: a fitted Whitener used to be
+    discarded once scripts/whiten_harmony_index.py finished rebuilding the
+    index in place, so nothing computing a FRESH embedding afterward (a live
+    query, a new song, a robustness test) could reproduce the same
+    transform -- it landed in a different, unwhitened vector space than
+    what's actually stored in the index. save()/load() exist so the fitted
+    mean/std outlive that one-off script run."""
+    vectors = [np.array([1.0, 2.0, 3.0]), np.array([2.0, 1.0, 4.0]), np.array([3.0, 3.0, 1.0])]
+    whitener = fit_whitener(vectors)
+    path = tmp_path / "whitener.npz"
+
+    whitener.save(path)
+    loaded = Whitener.load(path)
+
+    probe = np.array([1.5, 2.5, 2.0])
+    np.testing.assert_array_almost_equal(whitener.transform(probe), loaded.transform(probe))

@@ -10,12 +10,21 @@ audio re-processing, no re-embedding. Backs up the original index first
 (harmony.index.pre_whitening.bak) so this is reversible. Meant to run once;
 re-running would fit a whitener on an already-whitened corpus (mean ~0, std
 ~1 already), which is a near-identity transform, not harmful but pointless.
+
+Persists the fitted whitener to HARMONY_WHITENER_PATH -- a real gap this
+closes: earlier versions of this script fit a Whitener, used it in-memory
+to rebuild the index, then discarded it, leaving no way for any FUTURE
+harmony embedding (a live query, a new song, a robustness test) to land in
+the same whitened space the index now lives in. HarmonyFacet.embed() loads
+this file itself (see facets/harmony.py) and applies the same transform to
+every fresh embedding from now on, so this script only needs running once
+per corpus, not once per script run thereafter.
 """
 
 import shutil
 
 from sonic_explorer.analysis.embedding_whitening import fit_whitener
-from sonic_explorer.config import ARTIFACTS_DIR, DB_PATH
+from sonic_explorer.config import ARTIFACTS_DIR, DB_PATH, HARMONY_WHITENER_PATH
 from sonic_explorer.evaluation.genre_cohesion import genre_cohesion_at_k
 from sonic_explorer.evaluation.retrieval_diagnostics import top1_score_distribution
 from sonic_explorer.repository.db import init_db
@@ -68,6 +77,9 @@ def main():
     vectors = [embedding_repo.get_vector(FACET_NAME, seg_id) for seg_id in segment_ids]
     whitener = fit_whitener(vectors)
     whitened = [whitener.transform(v) for v in vectors]
+
+    whitener.save(HARMONY_WHITENER_PATH)
+    print(f"Saved whitener (mean/std) to {HARMONY_WHITENER_PATH}")
 
     import faiss
     import numpy as np
