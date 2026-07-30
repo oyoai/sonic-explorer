@@ -9,7 +9,33 @@ import streamlit as st
 
 from comparison_data import build_metadata_vs_real_graphs, get_demo_pairs
 from components.plotting import network_graph_figure
-from resources import facet_display_name, get_agent, get_repositories, hero_banner, nav_button, show_data_source_banner, show_logo
+from resources import (
+    facet_display_name,
+    get_agent,
+    get_calibration_repositories,
+    get_repositories,
+    hero_banner,
+    nav_button,
+    render_toc,
+    show_data_source_banner,
+    show_logo,
+)
+from sonic_explorer.evaluation.blend_weight_regression import compute_blend_weights
+
+# Headers below sit inside st.tabs() -- see render_toc's own docstring for
+# the real limitation this creates (a link into a header under a tab that
+# isn't already selected scrolls to nothing visible until that tab is
+# opened by hand).
+TOC_SECTIONS = [
+    ("Genre-cohesion outcome", "genre-cohesion-outcome"),
+    ("Score distributions", "score-distributions"),
+    ("CLAP gain sensitivity", "clap-gain-sensitivity"),
+    ("Genre-free clustering", "genre-free-clustering"),
+    ("Linear probing", "linear-probing"),
+    ("Calibration study & blend-weights", "calibration-blend-weights"),
+    ("Ask the DJ Gallery", "ask-the-dj-gallery"),
+    ("Metadata baseline vs. real approach", "metadata-vs-real"),
+]
 from sonic_explorer.analysis.network_graph import cross_genre_edge_fraction
 from sonic_explorer.analysis.song_dna import AXIS_LABELS
 from sonic_explorer.config import audio_path_for
@@ -103,6 +129,7 @@ DJ_GALLERY_QUERIES = [
 
 st.set_page_config(page_title="Sonic Explorer", layout="wide")
 hero_banner("results")
+render_toc(TOC_SECTIONS)
 
 song_repo, embedding_repo, retrieval_service = get_repositories()
 all_songs = song_repo.list_songs()
@@ -130,7 +157,7 @@ tab_facet, tab_calibration, tab_dj_gallery, tab_comparison = st.tabs([
 # Facet Evaluation
 # ---------------------------------------------------------------------------
 with tab_facet:
-    st.header("Genre-cohesion outcome")
+    st.header("Genre-cohesion outcome", anchor="genre-cohesion-outcome")
     st.write(
         f"Do a facet's nearest neighbors actually share genre more often than chance, at "
         f"k={GENRE_COHESION_RESULTS['k']} (sampled over {GENRE_COHESION_RESULTS['facets'][0]['n_queries']} "
@@ -174,7 +201,7 @@ with tab_facet:
 
     st.divider()
 
-    st.header("Score distributions across the whole library")
+    st.header("Score distributions across the whole library", anchor="score-distributions")
     st.write(
         "A facet can beat the random baseline on genre-sharing while still producing a nearly flat "
         "score landscape underneath, where the \"best\" match isn't meaningfully better than the "
@@ -223,7 +250,7 @@ with tab_facet:
 
     st.divider()
 
-    st.header("CLAP gain sensitivity")
+    st.header("CLAP gain sensitivity", anchor="clap-gain-sensitivity")
     st.write(
         "Measured before building a planned perturbation/robustness test on top of this pipeline -- "
         "see Methodology §7f for the full reasoning and the loudness-normalization decision it led "
@@ -258,7 +285,7 @@ with tab_facet:
 
     st.divider()
 
-    st.header("Genre-free clustering: real supporting evidence for the core thesis")
+    st.header("Genre-free clustering: real supporting evidence for the core thesis", anchor="genre-free-clustering")
     st.write(
         "This app argues throughout Approach and Methodology that genre_top is a metadata proxy, "
         "not a measurement of what a song actually sounds like. This is the quantitative test of "
@@ -296,7 +323,7 @@ with tab_facet:
 
     st.divider()
 
-    st.header("Linear probing: what CLAP's embedding encodes about Song DNA")
+    st.header("Linear probing: what CLAP's embedding encodes about Song DNA", anchor="linear-probing")
     st.write(
         "Lighter-weight, complementary evidence to the clustering result above -- not about genre, "
         "but about what the Sound facet's CLAP embedding geometrically encodes on its own. See "
@@ -330,7 +357,7 @@ with tab_facet:
 # Calibration & Blend-Weights
 # ---------------------------------------------------------------------------
 with tab_calibration:
-    st.header("Calibration study & blend-weight regression")
+    st.header("Calibration study & blend-weight regression", anchor="calibration-blend-weights")
     st.write(
         "A genre-cohesion lift is necessary but not sufficient -- it doesn't say whether a match "
         "*feels* right to an actual listener. This study collects blind XAB pairwise similarity "
@@ -338,18 +365,72 @@ with tab_calibration:
         "and random song pairs, then regresses facet blend weights against those human judgments -- "
         "see Methodology §8 for the full XAB design."
     )
-    st.warning(
-        "**In progress -- no results yet.** The rating tool is live and collecting data; this "
-        "section will report the XAB outcome, the blend-weight regression result, and the resulting "
-        "fine-tuning go/no-go decision once enough pairs are rated. Shown as an honest \"not done\" "
-        "rather than filled with placeholder numbers."
-    )
+    # Computed live from whatever's actually in calibration_ratings right now
+    # (sonic_explorer.evaluation.blend_weight_regression) -- not a hardcoded/
+    # precomputed number, so this section starts reporting real numbers the
+    # moment the first rating is submitted, and keeps updating as more come
+    # in, rather than waiting on a manual content update.
+    calibration_repo, _calibration_guest_repo, _taste_repo, _taste_guest_repo = get_calibration_repositories()
+    blend_result = compute_blend_weights(calibration_repo, song_repo, embedding_repo)
+
+    if blend_result.n_ratings == 0:
+        st.warning(
+            "**No ratings yet.** The rating tool is live and collecting data; this section computes "
+            "live from whatever's actually in calibration_ratings, so it'll start reporting real "
+            "numbers the moment the first rating is submitted -- shown as an honest \"not done\" "
+            "rather than filled with placeholder numbers."
+        )
+    else:
+        st.info(
+            f"**Live, computed from real data: {blend_result.n_ratings} rating(s) from "
+            f"{blend_result.n_raters} rater(s).** This is genuinely early -- read what follows as a "
+            "first look at real data, not a settled result. It updates automatically as more ratings "
+            "come in, no manual refresh of this page's content needed."
+        )
+
+        st.markdown("###### Per-facet agreement rate")
+        st.caption(
+            "For each facet: across ratings where that facet had a real embedding for all three "
+            "segments, how often did the facet's OWN higher-similarity candidate match the human's "
+            "actual choice? 50% is chance; a tie (the facet sees no difference at all between A and "
+            "B) counts as half credit, not a win for either side."
+        )
+        agreement_rows = [
+            {"Facet": facet_display_name(f), "Agreement rate": blend_result.agreement_rate[f], "n": blend_result.agreement_n[f]}
+            for f in blend_result.facet_names
+            if blend_result.agreement_n[f] > 0
+        ]
+        if not agreement_rows:
+            st.caption("No facet has a fully-embedded rated triplet yet.")
+        else:
+            agreement_df = pd.DataFrame(agreement_rows)
+            st.bar_chart(agreement_df.set_index("Facet")["Agreement rate"], height=220)
+            st.dataframe(agreement_df, hide_index=True, width="stretch")
+
+        st.markdown("###### Blend-weight regression")
+        if blend_result.regression_weights is None:
+            st.caption(blend_result.regression_note)
+        else:
+            st.caption(
+                "L2-regularized logistic regression coefficients (each facet's similarity-score "
+                "difference between candidates -> which one the human actually picked). A positive "
+                "weight means that facet's own judgment tends to agree with the human choice; "
+                "magnitude is how influential. These are NOT final blend weights to wire into "
+                "retrieval yet -- just what the regression finds on today's very small sample."
+            )
+            weights_df = pd.DataFrame([
+                {"Facet": facet_display_name(f), "Coefficient": w}
+                for f, w in blend_result.regression_weights.items()
+            ])
+            st.bar_chart(weights_df.set_index("Facet")["Coefficient"], height=220)
+
+    nav_button("Open the rating tool →", "pages/9_Calibration.py", key="nav_results_to_calibration")
 
 # ---------------------------------------------------------------------------
 # Ask the DJ Gallery
 # ---------------------------------------------------------------------------
 with tab_dj_gallery:
-    st.header("Ask the DJ Gallery")
+    st.header("Ask the DJ Gallery", anchor="ask-the-dj-gallery")
     st.write(
         "Click any example below to send it live to the deployed DJ and see its real response -- "
         "including the sound-recognition-specific queries that only search_by_sound_content can "
@@ -390,7 +471,7 @@ with tab_dj_gallery:
 # Metadata baseline vs. Real approach
 # ---------------------------------------------------------------------------
 with tab_comparison:
-    st.header("Metadata baseline vs. real audio similarity")
+    st.header("Metadata baseline vs. real audio similarity", anchor="metadata-vs-real")
     st.write(
         "Overview showed the strongest non-audio baseline this library's metadata can build (genre "
         "+ genre hierarchy + album + tags) and the tautology built into it: a metadata-only edge "

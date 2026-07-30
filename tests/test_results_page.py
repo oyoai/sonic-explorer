@@ -61,12 +61,38 @@ def test_results_page_comparison_tab_has_metadata_vs_real_graph_and_audio_demo()
     assert len(at.tabs[3].get("audio")) >= 4  # two songs per pair, two pairs
 
 
-def test_results_page_calibration_tab_is_honest_about_pending_status():
-    """No fabricated numbers -- calibration data collection hadn't produced
-    any ratings yet when this page was built, so the section must say so."""
+def test_results_page_calibration_tab_reports_honestly_either_way():
+    """This section is computed LIVE from whatever's actually in
+    calibration_ratings (sonic_explorer.evaluation.blend_weight_regression),
+    not a hardcoded/precomputed number -- so which of these two honest
+    states it shows depends on real, currently-mutable local DB state, not
+    something this test can assume a fixed outcome for. Either "no ratings
+    yet" (a warning) or "N rating(s) from M rater(s)" (an info box stating
+    the real sample size) is correct; showing neither, or a fabricated
+    number with no ratings behind it, would not be."""
     at = _run_results()
     warning_texts = [w.value for w in at.tabs[1].warning]
-    assert any("no results yet" in w.lower() for w in warning_texts)
+    info_texts = [i.value for i in at.tabs[1].info]
+    no_ratings_yet = any("no ratings yet" in w.lower() for w in warning_texts)
+    has_real_data = any("rating(s) from" in i.lower() and "rater(s)" in i.lower() for i in info_texts)
+    assert no_ratings_yet or has_real_data
+
+
+def test_results_page_calibration_tab_shows_agreement_and_regression_sections_when_data_exists():
+    """When real ratings do exist, both the per-facet agreement rate and
+    the blend-weight regression subsections must render something (a real
+    chart/table, or -- for the regression specifically, which needs many
+    more ratings than a handful to fit at all -- an honest "too few
+    ratings" note) rather than either crashing or silently showing
+    nothing."""
+    at = _run_results()
+    info_texts = [i.value for i in at.tabs[1].info]
+    has_real_data = any("rating(s) from" in i.lower() and "rater(s)" in i.lower() for i in info_texts)
+    if not has_real_data:
+        return  # nothing to check further -- the honest "no ratings yet" test above covers this state
+    markdown_texts = " ".join(m.value for m in at.tabs[1].markdown)
+    assert "Per-facet agreement rate" in markdown_texts
+    assert "Blend-weight regression" in markdown_texts
 
 
 def test_results_page_dj_gallery_tab_includes_sound_recognition_query():
