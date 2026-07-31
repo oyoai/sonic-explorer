@@ -1,9 +1,13 @@
 import numpy as np
+import pytest
 
 from sonic_explorer.analysis.key_chord import (
+    MIN_SEGMENT_SEC_DEFAULT,
+    MIN_SEGMENT_SEC_FLOOR,
     _MAJOR_PROFILE,
     _MINOR_PROFILE,
     ChordSegment,
+    _tempo_relative_min_segment_sec,
     estimate_chords,
     estimate_key,
 )
@@ -190,3 +194,44 @@ def test_chord_segment_is_a_plain_dataclass():
     seg = ChordSegment(start_sec=0.0, end_sec=1.0, label="C")
     assert seg.start_sec == 0.0
     assert seg.label == "C"
+
+
+def test_tempo_relative_min_segment_sec_scales_with_beat_duration():
+    """A 120 BPM song has a 0.5s beat -- one beat is the minimum plausible
+    chord duration (MIN_SEGMENT_BEATS=1), and 0.5s is well above the
+    absolute floor, so it should pass through unclamped."""
+    assert _tempo_relative_min_segment_sec(120.0) == pytest.approx(0.5)
+
+
+def test_tempo_relative_min_segment_sec_clamps_to_the_absolute_floor():
+    """A very fast song's beat is shorter than MIN_SEGMENT_SEC_FLOOR --
+    the floor wins rather than letting the tempo-relative number go
+    arbitrarily low."""
+    fast_bpm = 60.0 / (MIN_SEGMENT_SEC_FLOOR / 2)  # beat duration is half the floor
+    assert _tempo_relative_min_segment_sec(fast_bpm) == pytest.approx(MIN_SEGMENT_SEC_FLOOR)
+
+
+@pytest.mark.parametrize("bad_tempo", [None, 0.0, -10.0])
+def test_tempo_relative_min_segment_sec_falls_back_without_a_real_tempo(bad_tempo):
+    assert _tempo_relative_min_segment_sec(bad_tempo) == MIN_SEGMENT_SEC_DEFAULT
+
+
+def test_estimate_chords_derives_min_segment_sec_from_tempo_bpm_when_not_given_explicitly():
+    """A short G blip between two longer C runs: at a slow tempo (60 BPM,
+    1s beat) the blip is shorter than the tempo-relative floor and gets
+    merged away, exactly like passing an equivalent min_segment_sec by
+    hand would -- confirms tempo_bpm actually drives the merge pass, not
+    just accepted and ignored."""
+    c_major = np.zeros(12)
+    c_major[[0, 4, 7]] = 1.0
+    g_major = np.zeros(12)
+    g_major[[7, 11, 2]] = 1.0
+
+    frames = [c_major] * 4 + [g_major] + [c_major] * 4
+    chroma = np.stack(frames, axis=1)
+    times = np.arange(len(frames), dtype=float) * 0.1  # G blip alone is 0.1s wide
+
+    segments = estimate_chords(chroma, times, smooth_window_sec=0.05, tempo_bpm=60.0)
+
+    assert len(segments) == 1
+    assert segments[0].label == "C"

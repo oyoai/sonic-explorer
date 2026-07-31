@@ -120,9 +120,9 @@ def _cached_click_track(song_id: int, audio_path: str):
 
 
 @st.cache_data(show_spinner=False)
-def _cached_chords_for_xray(song_id: int, audio_path: str):
+def _cached_chords_for_xray(song_id: int, audio_path: str, tempo_bpm: float | None):
     chroma, times = chroma_for_display(audio_path)
-    return estimate_chords(chroma, times)
+    return estimate_chords(chroma, times, tempo_bpm=tempo_bpm)
 
 
 @st.cache_data(show_spinner=False)
@@ -169,7 +169,7 @@ with st.expander("Verify beat & chord detection by ear"):
             st.caption(f"{len(xray_beat_times)} beats detected.")
 
         st.markdown("###### Chord tone track")
-        xray_chords = _cached_chords_for_xray(song.id, xray_audio_path)
+        xray_chords = _cached_chords_for_xray(song.id, xray_audio_path, song.tempo_bpm)
         if not xray_chords:
             st.caption("No chords detected (near-silent or unpitched audio).")
         else:

@@ -257,7 +257,7 @@ def _key_and_chords_for_display(song_id: int):
     from sonic_explorer.analysis.key_chord import estimate_chords, estimate_key
 
     chroma, times = _chroma_for_display(song_id)
-    return estimate_key(chroma), estimate_chords(chroma, times)
+    return estimate_key(chroma), estimate_chords(chroma, times, tempo_bpm=songs_by_id[song_id].tempo_bpm)
 
 
 @st.cache_data(show_spinner=False)

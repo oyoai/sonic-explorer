@@ -1,11 +1,14 @@
 """Shared Plotly rendering helpers for the interface layer."""
 
+import colorsys
 import math
 
 import numpy as np
 import plotly.colors as pc
 import plotly.express as px
 import plotly.graph_objects as go
+
+from sonic_explorer.analysis.key_chord import PITCH_CLASSES
 
 # Perceptually-uniform colormaps (spec 2.6): color intensity maps linearly to
 # value, avoiding misread intensity -- an actual data-viz standard, not a
@@ -607,6 +610,28 @@ def mel_spectrogram_figure(mel_db: np.ndarray, times: np.ndarray, height: int = 
     return fig
 
 
+def _chord_color(label: str) -> str:
+    """Deterministic color per chord label, independent of which song/
+    segment is showing it -- same "fixed, known-set mapping" spirit as
+    GENRE_COLOR_MAP above, just built from HSL instead of a qualitative
+    palette since chords (24 triads + N/C) outnumber any qualitative
+    palette's distinct colors. The root pitch class picks the hue, evenly
+    spaced around the wheel in PITCH_CLASSES order, so e.g. every C-rooted
+    segment is the same color everywhere it appears; major vs. minor of
+    the SAME root differ only in lightness (minor darker) so a viewer can
+    read "same root, different quality" as a shade of one color rather
+    than two unrelated ones. "N/C" (no discernible chord, e.g. silence)
+    is a fixed neutral gray -- it isn't a real chord, so it shouldn't get
+    a wheel color."""
+    if label == "N/C":
+        return "rgb(130, 130, 130)"
+    is_minor = label.endswith("m")
+    root = label[:-1] if is_minor else label
+    hue = PITCH_CLASSES.index(root) / len(PITCH_CLASSES)
+    r, g, b = colorsys.hls_to_rgb(hue, 0.38 if is_minor else 0.58, 0.55)
+    return f"rgb({round(r * 255)}, {round(g * 255)}, {round(b * 255)})"
+
+
 def chord_strip_figure(segments, height: int = 70) -> go.Figure:
     """Horizontal labeled-block strip of chord segments (see
     analysis.key_chord.estimate_chords) -- one bar per (start_sec, end_sec,
@@ -617,7 +642,12 @@ def chord_strip_figure(segments, height: int = 70) -> go.Figure:
     new annotation-overlay scheme -- and, unlike chromagram_figure's heatmap,
     this Bar trace genuinely supports click-to-select, so this is the real
     seek control for the pair: customdata carries each segment's start_sec
-    for a caller to read back via event.selection.points[0]["customdata"][0]."""
+    for a caller to read back via event.selection.points[0]["customdata"][0].
+
+    Each bar is colored per its own chord label (_chord_color) rather than
+    a single flat bar color -- lets a viewer see chord changes (and spot a
+    repeating progression) directly from color, not just from the inline
+    text labels that a sub-1s segment doesn't have room to show."""
     if not segments:
         return go.Figure()
 
@@ -633,7 +663,8 @@ def chord_strip_figure(segments, height: int = 70) -> go.Figure:
         text=text, textposition="inside", insidetextanchor="middle",
         customdata=[[s.start_sec] for s in segments],
         hovertext=[f"{lab}: {s.start_sec:.1f}s–{s.end_sec:.1f}s" for lab, s in zip(labels, segments, strict=False)],
-        hoverinfo="text", marker_line_width=0.5, marker_line_color="rgba(255,255,255,0.3)",
+        hoverinfo="text", marker_color=[_chord_color(lab) for lab in labels],
+        marker_line_width=0.5, marker_line_color="rgba(255,255,255,0.3)",
     ))
     fig.update_layout(
         height=height, margin=dict(l=10, r=10, t=5, b=20),

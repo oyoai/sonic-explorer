@@ -148,8 +148,48 @@ def _merge_short_segments(segments: list[ChordSegment], min_duration_sec: float)
     return coalesced
 
 
+# Fallback flat floor when the caller has no per-song tempo to give us
+# (e.g. a synthetic chroma in a test) -- the old fixed default, still a
+# reasonable single number if there's truly nothing tempo-specific to go
+# on, but every real caller in this codebase has a song's tempo_bpm on
+# hand and should pass it instead (see MIN_SEGMENT_BEATS below).
+MIN_SEGMENT_SEC_DEFAULT = 1.0
+
+# Absolute safety net for the tempo-relative floor -- guards against a
+# pathological/undetected tempo (tempo_bpm <= 0, or an implausibly slow
+# one) producing a floor so large it eats real chord changes. 0.3s was
+# this project's ORIGINAL flat floor (86f1c23); kept only as this lower
+# bound now, not as the default.
+MIN_SEGMENT_SEC_FLOOR = 0.3
+
+# How many beats a real chord change needs, at minimum, to be plausible:
+# on real songs in this library (data/artifacts/sonic_explorer.db, 1398
+# with a detected tempo), beat duration ranges from ~0.37s (p10, up-tempo)
+# through ~0.51s (median) to ~0.70s (p90, slow) up to ~1.49s (slowest
+# song, ~40 BPM). Harmonic rhythm essentially never changes faster than
+# once per beat in tonal/tracked music -- there's no genre in this
+# library where a real sub-beat chord change is expected -- so 1 beat is
+# the physically-grounded floor, not an arbitrary constant.
+MIN_SEGMENT_BEATS = 1.0
+
+
+def _tempo_relative_min_segment_sec(tempo_bpm: float | None) -> float:
+    """Real per-song beat duration (60 / tempo_bpm) scaled by
+    MIN_SEGMENT_BEATS, floored at MIN_SEGMENT_SEC_FLOOR -- replaces a
+    single flat constant with a number that actually tracks how fast
+    THIS song is, since a fixed floor is simultaneously too lenient for
+    slow songs (a beat can last longer than 1s) and too strict for fast
+    ones (see estimate_chords' docstring for the real numbers behind
+    this). Falls back to MIN_SEGMENT_SEC_DEFAULT when tempo_bpm is
+    missing or non-positive (e.g. tempo detection failed for this song)."""
+    if not tempo_bpm or tempo_bpm <= 0:
+        return MIN_SEGMENT_SEC_DEFAULT
+    return max(MIN_SEGMENT_SEC_FLOOR, MIN_SEGMENT_BEATS * 60.0 / tempo_bpm)
+
+
 def estimate_chords(
-    chroma: np.ndarray, times: np.ndarray, smooth_window_sec: float = 1.0, min_segment_sec: float = 0.3
+    chroma: np.ndarray, times: np.ndarray, smooth_window_sec: float = 1.0,
+    min_segment_sec: float | None = None, tempo_bpm: float | None = None,
 ) -> list[ChordSegment]:
     """Per-frame chord template matching (24 major/minor triads), smoothed
     with a mode-filter over roughly smooth_window_sec of frames to avoid
@@ -167,9 +207,20 @@ def estimate_chords(
     one clean boundary. min_segment_sec runs a merge pass after smoothing
     to absorb any segment shorter than that into its longer neighbor,
     cleaning up exactly that residual seesaw without changing the
-    underlying per-frame estimation or the mode filter itself."""
+    underlying per-frame estimation or the mode filter itself.
+
+    min_segment_sec defaults to None, meaning "derive it from tempo_bpm"
+    (see _tempo_relative_min_segment_sec) rather than a single fixed
+    number for every song regardless of how fast it is -- pass tempo_bpm
+    (each song's own, already computed for Song DNA, so this is free)
+    and leave min_segment_sec alone for that; pass min_segment_sec
+    explicitly only to override the tempo-relative floor outright (e.g.
+    in a test that wants an exact, tempo-independent threshold)."""
     if chroma.shape[1] == 0:
         return []
+
+    if min_segment_sec is None:
+        min_segment_sec = _tempo_relative_min_segment_sec(tempo_bpm)
 
     raw_labels = [_best_chord_for_frame(chroma[:, i]) for i in range(chroma.shape[1])]
 
