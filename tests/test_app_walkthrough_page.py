@@ -6,6 +6,7 @@ only exists when the app is loaded from its root script."""
 import sys
 from pathlib import Path
 
+import pytest
 from streamlit.testing.v1 import AppTest
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "streamlit_app"))
@@ -18,14 +19,19 @@ def _run_app_walkthrough() -> AppTest:
     return at
 
 
-def test_app_walkthrough_page_runs_without_exceptions():
-    at = _run_app_walkthrough()
-    assert not at.exception
+@pytest.fixture(scope="module")
+def app_walkthrough_at() -> AppTest:
+    """Both tests in this file only read the default render -- one shared
+    cold start instead of 2 redundant ones."""
+    return _run_app_walkthrough()
 
 
-def test_app_walkthrough_page_has_all_five_sections():
-    at = _run_app_walkthrough()
-    header_texts = [h.value for h in at.header]
+def test_app_walkthrough_page_runs_without_exceptions(app_walkthrough_at):
+    assert not app_walkthrough_at.exception
+
+
+def test_app_walkthrough_page_has_all_five_sections(app_walkthrough_at):
+    header_texts = [h.value for h in app_walkthrough_at.header]
     for expected in [
         "1. Explore -- browse and drill into any song",
         "2. Song X-Ray -- one song's anatomy",

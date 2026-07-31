@@ -7,6 +7,7 @@ multipage-registry requirement."""
 import sys
 from pathlib import Path
 
+import pytest
 from streamlit.testing.v1 import AppTest
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "streamlit_app"))
@@ -34,28 +35,42 @@ def _run_xray_with_verification_enabled() -> AppTest:
     return at
 
 
-def test_song_xray_page_runs_without_exceptions():
-    at = _run_xray()
-    assert not at.exception
+@pytest.fixture(scope="module")
+def xray_at() -> AppTest:
+    """Shared across every read-only test using the DEFAULT (verification
+    off) render -- computed once instead of per test."""
+    return _run_xray()
 
 
-def test_song_xray_verification_audio_not_generated_by_default():
+@pytest.fixture(scope="module")
+def xray_at_verified() -> AppTest:
+    """Shared across every read-only test using the verification-ENABLED
+    render -- a separate fixture (not a mutation of xray_at) since it's a
+    genuinely different initial session_state, computed once instead of
+    per test."""
+    return _run_xray_with_verification_enabled()
+
+
+def test_song_xray_page_runs_without_exceptions(xray_at):
+    assert not xray_at.exception
+
+
+def test_song_xray_verification_audio_not_generated_by_default(xray_at):
     """The real performance fix this gate exists for: with the checkbox
     left unchecked (the default), the expensive audio generation must NOT
     run -- confirmed by the honest opt-in caption showing instead of any
     click-track/chord-tone content, and the audio widget count staying at
     just the song's own player."""
-    at = _run_xray()
-    assert not at.exception
-    expander_labels = [e.label for e in at.expander]
+    assert not xray_at.exception
+    expander_labels = [e.label for e in xray_at.expander]
     assert "Verify beat & chord detection by ear" in expander_labels
 
-    caption_texts = " ".join(c.value for c in at.caption)
+    caption_texts = " ".join(c.value for c in xray_at.caption)
     assert "enable the checkbox above" in caption_texts.lower()
-    assert len(at.get("audio")) == 1  # only the song's own player, no click/tone tracks
+    assert len(xray_at.get("audio")) == 1  # only the song's own player, no click/tone tracks
 
 
-def test_song_xray_shows_beat_and_chord_verification_when_enabled():
+def test_song_xray_shows_beat_and_chord_verification_when_enabled(xray_at_verified):
     """The click-track + chord-tone-track verification tool -- an explicit
     request to make beat AND chord detection checkable by ear, not just
     trusted as a number/label. Real audio mixing (click_track_audio,
@@ -64,10 +79,9 @@ def test_song_xray_shows_beat_and_chord_verification_when_enabled():
     audible-correct (that's waveform_preview's own test coverage:
     test_click_track_audio_is_louder_at_beat_positions_than_a_silent_
     original and the chord_tone_audio equivalents)."""
-    at = _run_xray_with_verification_enabled()
-    assert not at.exception
+    assert not xray_at_verified.exception
 
-    audios = at.get("audio")
+    audios = xray_at_verified.get("audio")
     # the song's own player + the beat click-track player -- the chord tone
     # track is a 3rd, but only when chords were actually detected, so it's
     # not asserted as an unconditional minimum here (see the dedicated
@@ -75,21 +89,19 @@ def test_song_xray_shows_beat_and_chord_verification_when_enabled():
     assert len(audios) >= 2
 
 
-def test_song_xray_verification_expander_shows_beat_count_caption():
-    at = _run_xray_with_verification_enabled()
-    assert not at.exception
-    caption_texts = " ".join(c.value for c in at.caption)
+def test_song_xray_verification_expander_shows_beat_count_caption(xray_at_verified):
+    assert not xray_at_verified.exception
+    caption_texts = " ".join(c.value for c in xray_at_verified.caption)
     assert "beats detected" in caption_texts.lower()
 
 
-def test_song_xray_verification_chord_strip_or_honest_fallback():
+def test_song_xray_verification_chord_strip_or_honest_fallback(xray_at_verified):
     """Same either/or pattern as Explore's Song DNA chord test: a chart when
     chords were detected, an honest caption when they weren't (near-silent/
     unpitched audio) -- never neither, never a crash."""
-    at = _run_xray_with_verification_enabled()
-    assert not at.exception
-    charts = at.get("plotly_chart")
-    caption_texts = " ".join(c.value for c in at.caption)
+    assert not xray_at_verified.exception
+    charts = xray_at_verified.get("plotly_chart")
+    caption_texts = " ".join(c.value for c in xray_at_verified.caption)
     chord_chart_or_fallback = (
         any("xray_chord_verify_strip" in c.proto.id for c in charts)
         or "no chords detected" in caption_texts.lower()
@@ -97,18 +109,17 @@ def test_song_xray_verification_chord_strip_or_honest_fallback():
     assert chord_chart_or_fallback
 
 
-def test_song_xray_chord_tone_track_present_when_chords_detected():
+def test_song_xray_chord_tone_track_present_when_chords_detected(xray_at_verified):
     """The harmonic equivalent of the beat click track -- a real 3rd audio
     player (song + click track + chord tone track) whenever chords were
     actually detected for this song; the honest "No chords detected"
     fallback (checked above) covers the case where there's nothing to
     sonify."""
-    at = _run_xray_with_verification_enabled()
-    assert not at.exception
-    caption_texts = " ".join(c.value for c in at.caption)
+    assert not xray_at_verified.exception
+    caption_texts = " ".join(c.value for c in xray_at_verified.caption)
     if "no chords detected" in caption_texts.lower():
         return  # nothing to verify for this particular song -- not a failure
-    assert len(at.get("audio")) >= 3
+    assert len(xray_at_verified.get("audio")) >= 3
     assert "root/third/fifth" in caption_texts
 
 

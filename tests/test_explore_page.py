@@ -8,6 +8,7 @@ markdown/captions Streamlit only resolves with the full app context."""
 import sys
 from pathlib import Path
 
+import pytest
 from streamlit.testing.v1 import AppTest
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "streamlit_app"))
@@ -29,35 +30,46 @@ def _run_explore() -> AppTest:
     return at
 
 
-def test_explore_page_runs_without_exceptions():
-    at = _run_explore()
-    assert not at.exception
+@pytest.fixture(scope="module")
+def explore_at() -> AppTest:
+    """Most tests in this file only ever READ the default render (no widget
+    interaction) -- sharing one real cold-started instance across those
+    (module-scoped: computed once, reused for the rest of this file) avoids
+    paying the ~78s+ cold-start cost over two dozen times for identical
+    output. Tests that mutate a widget/session_state and rerun, or that
+    monkeypatch config before rendering, keep calling _run_explore()
+    directly for their own independent, fresh instance -- sharing this one
+    would leak state between them and change what they're actually
+    testing."""
+    return _run_explore()
 
 
-def test_explore_page_has_no_hero_banner():
+def test_explore_page_runs_without_exceptions(explore_at):
+    assert not explore_at.exception
+
+
+def test_explore_page_has_no_hero_banner(explore_at):
     """Removed specifically on this page -- the three panels already take
     real vertical space; a decorative banner on top would compete with
     that, unlike every other page where there's nothing else up there."""
-    at = _run_explore()
-    assert not at.exception
-    charts = at.get("plotly_chart")
+    assert not explore_at.exception
+    charts = explore_at.get("plotly_chart")
     assert not any("hero_explore" in c.proto.id for c in charts)
 
 
-def test_explore_page_defaults_to_a_selected_song():
+def test_explore_page_defaults_to_a_selected_song(explore_at):
     """Unlike the old click-to-select design, a song is selected by default
     (the mockup this page follows shows the middle/right panels already
     populated, not an empty "click a node" hint)."""
-    at = _run_explore()
-    assert not at.exception
-    assert at.session_state["explore_selected_song_id"] is not None
-    caption_texts = " ".join(c.value for c in at.caption)
+    assert not explore_at.exception
+    assert explore_at.session_state["explore_selected_song_id"] is not None
+    caption_texts = " ".join(c.value for c in explore_at.caption)
     assert "Selected song" in caption_texts
-    markdown_texts = " ".join(m.value for m in at.markdown)
+    markdown_texts = " ".join(m.value for m in explore_at.markdown)
     assert "### Moment Matcher" in markdown_texts
 
 
-def test_explore_page_has_search_box_and_two_per_tab_facet_selectors():
+def test_explore_page_has_search_box_and_two_per_tab_facet_selectors(explore_at):
     """No more literal/NL toggle -- the search bar is natural-language-only
     now (see the module docstring's "Search architecture" paragraph for
     why: the song list's own st.dataframe toolbar search covers literal
@@ -66,10 +78,9 @@ def test_explore_page_has_search_box_and_two_per_tab_facet_selectors():
     Matcher as one shared control; now that the mini-map lives inside
     Moment Matcher's own "Full Song" tab, each of the two tabs (Full Song,
     Moment) gets its own independent selector instead."""
-    at = _run_explore()
-    assert any(ti.label == "Search library" for ti in at.text_input)
-    assert not any(t.label == "NL search" for t in at.toggle)
-    facet_selects = [sb for sb in at.selectbox if sb.label == "Match by"]
+    assert any(ti.label == "Search library" for ti in explore_at.text_input)
+    assert not any(t.label == "NL search" for t in explore_at.toggle)
+    facet_selects = [sb for sb in explore_at.selectbox if sb.label == "Match by"]
     assert len(facet_selects) == 2
     for facet_select in facet_selects:
         assert set(facet_select.options) == {
@@ -77,12 +88,11 @@ def test_explore_page_has_search_box_and_two_per_tab_facet_selectors():
         }
 
 
-def test_explore_page_has_ask_the_dj_button():
+def test_explore_page_has_ask_the_dj_button(explore_at):
     """Sits at the very start of the top bar (left of the search box) --
     see test_explore_page_ask_the_dj_is_first_clear_only_appears_with_a_query
     for the document-order check."""
-    at = _run_explore()
-    assert any(b.label == "Ask the DJ" for b in at.button)
+    assert any(b.label == "Ask the DJ" for b in explore_at.button)
 
 
 def test_explore_page_never_shows_a_conversational_dj_reply_card():
@@ -140,11 +150,10 @@ def test_explore_page_clear_results_resets_search_state_not_selection_default():
     assert at.session_state["explore_search_note"] is None
 
 
-def test_explore_page_list_is_a_dataframe_with_song_columns():
+def test_explore_page_list_is_a_dataframe_with_song_columns(explore_at):
     """The list is a real st.dataframe() now, not a hand-rolled row loop --
     see the module docstring for why."""
-    at = _run_explore()
-    tables = [d for d in at.get("dataframe") if d.key == "explore_song_table"]
+    tables = [d for d in explore_at.get("dataframe") if d.key == "explore_song_table"]
     assert len(tables) == 1
     columns = set(tables[0].value.columns)
     assert {"song_id", "Thumbnail", "Title", "Artist", "Genre"} <= columns
@@ -202,22 +211,21 @@ def test_explore_page_list_selection_survives_an_empty_search_without_crashing()
     assert at.session_state["explore_filtered_song_ids"] == []
 
 
-def test_explore_page_mid_panel_shows_structure_fingerprint_only_no_cycler():
+def test_explore_page_mid_panel_shows_structure_fingerprint_only_no_cycler(explore_at):
     """Fingerprint variant cycling was removed -- Selected Song shows only
     the Structure fingerprint now, no refresh/cycle button."""
-    at = _run_explore()
-    assert not at.exception
-    assert not any(b.key == "cycle_fp_variant" for b in at.button)
-    assert "explore_fp_variant_idx" not in at.session_state
-    markdown_texts = " ".join(m.value for m in at.markdown)
+    assert not explore_at.exception
+    assert not any(b.key == "cycle_fp_variant" for b in explore_at.button)
+    assert "explore_fp_variant_idx" not in explore_at.session_state
+    markdown_texts = " ".join(m.value for m in explore_at.markdown)
     assert "tag-chip" in markdown_texts
-    metric_labels = [m.label for m in at.metric]
+    metric_labels = [m.label for m in explore_at.metric]
     assert "Tempo" in metric_labels
     assert "Key" in metric_labels
     assert "Sound Tags" in metric_labels
 
 
-def test_explore_page_fingerprint_explanation_is_hover_only_not_a_visible_caption():
+def test_explore_page_fingerprint_explanation_is_hover_only_not_a_visible_caption(explore_at):
     """The "brighter cells..." / "standing in for album art" explanation
     must live in the fingerprint <img>'s own title= attribute (a native
     browser hover tooltip), not as a permanently-visible st.caption
@@ -225,40 +233,37 @@ def test_explore_page_fingerprint_explanation_is_hover_only_not_a_visible_captio
     fingerprint_image_data_uri's docstring for why (a real reported bug:
     the Plotly-rendered version looked visibly different from the list's
     image-rendered thumbnails for the same song)."""
-    at = _run_explore()
-    assert not at.exception
-    caption_texts = " ".join(c.value for c in at.caption)
+    assert not explore_at.exception
+    caption_texts = " ".join(c.value for c in explore_at.caption)
     assert "album art" not in caption_texts.lower()
 
-    fp_markdown = next(m for m in at.markdown if "<img" in m.value)
+    fp_markdown = next(m for m in explore_at.markdown if "<img" in m.value)
     assert "album art" in fp_markdown.value.lower()
     assert "title=" in fp_markdown.value
 
 
-def test_explore_page_has_no_other_detailed_metadata_expander():
+def test_explore_page_has_no_other_detailed_metadata_expander(explore_at):
     """Removed entirely per explicit request -- the X-Ray link is real
     functionality, now living inside the Song DNA expander; the old
     expander's purely-informational content (cluster id, facet Yes/No
     table) was dropped rather than silently unwrapped into plain view.
     Save/Unsave is removed for now (a separate, explicit request) --
     genuinely gone, not just relocated."""
-    at = _run_explore()
-    expander_labels = [e.label for e in at.expander]
+    expander_labels = [e.label for e in explore_at.expander]
     assert "Other Detailed Metadata" not in expander_labels
-    assert not any(b.label in ("Save", "Unsave") for b in at.button)
-    assert any(b.label == "Open full Song X-Ray →" for b in at.button)
+    assert not any(b.label in ("Save", "Unsave") for b in explore_at.button)
+    assert any(b.label == "Open full Song X-Ray →" for b in explore_at.button)
 
 
-def test_explore_page_has_no_up_next_feature():
-    at = _run_explore()
-    assert not at.exception
-    markdown_texts = " ".join(m.value for m in at.markdown)
+def test_explore_page_has_no_up_next_feature(explore_at):
+    assert not explore_at.exception
+    markdown_texts = " ".join(m.value for m in explore_at.markdown)
     assert "Up Next" not in markdown_texts
-    button_labels = [b.label for b in at.button]
+    button_labels = [b.label for b in explore_at.button]
     assert "◀ Back" not in button_labels
     assert "Next ▶" not in button_labels
-    assert "explore_up_next_cache" not in at.session_state
-    assert "explore_up_next_history" not in at.session_state
+    assert "explore_up_next_cache" not in explore_at.session_state
+    assert "explore_up_next_history" not in explore_at.session_state
 
 
 def test_explore_page_previous_next_always_visible_navigates_full_library_without_search():
@@ -393,29 +398,27 @@ def test_explore_page_list_rows_show_per_result_match_explanation():
     assert row["Why it matched"] == "Matched on tag: crow"
 
 
-def test_explore_page_moment_matcher_panel_shows_segment_pills_and_results():
+def test_explore_page_moment_matcher_panel_shows_segment_pills_and_results(explore_at):
     """Segment picker is real st.pills() now, not a button grid -- see the
     page's own module docstring for why (the button grid stretched every
     button to its own column's full width regardless of label length,
     reading as oversized boxes around short "0.0-5.0s" text)."""
-    at = _run_explore()
-    assert not at.exception
-    assert len(at.pills) == 1
-    options = at.pills[0].options
+    assert not explore_at.exception
+    assert len(explore_at.pills) == 1
+    options = explore_at.pills[0].options
     # Every song has 10-11 real segments, but only every other one is shown
     # (~5s apart) to keep the picker short -- see SEGMENT_DISPLAY_STRIDE.
     assert 4 <= len(options) <= 6
     assert all("s" in label for label in options)  # e.g. "0.0-5.0s"
-    markdown_texts = " ".join(m.value for m in at.markdown)
+    markdown_texts = " ".join(m.value for m in explore_at.markdown)
     assert "Top " in markdown_texts and "results" in markdown_texts
 
 
-def test_explore_page_segment_pills_are_five_seconds_apart():
+def test_explore_page_segment_pills_are_five_seconds_apart(explore_at):
     """Display-only regrouping: the underlying segments still overlap every
     2.5s (untouched), but the picker should show every other one, so
     consecutive pills read as clean 5s-spaced moments."""
-    at = _run_explore()
-    options = at.pills[0].options
+    options = explore_at.pills[0].options
     starts = [float(label.split("–")[0]) for label in options]
     # starts[1:] is deliberately one element shorter (adjacent-pair diffing)
     # -- strict=True would be wrong here, it's not a same-length zip.
@@ -423,9 +426,8 @@ def test_explore_page_segment_pills_are_five_seconds_apart():
     assert all(d == 5.0 for d in diffs)
 
 
-def test_explore_page_moment_matcher_result_cards_have_match_badge():
-    at = _run_explore()
-    markdown_texts = " ".join(m.value for m in at.markdown)
+def test_explore_page_moment_matcher_result_cards_have_match_badge(explore_at):
+    markdown_texts = " ".join(m.value for m in explore_at.markdown)
     assert "match-badge" in markdown_texts
     assert "% match" in markdown_texts
 
@@ -453,19 +455,18 @@ def test_explore_page_clicking_a_segment_pill_updates_selection_and_matches():
     assert at.session_state["explore_selected_segment_id"] == target_segment_id
 
 
-def test_explore_page_moment_matcher_query_player_loops_the_selected_segment():
+def test_explore_page_moment_matcher_query_player_loops_the_selected_segment(explore_at):
     """Uses st.audio()'s own native start_time/end_time/loop parameters --
     not a custom HTML5/JS player, not a pre-sliced clip file, since neither
     turned out to be necessary (see the page's module docstring)."""
-    at = _run_explore()
     from resources import get_repositories
 
     song_repo, _, _ = get_repositories()
-    song_id = at.session_state["explore_selected_song_id"]
+    song_id = explore_at.session_state["explore_selected_song_id"]
     song = song_repo.get_song(song_id)
     query_segment = song.segments[0]
 
-    audios = at.get("audio")
+    audios = explore_at.get("audio")
     query_player = next(
         a for a in audios
         if a.proto.start_time == query_segment.start_sec and a.proto.end_time == query_segment.end_sec
@@ -473,18 +474,16 @@ def test_explore_page_moment_matcher_query_player_loops_the_selected_segment():
     assert query_player.proto.loop is True
 
 
-def test_explore_page_mini_graph_toggle_defaults_to_network():
-    at = _run_explore()
-    assert not at.exception
-    toggle = at.segmented_control[0]
+def test_explore_page_mini_graph_toggle_defaults_to_network(explore_at):
+    assert not explore_at.exception
+    toggle = explore_at.segmented_control[0]
     assert toggle.label == "Mini-graph view"
     assert set(toggle.options) == {"Network", "Map"}
     assert toggle.value == "network"
 
 
-def test_explore_page_mini_graph_network_mode_shows_neighbors_only_caption():
-    at = _run_explore()
-    caption_texts = " ".join(c.value for c in at.caption)
+def test_explore_page_mini_graph_network_mode_shows_neighbors_only_caption(explore_at):
+    caption_texts = " ".join(c.value for c in explore_at.caption)
     assert "direct" in caption_texts and "neighbors only" in caption_texts
 
 
@@ -501,40 +500,36 @@ def test_explore_page_mini_graph_switching_to_map_mode_renders_without_exception
     assert any("explore_mini_map" in c.proto.id for c in charts)
 
 
-def test_explore_page_mini_graph_network_mode_renders_a_chart():
-    at = _run_explore()
-    charts = at.get("plotly_chart")
+def test_explore_page_mini_graph_network_mode_renders_a_chart(explore_at):
+    charts = explore_at.get("plotly_chart")
     assert any("explore_mini_network" in c.proto.id for c in charts)
 
 
-def test_explore_page_moment_matcher_tabs_are_full_song_first_then_moment():
+def test_explore_page_moment_matcher_tabs_are_full_song_first_then_moment(explore_at):
     """Full Song leads -- "what does this whole song match" is the primary
     question, Moment ("what does this specific moment match") the more
     specific follow-up. Reversed from an earlier layout where Moment was
     the page's only Moment Matcher content and the mini-map was a
     completely separate, standalone panel."""
-    at = _run_explore()
-    assert not at.exception
-    labels = [t.label for t in at.tabs]
+    assert not explore_at.exception
+    labels = [t.label for t in explore_at.tabs]
     assert labels == ["Full Song", "Moment"]
 
 
-def test_explore_page_full_song_tab_has_its_own_facet_selector_and_mini_graph():
+def test_explore_page_full_song_tab_has_its_own_facet_selector_and_mini_graph(explore_at):
     """The mini-graph (Network/Map toggle) now lives inside this tab
     specifically, not as an independent left-panel feature -- moved
     wholesale, not rebuilt, since a network graph already IS song-level
     matching."""
-    at = _run_explore()
-    full_song_tab = next(t for t in at.tabs if t.label == "Full Song")
+    full_song_tab = next(t for t in explore_at.tabs if t.label == "Full Song")
     facet_selects = [sb for sb in full_song_tab.selectbox if sb.label == "Match by"]
     assert len(facet_selects) == 1
     toggles = [sc for sc in full_song_tab.segmented_control if sc.label == "Mini-graph view"]
     assert len(toggles) == 1
 
 
-def test_explore_page_moment_tab_has_its_own_facet_selector_and_segment_pills():
-    at = _run_explore()
-    moment_tab = next(t for t in at.tabs if t.label == "Moment")
+def test_explore_page_moment_tab_has_its_own_facet_selector_and_segment_pills(explore_at):
+    moment_tab = next(t for t in explore_at.tabs if t.label == "Moment")
     facet_selects = [sb for sb in moment_tab.selectbox if sb.label == "Match by"]
     assert len(facet_selects) == 1
     assert len(moment_tab.pills) == 1
@@ -557,46 +552,43 @@ def test_explore_page_full_song_and_moment_facet_selectors_are_independent():
     assert at.session_state["explore_moment_facet_select"] != "harmony"
 
 
-def test_explore_page_shows_tempo_and_key_as_metrics_with_help():
+def test_explore_page_shows_tempo_and_key_as_metrics_with_help(explore_at):
     """st.metric's own help= icon replaced the earlier badge + st.popover
     ("ℹ️") pair -- a native tooltip affordance instead of a hand-rolled
     one."""
-    at = _run_explore()
-    assert not at.exception
-    metrics_by_label = {m.label: m for m in at.metric}
+    assert not explore_at.exception
+    metrics_by_label = {m.label: m for m in explore_at.metric}
     assert "Tempo" in metrics_by_label
     assert "Key" in metrics_by_label
     assert "beat-tracking" in metrics_by_label["Tempo"].proto.help.lower()
     assert "krumhansl" in metrics_by_label["Key"].proto.help.lower()
 
 
-def test_explore_page_shows_song_dna_expander_with_chart():
-    at = _run_explore()
-    assert not at.exception
-    expander_labels = [e.label for e in at.expander]
+def test_explore_page_shows_song_dna_expander_with_chart(explore_at):
+    assert not explore_at.exception
+    expander_labels = [e.label for e in explore_at.expander]
     assert "Song DNA" in expander_labels
-    charts = at.get("plotly_chart")
+    charts = explore_at.get("plotly_chart")
     assert any("mid_dna_bars" in c.proto.id for c in charts)
 
 
-def test_explore_page_song_dna_shows_chord_progression_strip():
+def test_explore_page_song_dna_shows_chord_progression_strip(explore_at):
     """Reuses the same estimate_chords()/chord_strip_figure() pair the
     module docstring says it does -- not a new detection method, so this
     just checks the chart actually renders inside Song DNA, not that chord
     detection itself is correct (that's key_chord.py's own test coverage)."""
-    at = _run_explore()
-    assert not at.exception
-    markdown_texts = " ".join(m.value for m in at.markdown)
+    assert not explore_at.exception
+    markdown_texts = " ".join(m.value for m in explore_at.markdown)
     assert "Chord progression" in markdown_texts
-    charts = at.get("plotly_chart")
+    charts = explore_at.get("plotly_chart")
     chord_or_no_chords = (
         any("dna_chord_strip" in c.proto.id for c in charts)
-        or "No chords detected" in " ".join(c.value for c in at.caption)
+        or "No chords detected" in " ".join(c.value for c in explore_at.caption)
     )
     assert chord_or_no_chords
 
 
-def test_explore_page_song_dna_shows_novelty_and_loudness_charts():
+def test_explore_page_song_dna_shows_novelty_and_loudness_charts(explore_at):
     """Both read from data this app already computes elsewhere (the
     persisted structure timeline for novelty, a live RMS pass for loudness)
     -- see the page's own Song DNA comment for why neither is a new radar
@@ -605,37 +597,35 @@ def test_explore_page_song_dna_shows_novelty_and_loudness_charts():
     chart unconditionally and checks novelty renders SOME valid outcome
     (chart or the "not yet computed" fallback caption), not that novelty
     specifically is always there."""
-    at = _run_explore()
-    assert not at.exception
-    markdown_texts = " ".join(m.value for m in at.markdown)
+    assert not explore_at.exception
+    markdown_texts = " ".join(m.value for m in explore_at.markdown)
     assert "Novelty curve" in markdown_texts
     assert "Loudness contour" in markdown_texts
 
-    charts = at.get("plotly_chart")
+    charts = explore_at.get("plotly_chart")
     assert any("dna_loudness_contour" in c.proto.id for c in charts)
 
     novelty_present = any("dna_novelty_curve" in c.proto.id for c in charts)
-    novelty_fallback = "not yet computed" in " ".join(c.value for c in at.caption).lower()
+    novelty_fallback = "not yet computed" in " ".join(c.value for c in explore_at.caption).lower()
     assert novelty_present or novelty_fallback
 
 
-def test_explore_page_song_dna_shows_repetition_rate_and_beats_metrics():
+def test_explore_page_song_dna_shows_repetition_rate_and_beats_metrics(explore_at):
     """Repetition rate reads the already-persisted structure matrix
     (facets.structure.repetition_rate); Beats detected is a live
     beat_track() pass, same live-compute pattern Tempo/Key already use on
     this page. Both degrade to an honest caption instead of crashing when
     their underlying data isn't available for a given song -- checked the
     same either/or way as the novelty curve above."""
-    at = _run_explore()
-    assert not at.exception
-    metrics_by_label = {m.label: m for m in at.metric}
-    caption_texts = " ".join(c.value for c in at.caption)
+    assert not explore_at.exception
+    metrics_by_label = {m.label: m for m in explore_at.metric}
+    caption_texts = " ".join(c.value for c in explore_at.caption)
 
     assert "Repetition rate" in metrics_by_label or "not yet computed" in caption_texts.lower()
     assert "Beats detected" in metrics_by_label or "not enough beats" in caption_texts.lower()
 
 
-def test_explore_page_song_dna_shows_self_similarity_matrices():
+def test_explore_page_song_dna_shows_self_similarity_matrices(explore_at):
     """The self-similarity-matrix fingerprints (Structure/Sound/Harmony +
     composite) moved into Song DNA from the Selected Song thumbnail, which
     now prioritizes real album art instead (see the album-art tests below).
@@ -644,17 +634,16 @@ def test_explore_page_song_dna_shows_self_similarity_matrices():
     Sound/Harmony/Composite depend on the structure timeline actually having
     those fingerprints persisted, checked the same either/or way the rest of
     Song DNA's optional visuals already are."""
-    at = _run_explore()
-    assert not at.exception
-    markdown_texts = " ".join(m.value for m in at.markdown)
-    caption_texts = " ".join(c.value for c in at.caption)
+    assert not explore_at.exception
+    markdown_texts = " ".join(m.value for m in explore_at.markdown)
+    caption_texts = " ".join(c.value for c in explore_at.caption)
 
     matrices_present = "Self-similarity matrices" in markdown_texts
     matrices_absent_gracefully = "Self-similarity matrices" not in markdown_texts
     assert matrices_present or matrices_absent_gracefully  # never crashes either way
 
     if matrices_present:
-        charts = at.get("plotly_chart")
+        charts = explore_at.get("plotly_chart")
         assert any("dna_fp_structure" in c.proto.id for c in charts)
         assert "brighter means more alike" in caption_texts.lower()
 

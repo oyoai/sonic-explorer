@@ -20,6 +20,7 @@ test_calibration_repository.py and test_taste_repository.py."""
 import sys
 from pathlib import Path
 
+import pytest
 from streamlit.testing.v1 import AppTest
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "streamlit_app"))
@@ -32,23 +33,29 @@ def _run_calibration() -> AppTest:
     return at
 
 
-def test_calibration_page_runs_without_exceptions():
-    at = _run_calibration()
-    assert not at.exception
+@pytest.fixture(scope="module")
+def calibration_at() -> AppTest:
+    """Shared across the read-only tests below -- one cold start instead of
+    4. The profile-select test that reruns after set_value(), and the
+    deploy-subset test that monkeypatches config before rendering, both
+    keep their own fresh instances."""
+    return _run_calibration()
 
 
-def test_calibration_page_defaults_to_similarity_round():
-    at = _run_calibration()
-    subheader_texts = [s.value for s in at.subheader]
+def test_calibration_page_runs_without_exceptions(calibration_at):
+    assert not calibration_at.exception
+
+
+def test_calibration_page_defaults_to_similarity_round(calibration_at):
+    subheader_texts = [s.value for s in calibration_at.subheader]
     assert any("Similarity round" in s for s in subheader_texts)
 
 
-def test_calibration_page_shows_real_profiles_plus_guest_locally():
+def test_calibration_page_shows_real_profiles_plus_guest_locally(calibration_at):
     """This suite runs against the real local data/ library (is_deploy_
     subset() is False there), so the profile selector must offer both real
     profiles and Guest/Test."""
-    at = _run_calibration()
-    profile_select = next(s for s in at.selectbox if s.label == "Rating profile")
+    profile_select = next(s for s in calibration_at.selectbox if s.label == "Rating profile")
     assert profile_select.options == ["profile1", "profile2", "Guest / Test"]
 
 
@@ -77,11 +84,10 @@ def test_calibration_page_guest_profile_shows_isolation_caption():
     assert "kept separate" in caption_texts.lower()
 
 
-def test_calibration_page_shows_harmony_sanity_check_pool():
+def test_calibration_page_shows_harmony_sanity_check_pool(calibration_at):
     """The small opt-in supplemental pool (sampled via Harmony retrieval,
     not Sound) exists as a separate section, not mixed into the main
     similarity batch -- read-only check, doesn't click into it."""
-    at = _run_calibration()
-    assert not at.exception
-    expander_labels = [e.label for e in at.expander]
+    assert not calibration_at.exception
+    expander_labels = [e.label for e in calibration_at.expander]
     assert any("Harmony sanity-check pool" in label for label in expander_labels)
