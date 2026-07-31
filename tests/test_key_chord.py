@@ -90,7 +90,9 @@ def test_estimate_chords_without_smoothing_keeps_the_flicker():
     """Sanity check that the smoothing test above is actually testing
     something -- a near-zero smoothing window should NOT absorb the outlier
     frame, confirming the smoothed result differs because of the window,
-    not because chord detection itself ignores that frame."""
+    not because chord detection itself ignores that frame. min_segment_sec
+    is disabled here too, since this test targets the mode filter
+    specifically -- the merge pass is covered separately below."""
     c_major = np.zeros(12)
     c_major[[0, 4, 7]] = 1.0
     g_major = np.zeros(12)
@@ -100,9 +102,62 @@ def test_estimate_chords_without_smoothing_keeps_the_flicker():
     chroma = np.stack(frames, axis=1)
     times = np.arange(len(frames), dtype=float) * 0.1
 
-    segments = estimate_chords(chroma, times, smooth_window_sec=0.05)  # sub-one-frame window -- effectively no smoothing
+    segments = estimate_chords(chroma, times, smooth_window_sec=0.05, min_segment_sec=0)  # no smoothing, no merge
 
     assert len(segments) == 3  # C run, G outlier, C run
+
+
+def test_estimate_chords_merges_a_short_segment_into_its_longer_neighbor():
+    """The residual-flicker case the mode filter alone can't clean up: a
+    short-lived segment (below min_segment_sec) sitting between two longer
+    runs of different chords gets absorbed into whichever neighbor is
+    longer, rather than surviving as its own tiny segment."""
+    c_major = np.zeros(12)
+    c_major[[0, 4, 7]] = 1.0
+    g_major = np.zeros(12)
+    g_major[[7, 11, 2]] = 1.0
+
+    # No smoothing (isolate the merge pass): C run, one-frame G blip, C run
+    # -- the blip is shorter than min_segment_sec and gets absorbed into
+    # whichever C run is longer (the first one, 4 frames vs 4 frames minus
+    # the trailing partial -- see the exact-duration assertions below).
+    frames = [c_major] * 4 + [g_major] + [c_major] * 4
+    chroma = np.stack(frames, axis=1)
+    times = np.arange(len(frames), dtype=float) * 0.1  # 0.1s hops; G blip alone is 0.1s wide
+
+    segments = estimate_chords(chroma, times, smooth_window_sec=0.05, min_segment_sec=0.15)
+
+    assert len(segments) == 1
+    assert segments[0].label == "C"
+    assert segments[0].start_sec == 0.0
+    assert segments[0].end_sec == times[-1]
+
+
+def test_estimate_chords_merge_pass_prefers_the_longer_neighbor():
+    """When a short segment sits between two unequal-length neighbors, it
+    should be absorbed into the longer one, not just whichever comes
+    first -- confirms the merge pass actually compares durations rather
+    than always merging left (or always merging right)."""
+    c_major = np.zeros(12)
+    c_major[[0, 4, 7]] = 1.0
+    g_major = np.zeros(12)
+    g_major[[7, 11, 2]] = 1.0
+    a_minor = np.zeros(12)
+    a_minor[[9, 0, 4]] = 1.0
+
+    # Short C run (2 frames), G blip (1 frame), long A-minor run (6 frames).
+    # The blip is shorter than min_segment_sec and should merge into the
+    # longer A-minor neighbor, not the shorter C run.
+    frames = [c_major] * 2 + [g_major] * 1 + [a_minor] * 6
+    chroma = np.stack(frames, axis=1)
+    times = np.arange(len(frames), dtype=float) * 0.1
+
+    segments = estimate_chords(chroma, times, smooth_window_sec=0.05, min_segment_sec=0.15)
+
+    assert len(segments) == 2
+    assert segments[0].label == "C"
+    assert segments[1].label == "Am"
+    assert segments[1].start_sec == 0.2  # G blip's span absorbed into the A-minor segment
 
 
 def test_estimate_chords_segments_cover_contiguous_time_ranges():

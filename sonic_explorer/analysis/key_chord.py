@@ -105,13 +105,69 @@ class ChordSegment:
     label: str  # e.g. "C", "Am", or "N/C" for no discernible chord
 
 
-def estimate_chords(chroma: np.ndarray, times: np.ndarray, smooth_window_sec: float = 1.0) -> list[ChordSegment]:
+def _merge_short_segments(segments: list[ChordSegment], min_duration_sec: float) -> list[ChordSegment]:
+    """Absorbs any segment shorter than min_duration_sec into whichever
+    neighbor is longer, extending that neighbor's boundary to cover the
+    absorbed span. This is a post-hoc cleanup on top of _mode_filter's
+    output, not a substitute for it: the mode filter can still legitimately
+    emit a short-lived segment near a real chord change when the sliding
+    window's vote is close to tied between two candidates (e.g. 18 vs 17
+    frames), causing its own output to seesaw for a few frames before
+    settling -- this pass exists specifically to clean up that residual
+    flicker. Runs to a fixed point (segments can chain-merge below the
+    threshold as neighbors grow) and finishes by coalescing any
+    newly-adjacent equal-label segments a merge produced."""
+    if len(segments) <= 1:
+        return segments
+    segments = list(segments)
+    changed = True
+    while changed and len(segments) > 1:
+        changed = False
+        for i, seg in enumerate(segments):
+            if seg.end_sec - seg.start_sec >= min_duration_sec:
+                continue
+            left = segments[i - 1] if i > 0 else None
+            right = segments[i + 1] if i + 1 < len(segments) else None
+            merge_into_left = left is not None and (
+                right is None or (left.end_sec - left.start_sec) >= (right.end_sec - right.start_sec)
+            )
+            if merge_into_left:
+                segments[i - 1] = ChordSegment(left.start_sec, seg.end_sec, left.label)
+            else:
+                segments[i + 1] = ChordSegment(seg.start_sec, right.end_sec, right.label)
+            del segments[i]
+            changed = True
+            break
+
+    coalesced = [segments[0]]
+    for seg in segments[1:]:
+        if seg.label == coalesced[-1].label:
+            coalesced[-1] = ChordSegment(coalesced[-1].start_sec, seg.end_sec, seg.label)
+        else:
+            coalesced.append(seg)
+    return coalesced
+
+
+def estimate_chords(
+    chroma: np.ndarray, times: np.ndarray, smooth_window_sec: float = 1.0, min_segment_sec: float = 0.3
+) -> list[ChordSegment]:
     """Per-frame chord template matching (24 major/minor triads), smoothed
     with a mode-filter over roughly smooth_window_sec of frames to avoid
     flickery frame-to-frame relabeling, then collapsed into contiguous
     same-chord runs -- a handful of real segments to display, not one label
     per frame. chroma/times are chroma_for_display()'s (12, T) output --
-    same data the chromagram already renders, no separate computation."""
+    same data the chromagram already renders, no separate computation.
+
+    The mode filter alone doesn't fully eliminate flicker: near a real chord
+    change, the sliding window's vote count between the outgoing and
+    incoming chord can be nearly tied (confirmed on real songs, e.g. 18 vs
+    17 frames out of a 43-frame window), so the filter's own output can
+    seesaw between them for a few frames before settling, producing a
+    handful of spurious short segments right at the transition rather than
+    one clean boundary. min_segment_sec runs a merge pass after smoothing
+    to absorb any segment shorter than that into its longer neighbor,
+    cleaning up exactly that residual seesaw without changing the
+    underlying per-frame estimation or the mode filter itself."""
     if chroma.shape[1] == 0:
         return []
 
@@ -131,4 +187,5 @@ def estimate_chords(chroma: np.ndarray, times: np.ndarray, smooth_window_sec: fl
                 label=smoothed_labels[seg_start_idx],
             ))
             seg_start_idx = i
-    return segments
+
+    return _merge_short_segments(segments, min_segment_sec)
