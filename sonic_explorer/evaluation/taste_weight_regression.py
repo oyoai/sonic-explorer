@@ -23,7 +23,16 @@ blend_weight_regression's already-comparable cosine-similarity-diff
 features -- so features here go through DNANormalizer's existing
 corpus-relative [0, 1] scaling first (the same normalizer the Song DNA
 radar chart and nearest_songs_by_dna already use), rather than adding a
-second, redundant scaling mechanism just for this."""
+second, redundant scaling mechanism just for this.
+
+compute_taste_comparison() is the per-rater counterpart: compute_taste_
+weights() above pools every rater's ratings into one regression and never
+looks at who rated what -- this instead groups by rater and reports each
+one's own liked-rate and the mean DNA of their liked segments, so two
+raters' taste can actually be compared once both have some data. Uses a
+plain mean rather than a per-rater fitted regression -- a fit needs far
+more data PER rater than realistic early volume gives, but a mean is
+honestly exactly what it says regardless of n (shown alongside it)."""
 
 from dataclasses import dataclass
 
@@ -95,3 +104,74 @@ def compute_taste_weights(
         n_ratings=len(ratings), n_raters=n_raters, n_liked=n_liked, n_disliked=n_disliked,
         axis_names=AXES, regression_weights=regression_weights, regression_note=regression_note,
     )
+
+
+@dataclass
+class PerRaterTasteSummary:
+    rater: str
+    n_ratings: int
+    n_liked: int
+    n_disliked: int
+    liked_pct: float
+    # Mean DNA (corpus-normalized [0, 1], same scale as the regression
+    # above) of just this rater's LIKED segments -- None if they haven't
+    # liked anything yet. Deliberately a plain mean, not a per-rater fitted
+    # model: a fitted regression needs far more data PER RATER than exists
+    # yet to mean anything, but a mean is honestly exactly what it says
+    # regardless of how few points went into it (n is always shown
+    # alongside it, so a reader can judge reliability themselves).
+    mean_liked_dna: dict[str, float] | None
+
+
+@dataclass
+class TasteComparisonResult:
+    per_rater: list[PerRaterTasteSummary]  # sorted by rater name, stable display order
+    # Set only when there's nothing real to compare yet (fewer than 2
+    # raters with any taste ratings at all) -- an honest "not yet," never
+    # a comparison rendered against just one person's own data.
+    note: str | None
+
+
+def compute_taste_comparison(
+    taste_repo: TasteRepository, song_repo: SongRepository, dna_normalizer: DNANormalizer,
+) -> TasteComparisonResult:
+    ratings = taste_repo.get_all_ratings()
+    by_rater: dict[str, list] = {}
+    for row in ratings:
+        if row["rater"] is None:
+            continue  # no identity to compare against another rater's
+        by_rater.setdefault(row["rater"], []).append(row)
+
+    summaries: list[PerRaterTasteSummary] = []
+    for rater in sorted(by_rater):
+        rater_rows = by_rater[rater]
+        n_liked = sum(1 for r in rater_rows if r["liked"])
+
+        liked_dna_vectors = []
+        for row in rater_rows:
+            if not row["liked"]:
+                continue
+            segment = song_repo.get_segment(row["segment_id"])
+            song = song_repo.get_song(segment.song_id)
+            normalized = dna_normalizer.normalize({axis: getattr(song, axis) for axis in AXES})
+            liked_dna_vectors.append([normalized[axis] for axis in AXES])
+
+        mean_liked_dna = None
+        if liked_dna_vectors:
+            mean_vec = np.mean(np.array(liked_dna_vectors), axis=0)
+            mean_liked_dna = dict(zip(AXES, mean_vec.tolist(), strict=True))
+
+        summaries.append(PerRaterTasteSummary(
+            rater=rater, n_ratings=len(rater_rows), n_liked=n_liked, n_disliked=len(rater_rows) - n_liked,
+            liked_pct=n_liked / len(rater_rows), mean_liked_dna=mean_liked_dna,
+        ))
+
+    note = None
+    if len(summaries) < 2:
+        note = (
+            f"Only {len(summaries)} rater(s) have submitted taste ratings so far -- nothing to compare "
+            "yet. This section starts showing a real per-rater breakdown the moment a second rater's "
+            "ratings exist."
+        )
+
+    return TasteComparisonResult(per_rater=summaries, note=note)

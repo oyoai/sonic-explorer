@@ -132,6 +132,24 @@ def test_results_page_calibration_tab_taste_section_shows_a_regression_or_honest
     assert has_regression_chart or has_honest_note
 
 
+def test_results_page_calibration_tab_per_rater_taste_comparison_reports_honestly_either_way(results_at):
+    """Per-rater comparison section, only rendered once at least one taste
+    rating exists (the "no taste ratings yet" warning above already covers
+    the zero-ratings state). With fewer than 2 raters there's nothing real
+    to compare yet -- must say so explicitly, not render an empty/
+    misleading chart."""
+    info_texts = [i.value for i in results_at.tabs[1].info]
+    if not _has_taste_real_data(info_texts):
+        return  # nothing to check further -- covered by the honest "no taste ratings yet" test above
+    markdown_texts = " ".join(m.value for m in results_at.tabs[1].markdown)
+    assert "does taste differ between raters" in markdown_texts.lower()
+
+    caption_texts = " ".join(c.value for c in results_at.tabs[1].caption)
+    has_nothing_to_compare_note = "nothing to compare yet" in caption_texts.lower()
+    has_real_comparison = any("Liked %" in df.value.columns for df in results_at.tabs[1].get("dataframe"))
+    assert has_nothing_to_compare_note or has_real_comparison
+
+
 def test_results_page_dj_gallery_tab_includes_sound_recognition_query(results_at):
     """The gallery must include a sound-recognition-specific example
     (search_by_sound_content), not just typical mood/genre queries."""

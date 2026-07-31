@@ -22,7 +22,7 @@ from resources import (
     show_logo,
 )
 from sonic_explorer.evaluation.blend_weight_regression import compute_blend_weights
-from sonic_explorer.evaluation.taste_weight_regression import compute_taste_weights
+from sonic_explorer.evaluation.taste_weight_regression import compute_taste_comparison, compute_taste_weights
 
 # Headers below sit inside st.tabs() -- see render_toc's own docstring for
 # the real limitation this creates (a link into a header under a tab that
@@ -39,7 +39,7 @@ TOC_SECTIONS = [
     ("Metadata baseline vs. real approach", "metadata-vs-real"),
 ]
 from sonic_explorer.analysis.network_graph import cross_genre_edge_fraction
-from sonic_explorer.analysis.song_dna import AXIS_LABELS
+from sonic_explorer.analysis.song_dna import AXES, AXIS_LABELS
 from sonic_explorer.config import audio_path_for
 from sonic_explorer.evaluation.retrieval_diagnostics import top1_score_distribution
 from sonic_explorer.llm.agent import extract_mentioned_song_ids
@@ -467,6 +467,34 @@ with tab_calibration:
                 for axis, w in taste_result.regression_weights.items()
             ])
             st.bar_chart(taste_weights_df.set_index("Axis")["Coefficient"], height=220)
+
+        st.markdown("###### Does taste differ between raters?")
+        st.write(
+            "The regression above pools every rater together and never looks at who rated what. This "
+            "compares raters directly: each one's own liked-rate, and the average DNA of just their "
+            "liked segments -- a plain mean, not a per-rater fitted model (a fit needs far more data "
+            "per person than realistic early volume gives; a mean is honestly exactly what it says "
+            "regardless of how few points went into it, which is why n is always shown alongside it)."
+        )
+        comparison_result = compute_taste_comparison(taste_repo, song_repo, dna_normalizer)
+        if comparison_result.note is not None:
+            st.caption(comparison_result.note)
+        else:
+            liked_pct_df = pd.DataFrame([
+                {"Rater": s.rater, "Liked %": s.liked_pct * 100, "n": s.n_ratings}
+                for s in comparison_result.per_rater
+            ])
+            st.bar_chart(liked_pct_df.set_index("Rater")["Liked %"], height=180)
+            st.dataframe(liked_pct_df, hide_index=True, width="stretch")
+
+            raters_with_liked_dna = [s for s in comparison_result.per_rater if s.mean_liked_dna is not None]
+            if raters_with_liked_dna:
+                st.caption("Mean DNA (corpus-normalized [0, 1]) of each rater's own liked segments:")
+                mean_dna_df = pd.DataFrame(
+                    {AXIS_LABELS[axis]: [s.mean_liked_dna[axis] for s in raters_with_liked_dna] for axis in AXES},
+                    index=[s.rater for s in raters_with_liked_dna],
+                )
+                st.bar_chart(mean_dna_df, height=220)
 
     nav_button("Open the rating tool →", "pages/9_Calibration.py", key="nav_results_to_calibration")
 

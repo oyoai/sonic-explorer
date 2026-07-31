@@ -1,7 +1,7 @@
 import pytest
 
 from sonic_explorer.analysis.song_dna import AXES, fit_normalizer
-from sonic_explorer.evaluation.taste_weight_regression import compute_taste_weights
+from sonic_explorer.evaluation.taste_weight_regression import compute_taste_comparison, compute_taste_weights
 from sonic_explorer.models import Segment, Song
 from sonic_explorer.repository.db import init_db
 from sonic_explorer.repository.song_repository import SongRepository
@@ -102,3 +102,60 @@ def test_compute_taste_weights_regression_fits_with_enough_varied_data(repos):
     assert set(result.regression_weights.keys()) == set(AXES)
     assert all(isinstance(v, float) for v in result.regression_weights.values())
     assert result.regression_note is None
+
+
+def test_compute_taste_comparison_reports_nothing_to_compare_with_zero_or_one_raters(repos):
+    song_repo, taste_repo = repos
+
+    result = compute_taste_comparison(taste_repo, song_repo, _normalizer_for(song_repo))
+    assert result.per_rater == []
+    assert result.note is not None
+    assert "0 rater" in result.note
+
+    _, seg1 = _add_song_with_dna(song_repo, 1, 120.0, 0.2, 2000.0)
+    taste_repo.add_rating(seg1, liked=True, rater="profile1")
+
+    result = compute_taste_comparison(taste_repo, song_repo, _normalizer_for(song_repo))
+    assert len(result.per_rater) == 1
+    assert result.note is not None
+    assert "1 rater" in result.note
+
+
+def test_compute_taste_comparison_reports_a_real_per_rater_breakdown_with_two_raters(repos):
+    song_repo, taste_repo = repos
+    _, seg1 = _add_song_with_dna(song_repo, 1, 120.0, 0.2, 2000.0)
+    _, seg2 = _add_song_with_dna(song_repo, 2, 90.0, 0.05, 1000.0)
+    _, seg3 = _add_song_with_dna(song_repo, 3, 150.0, 0.3, 3000.0)
+    taste_repo.add_rating(seg1, liked=True, rater="profile1")
+    taste_repo.add_rating(seg2, liked=False, rater="profile1")
+    taste_repo.add_rating(seg3, liked=True, rater="profile2")
+
+    result = compute_taste_comparison(taste_repo, song_repo, _normalizer_for(song_repo))
+
+    assert result.note is None
+    assert [s.rater for s in result.per_rater] == ["profile1", "profile2"]  # sorted, stable order
+
+    profile1_summary = result.per_rater[0]
+    assert profile1_summary.n_ratings == 2
+    assert profile1_summary.n_liked == 1
+    assert profile1_summary.n_disliked == 1
+    assert profile1_summary.liked_pct == pytest.approx(0.5)
+    assert profile1_summary.mean_liked_dna is not None
+    assert set(profile1_summary.mean_liked_dna.keys()) == set(AXES)
+
+    profile2_summary = result.per_rater[1]
+    assert profile2_summary.n_ratings == 1
+    assert profile2_summary.liked_pct == pytest.approx(1.0)
+
+
+def test_compute_taste_comparison_mean_liked_dna_is_none_when_a_rater_liked_nothing(repos):
+    song_repo, taste_repo = repos
+    _, seg1 = _add_song_with_dna(song_repo, 1, 120.0, 0.2, 2000.0)
+    _, seg2 = _add_song_with_dna(song_repo, 2, 90.0, 0.05, 1000.0)
+    taste_repo.add_rating(seg1, liked=False, rater="profile1")
+    taste_repo.add_rating(seg2, liked=True, rater="profile2")
+
+    result = compute_taste_comparison(taste_repo, song_repo, _normalizer_for(song_repo))
+
+    profile1_summary = next(s for s in result.per_rater if s.rater == "profile1")
+    assert profile1_summary.mean_liked_dna is None
