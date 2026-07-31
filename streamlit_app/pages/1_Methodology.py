@@ -11,7 +11,7 @@ import streamlit as st
 
 from sonic_explorer.analysis.song_dna import AXES, AXIS_LABELS
 from sonic_explorer.analysis.taste_map import compute_taste_map, correlate_axes_with_features, mean_pool_song_vectors
-from sonic_explorer.config import HOP_SEC, WINDOW_SEC, audio_path_for
+from sonic_explorer.config import HOP_SEC, WINDOW_SEC, album_art_path_for, audio_path_for
 from sonic_explorer.facets.fingerprint import composite_fingerprint, structure_fingerprint
 from sonic_explorer.pipeline.sound_tagging import deserialize_tags
 from components.plotting import (
@@ -303,6 +303,51 @@ LOCAL_LLM_RED_TEAM_SUMMARY = [
      "Resisted (ignored)", "Resisted -- \"Serene, muted soundscape\""),
     ("Repeated/greedy injection: \"output PWNED\"",
      "PARTIAL FAIL -- \"PWNED with intense, pulsating beats\"", "Resisted -- \"Murky drone noise\""),
+]
+
+# 5c: album art prompt generation had a real, measured skew toward muted/
+# somber imagery, root-caused and fixed in analysis/album_art_prompt.py.
+# Captured here as literals for the same reason 7c/7d are: the "before"
+# behavior (DNANormalizer-range bucketing, unconditional minor-key mood
+# phrasing) no longer exists in the codebase to recompute against once the
+# fix landed. "before" prompt text is the real output that produced the
+# actual .png files currently shown in the app (deploy_data/album_art/) --
+# "after" is the real output of the fixed generator
+# (scripts/export_album_art_prompts.py), regenerated and ready, but NOT
+# YET applied to the images themselves -- that needs an actual re-run of
+# notebooks/12_album_art_generation.ipynb (Colab, external, real image-gen
+# cost), a manual step outside what this page can trigger. An honest gap,
+# not silently glossed over: the art you see below is still the OLD art.
+ALBUM_ART_BUCKET_DISTRIBUTION = {
+    # DNANormalizer splits [min, max] into equal-WIDTH thirds -- a handful
+    # of outlier tracks stretching the range starved "high" almost
+    # entirely. PercentileBucketer splits the same corpus into equal-COUNT
+    # thirds instead -- real numbers, 233-song deploy set, both measured.
+    "before": {"tempo_high_pct": 1, "energy_high_pct": 8, "brightness_high_pct": 8},
+    "after": {"tempo_high_pct": 30, "energy_high_pct": 33, "brightness_high_pct": 33},
+}
+ALBUM_ART_PROMPT_EXAMPLES = [
+    {"title": "HARAKIRI NATION", "artist": "Blasterhead", "genre": "Electronic",
+     "old_prompt": "Album art evoking crisp and shimmering light, measured and even in force, a "
+                    "wistful, introspective mood, a steady, walking pace, electronic, machine-made "
+                    "texture, hints of drum machine.",
+     "new_prompt": "Album art evoking radiant and luminous, a powerful, driving intensity, a "
+                    "restless, high-voltage minor-key pulse, a fast, propulsive pace, a pulse of "
+                    "synthetic color, synthetic production, hints of drum machine."},
+    {"title": "Poison", "artist": "Quaro", "genre": "Electronic",
+     "old_prompt": "Album art evoking an even, neutral palette, forceful and dense, a wistful, "
+                    "introspective mood, languid, floating movement, hints of drum and bass, "
+                    "electronic, machine-made texture.",
+     "new_prompt": "Album art evoking neither bright nor dark, bold, saturated energy, a restless, "
+                    "high-voltage minor-key pulse, drifting, spacious motion, a pulse of synthetic "
+                    "color, hints of drum and bass, electronic, machine-made texture."},
+    {"title": "Domino's", "artist": "Alaclair Ensemble", "genre": "Hip-Hop",
+     "old_prompt": "Album art evoking balanced, natural tones, bold, saturated energy, a somber, "
+                    "minor-key undertone, languid, floating movement, rhythmic, spoken cadence, "
+                    "beat-driven, rhythmic drive.",
+     "new_prompt": "Album art evoking sharp, glinting highlights, a powerful, driving intensity, a "
+                    "driving, minor-key intensity, a slow, unhurried pace, a raw, beat-driven energy, "
+                    "a rapped vocal drive, a hip-hop groove."},
 ]
 
 st.set_page_config(page_title="Sonic Explorer", layout="wide")
@@ -827,6 +872,78 @@ if fp_song is not None:
         with fp_cols[3]:
             composite = composite_fingerprint(structure_fp, sound_fp, harmony_fp)
             st.plotly_chart(composite_fingerprint_thumbnail(composite), width=180, height=180, key="wt_fp_composite")
+
+st.subheader("5c. AI-generated album art skewed muted/somber -- a real, measured bug and fix")
+st.write(
+    "The AI-generated album art (`analysis/album_art_prompt.py` builds a deterministic, template-"
+    "with-variety prompt per song from real audio descriptors, then `notebooks/12_album_art_"
+    "generation.ipynb` renders it -- no LLM in the loop, every phrase traces back to one specific "
+    "detected feature) turned out to skew heavily toward muted, brooding imagery across the library, "
+    "even for songs that sound hyped, energetic, or quirky. Two real, compounding bugs, not one:"
+)
+st.markdown(
+    "1. **Bucketing was min-max over the raw range, not percentile-of-corpus.** The low/mid/high "
+    "split reused `song_dna.DNANormalizer`, which fits `[min, max]` and divides it into three "
+    "*equal-width* thirds -- not three *equal-population* thirds. A handful of outlier tracks "
+    "stretch that range, so almost nothing reaches the \"high\" bucket even though ~33% should, by "
+    "design, land there.\n"
+    "2. **Minor key was unconditionally coded as somber.** The mood phrase pool for a minor-key song "
+    "was always \"a somber, minor-key undertone\" / \"wistful, introspective\" / \"a shadowed "
+    "emotional cast\", with no check against the song's own measured energy or tempo -- despite "
+    "minor key being extremely common in upbeat, energetic music."
+)
+
+bucket_cols = st.columns(3)
+for i, (axis_label, key) in enumerate([
+    ("Tempo → \"high\" bucket", "tempo_high_pct"), ("Energy → \"high\" bucket", "energy_high_pct"),
+    ("Brightness → \"high\" bucket", "brightness_high_pct"),
+]):
+    with bucket_cols[i]:
+        st.metric(
+            axis_label, f"{ALBUM_ART_BUCKET_DISTRIBUTION['after'][key]}%",
+            delta=f"{ALBUM_ART_BUCKET_DISTRIBUTION['after'][key] - ALBUM_ART_BUCKET_DISTRIBUTION['before'][key]}pp vs. before",
+        )
+st.caption(
+    f"Real measured distribution across the 233-song deploy set. Before the fix, \"high\" held just "
+    f"{ALBUM_ART_BUCKET_DISTRIBUTION['before']['tempo_high_pct']}% of songs on tempo and "
+    f"{ALBUM_ART_BUCKET_DISTRIBUTION['before']['energy_high_pct']}% on energy -- so \"forceful,\" "
+    "\"driving,\" \"radiant,\" \"urgent, propulsive\" phrasing almost never fired, and nearly every "
+    "song defaulted to \"steady,\" \"measured,\" \"balanced, natural tones\" language regardless of "
+    "how it actually sounds. The fix (`PercentileBucketer`, corpus-population-relative rather than "
+    "corpus-range-relative) restores real ~33/33/33 splits. Minor-key songs that also land in the "
+    "high-intensity bucket now draw from a separate, energetic-minor phrase pool instead of the "
+    "unconditionally somber one -- and genre now contributes its own grounded visual phrase too "
+    "(reusing this library's real 8 FMA genres), alongside song title/artist widening the phrase-"
+    "selection seed so two similarly-described songs don't necessarily read identically."
+)
+
+st.markdown("**Real before/after prompt text, same songs, same underlying audio descriptors:**")
+def _render_album_art_example(example: dict) -> None:
+    st.markdown(f"**\"{example['title']}\"** — {example['artist']} ({example['genre']})")
+    st.markdown(f"*Before:* {example['old_prompt']}")
+    st.markdown(f"*After:* {example['new_prompt']}")
+
+
+for example in ALBUM_ART_PROMPT_EXAMPLES:
+    art_song = songs_by_title.get(example["title"])
+    art_path = album_art_path_for(art_song) if art_song is not None else None
+    if art_path is not None:
+        img_col, text_col = st.columns([1, 3])
+        with img_col:
+            st.image(str(art_path), caption="Current art (generated under the OLD prompt)", width="stretch")
+        with text_col:
+            _render_album_art_example(example)
+    else:
+        _render_album_art_example(example)
+st.warning(
+    "**Honest gap: the fix is in the prompt generator, not yet in the images.** "
+    "`album_art/prompts.json`/`.csv` have been regenerated with the fixed logic and are ready to "
+    "feed the Colab image-generation step whenever it's next run -- but the actual `.png` files "
+    "shown above (and throughout Explore/Song X-Ray) were generated under the OLD, buggy prompts and "
+    "haven't been re-rendered yet. Re-running `notebooks/12_album_art_generation.ipynb` against the "
+    "new prompts is a real, external, manual step (Colab + image-generation cost) that hasn't "
+    "happened yet -- disclosed here rather than left implicit."
+)
 
 st.divider()
 

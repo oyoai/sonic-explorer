@@ -28,9 +28,8 @@ gracefully for, not a bug."""
 import csv
 import json
 
-from sonic_explorer.analysis.album_art_prompt import SongDescriptors, build_album_art_prompt
+from sonic_explorer.analysis.album_art_prompt import SongDescriptors, build_album_art_prompt, fit_percentile_bucketer
 from sonic_explorer.analysis.key_chord import estimate_key
-from sonic_explorer.analysis.song_dna import AXES, fit_normalizer
 from sonic_explorer.analysis.waveform_preview import chroma_for_display
 from sonic_explorer.config import PROJECT_ROOT, audio_path_for
 from sonic_explorer.pipeline.sound_tagging import deserialize_tags
@@ -61,6 +60,7 @@ def _descriptors_for_song(song) -> SongDescriptors:
     return SongDescriptors(
         song_id=song.id, tempo_bpm=song.tempo_bpm, energy=song.energy, brightness=song.brightness,
         key_tonic=key_tonic, key_mode=key_mode, sound_tags=tags,
+        genre=song.genre_top, title=song.title, artist=song.artist,
     )
 
 
@@ -70,7 +70,9 @@ def main():
     songs = song_repo.list_songs()
     print(f"{len(songs)} songs in the deployed set.")
 
-    normalizer = fit_normalizer([{axis: getattr(s, axis) for axis in AXES} for s in songs])
+    bucketer = fit_percentile_bucketer([
+        {"tempo_bpm": s.tempo_bpm, "energy": s.energy, "brightness": s.brightness} for s in songs
+    ])
 
     n_tagged = sum(1 for s in songs if s.sound_tags)
     print(
@@ -81,7 +83,7 @@ def main():
     rows = []
     for i, song in enumerate(songs):
         descriptors = _descriptors_for_song(song)
-        prompt = build_album_art_prompt(descriptors, normalizer)
+        prompt = build_album_art_prompt(descriptors, bucketer)
         rows.append({
             "song_id": song.id, "title": song.title, "artist": song.artist, "genre": song.genre_top,
             "prompt": prompt.prompt_text, "trace": prompt.trace,

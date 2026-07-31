@@ -4,14 +4,26 @@ phrase in a generated prompt traces back to one specific detected feature
 (see PromptTrace below), by explicit design: this exists to be inspectable,
 not a black box that happens to produce plausible-sounding text.
 
-Four descriptor axes -- brightness (spectral centroid), intensity (RMS
-energy), mood (major/minor key), pace (tempo) -- each bucketed into
-low/mid/high (mood: major/minor) relative to THIS CORPUS's own actual
-range via analysis.song_dna.DNANormalizer, the same corpus-relative
-normalization Song DNA's radar chart already uses -- not arbitrary
-hardcoded thresholds. A 5th axis, sound tags (real AST/AudioSet labels
-already persisted per song, see pipeline.sound_tagging), contributes
-zero or more additional phrases when present.
+Five descriptor axes -- brightness (spectral centroid), intensity (RMS
+energy), mood (major/minor key), pace (tempo), genre (song.genre_top) --
+each bucketed/mapped to a real, grounded phrase. A 6th axis, sound tags
+(real AST/AudioSet labels already persisted per song, see
+pipeline.sound_tagging), contributes zero or more additional phrases when
+present.
+
+Bucketing (tempo/energy/brightness -> low/mid/high) is corpus-*population*-
+relative via PercentileBucketer (below), not song_dna.DNANormalizer's
+min-max range. That distinction mattered in practice: DNANormalizer splits
+the raw [min, max] range into equal-width thirds, so a handful of outlier
+tracks stretching the range can starve the "high" bucket almost entirely --
+confirmed on the real deploy set, where tempo's "high" bucket held just 1%
+of songs, energy's 8%, brightness's 8%, systematically under-firing the
+"forceful"/"driving"/"radiant" phrasing even for genuinely energetic songs
+and producing a library-wide skew toward muted, subdued album art. This
+module deliberately does NOT change DNANormalizer itself -- the Song DNA
+radar chart and nearest_songs_by_dna() depend on its min-max semantics for
+a different, still-correct-for-them purpose -- so PercentileBucketer is a
+separate, self-contained bucketer just for this module.
 
 "Intensity" uses energy (mean RMS, already computed/persisted) rather than
 crest factor (peak/RMS ratio) -- crest factor isn't computed anywhere in
@@ -21,16 +33,29 @@ sound" intuition. If you have a real, hearing-verified reason crest factor
 would materially change the intensity phrasing, that would be a defensible
 follow-up.
 
-Phrase selection is deterministic per song: random.Random(song_id) seeds
-each pick, so re-running this against the same library always produces the
-exact same prompt for the exact same song -- important for a batch export
-whose output (scripts/export_album_art_prompts.py) feeds a separate,
-possibly-rerun Colab image-generation step."""
+Mood used to map minor-key songs to somber/wistful language unconditionally
+-- a real music-theory oversimplification (plenty of energetic, upbeat
+music is in a minor key), which combined with the bucketing skew above to
+push a high-energy minor-key song toward "wistful, introspective" phrasing
+that directly contradicted its own intensity. Minor-key songs that also
+land in the high-intensity bucket now draw from a separate, energetic-
+minor phrase pool instead (see MOOD_PHRASES_MINOR_HIGH_ENERGY).
 
+Phrase selection is deterministic per song: random.Random seeded from a
+hash of (song_id, title, artist) -- not song_id alone -- so two songs that
+happen to land in identical buckets (same tempo/energy/brightness/mood/
+genre bucket combination) aren't guaranteed to draw the same phrases, while
+still being fully reproducible run to run for the exact same song. Uses
+hashlib rather than Python's builtin hash() specifically because builtin
+hash() of a string is salted per-process (PYTHONHASHSEED) and would NOT
+reproduce the same value across separate runs -- important for a batch
+export whose output (scripts/export_album_art_prompts.py) feeds a
+separate, possibly-rerun Colab image-generation step."""
+
+import hashlib
 import random
+from bisect import bisect_left
 from dataclasses import dataclass, field
-
-from sonic_explorer.analysis.song_dna import DNANormalizer
 
 BUCKET_AXES = ["tempo_bpm", "energy", "brightness"]
 
@@ -83,6 +108,17 @@ MOOD_PHRASES = {
         "a shadowed emotional cast",
     ],
 }
+
+# Used instead of MOOD_PHRASES["minor"] specifically when a minor-key song
+# ALSO lands in the high-intensity bucket -- minor key alone doesn't mean
+# sad (a lot of upbeat, driving music is written in a minor key), so a
+# fast/forceful minor-key song gets phrasing that keeps the minor-key
+# color without contradicting its own measured intensity.
+MOOD_PHRASES_MINOR_HIGH_ENERGY = [
+    "a driving, minor-key intensity",
+    "an edgy, minor-key tension",
+    "a restless, high-voltage minor-key pulse",
+]
 
 PACE_PHRASES = {
     "low": [
@@ -142,6 +178,24 @@ SOUND_TAG_PHRASES: dict[str, list[str]] = {
 # art from any other's. Still real, honest data -- just not visual material.
 SOUND_TAG_EXCLUDE = {"Music", "Musical instrument", "Speech", "Animal", "Crow", "Caw"}
 
+# This library's real 8 FMA top-level genres (same fixed list
+# streamlit_app/components/plotting.py's _KNOWN_GENRES uses for the network
+# graph's genre coloring -- duplicated rather than imported, since
+# sonic_explorer/ never imports from streamlit_app/, see CLAUDE.md). A
+# genre reaching this function that isn't one of these 8 (shouldn't happen
+# against this corpus, but a different/future corpus might have others)
+# still gets a phrase via the honest generic fallback in _phrase_for_genre.
+GENRE_PHRASES: dict[str, list[str]] = {
+    "Electronic": ["a pulse of synthetic color", "cool, circuit-lit geometry"],
+    "Experimental": ["unpredictable, fractured forms", "textures that resist a single shape"],
+    "Folk": ["warm, handmade grain", "an earthy, acoustic warmth"],
+    "Hip-Hop": ["bold, street-worn texture", "a raw, beat-driven energy"],
+    "Instrumental": ["a spacious, wordless atmosphere", "an open instrumental canvas"],
+    "International": ["richly patterned, cross-cultural motifs", "woven, global texture"],
+    "Pop": ["polished, vivid color blocking", "a bright, catchy visual hook"],
+    "Rock": ["gritty, high-contrast edges", "a raw, amplified texture"],
+}
+
 STYLE_SUFFIX = (
     "Abstract, textural album art. No faces, no text, no literal band-photo imagery."
 )
@@ -155,7 +209,10 @@ class SongDescriptors:
     estimate_key() call (never persisted -- see analysis.key_chord);
     sound_tags from the persisted songs.sound_tags column via
     pipeline.sound_tagging.deserialize_tags (already gracefully [] for a
-    song with none)."""
+    song with none); genre/title/artist likewise straight off the Song row.
+    title/artist are NEVER turned into phrase text (STYLE_SUFFIX explicitly
+    rules out literal text/imagery in the art) -- they only widen the RNG
+    seed, see build_album_art_prompt."""
 
     song_id: int
     tempo_bpm: float | None
@@ -164,6 +221,9 @@ class SongDescriptors:
     key_tonic: str | None
     key_mode: str | None  # "major" or "minor", or None if never estimated
     sound_tags: list[str] = field(default_factory=list)  # label strings only, scores not needed for phrasing
+    genre: str | None = None
+    title: str = ""
+    artist: str = ""
 
 
 @dataclass
@@ -173,14 +233,34 @@ class AlbumArtPrompt:
     trace: dict[str, str]  # phrase -> the real feature/bucket it came from, for inspectability
 
 
-def _bucket(normalized_value: float | None) -> str | None:
-    if normalized_value is None:
-        return None
-    if normalized_value < 1 / 3:
-        return "low"
-    if normalized_value < 2 / 3:
-        return "mid"
-    return "high"
+@dataclass
+class PercentileBucketer:
+    """Corpus-relative low/mid/high buckets by POPULATION rank (equal-COUNT
+    thirds) rather than song_dna.DNANormalizer's equal-WIDTH numeric thirds
+    -- see this module's docstring for the real, measured skew that
+    difference caused. sorted_values holds each axis's real corpus values,
+    pre-sorted once at fit time so bucket() can binary-search a rank
+    instead of rescanning the whole corpus per song."""
+
+    sorted_values: dict[str, list[float]]
+
+    def bucket(self, axis: str, value: float | None) -> str | None:
+        values = self.sorted_values.get(axis)
+        if value is None or not values:
+            return None
+        rank = bisect_left(values, value) / len(values)
+        if rank < 1 / 3:
+            return "low"
+        if rank < 2 / 3:
+            return "mid"
+        return "high"
+
+
+def fit_percentile_bucketer(all_raw_stats: list[dict[str, float | None]]) -> PercentileBucketer:
+    sorted_values = {
+        axis: sorted(s[axis] for s in all_raw_stats if s.get(axis) is not None) for axis in BUCKET_AXES
+    }
+    return PercentileBucketer(sorted_values=sorted_values)
 
 
 def _phrase_for_tag(label: str, rng: random.Random) -> str:
@@ -190,46 +270,66 @@ def _phrase_for_tag(label: str, rng: random.Random) -> str:
     return f"hints of {label.lower()}"  # honest, still-grounded fallback for an uncurated label
 
 
+def _phrase_for_genre(genre: str, rng: random.Random) -> str:
+    variants = GENRE_PHRASES.get(genre)
+    if variants:
+        return rng.choice(variants)
+    return f"a {genre.lower()} character"  # honest, still-grounded fallback for an unlisted genre
+
+
+def _seed_for(song_id: int, title: str, artist: str) -> int:
+    """hashlib, not builtin hash() -- str hashing is salted per-process
+    (PYTHONHASHSEED) and would silently break the determinism a re-runnable
+    batch export depends on (see module docstring)."""
+    material = f"{song_id}|{title}|{artist}".encode()
+    return int(hashlib.sha256(material).hexdigest(), 16)
+
+
 def build_album_art_prompt(
-    descriptors: SongDescriptors, normalizer: DNANormalizer, max_sound_tags: int = 2,
+    descriptors: SongDescriptors, bucketer: PercentileBucketer, max_sound_tags: int = 2,
 ) -> AlbumArtPrompt:
-    """One deterministic prompt per song. rng is seeded by song_id alone
-    (not song_id + anything else) so the exact same descriptors always
-    produce the exact same prompt, run to run -- a batch re-export after,
-    say, adding more songs to the library still gives every PREVIOUSLY
-    existing song_id the identical prompt it had before, not a shuffled
-    one (list order/count elsewhere in the corpus never enters this
-    picture)."""
-    rng = random.Random(descriptors.song_id)
-    normalized = normalizer.normalize({
-        "tempo_bpm": descriptors.tempo_bpm, "energy": descriptors.energy, "brightness": descriptors.brightness,
-    })
+    """One deterministic prompt per song. rng is seeded from a hash of
+    (song_id, title, artist) -- not song_id alone -- so re-running this
+    against the same library always produces the exact same prompt for the
+    exact same song (title/artist don't change between runs for a given
+    song_id), while two different songs that happen to land in identical
+    buckets aren't guaranteed to draw identical phrases."""
+    rng = random.Random(_seed_for(descriptors.song_id, descriptors.title, descriptors.artist))
 
     phrases: list[str] = []
     trace: dict[str, str] = {}
 
-    brightness_bucket = _bucket(normalized.get("brightness")) if descriptors.brightness is not None else None
+    brightness_bucket = bucketer.bucket("brightness", descriptors.brightness)
     if brightness_bucket:
         phrase = rng.choice(BRIGHTNESS_PHRASES[brightness_bucket])
         phrases.append(phrase)
         trace[phrase] = f"brightness={descriptors.brightness:.1f} -> {brightness_bucket}"
 
-    intensity_bucket = _bucket(normalized.get("energy")) if descriptors.energy is not None else None
+    intensity_bucket = bucketer.bucket("energy", descriptors.energy)
     if intensity_bucket:
         phrase = rng.choice(INTENSITY_PHRASES[intensity_bucket])
         phrases.append(phrase)
         trace[phrase] = f"energy={descriptors.energy:.4f} -> {intensity_bucket}"
 
-    if descriptors.key_mode in MOOD_PHRASES:
+    if descriptors.key_mode == "minor" and intensity_bucket == "high":
+        phrase = rng.choice(MOOD_PHRASES_MINOR_HIGH_ENERGY)
+        phrases.append(phrase)
+        trace[phrase] = f"key={descriptors.key_tonic} minor, energy -> high (energetic-minor variant)"
+    elif descriptors.key_mode in MOOD_PHRASES:
         phrase = rng.choice(MOOD_PHRASES[descriptors.key_mode])
         phrases.append(phrase)
         trace[phrase] = f"key={descriptors.key_tonic} {descriptors.key_mode}"
 
-    pace_bucket = _bucket(normalized.get("tempo_bpm")) if descriptors.tempo_bpm is not None else None
+    pace_bucket = bucketer.bucket("tempo_bpm", descriptors.tempo_bpm)
     if pace_bucket:
         phrase = rng.choice(PACE_PHRASES[pace_bucket])
         phrases.append(phrase)
         trace[phrase] = f"tempo_bpm={descriptors.tempo_bpm:.0f} -> {pace_bucket}"
+
+    if descriptors.genre:
+        phrase = _phrase_for_genre(descriptors.genre, rng)
+        phrases.append(phrase)
+        trace[phrase] = f"genre={descriptors.genre!r}"
 
     candidate_tags = [t for t in descriptors.sound_tags if t not in SOUND_TAG_EXCLUDE]
     for label in candidate_tags[:max_sound_tags]:
