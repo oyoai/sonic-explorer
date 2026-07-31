@@ -65,6 +65,18 @@ def test_results_page_comparison_tab_has_metadata_vs_real_graph_and_audio_demo(r
     assert len(results_at.tabs[3].get("audio")) >= 4  # two songs per pair, two pairs
 
 
+def _has_blend_real_data(info_texts: list[str]) -> bool:
+    """The blend-weight info box's own text, distinguished from the taste
+    section's near-identical phrasing below by the absence of the word
+    "taste" -- both sections say "N rating(s) from M rater(s)", so a plain
+    substring check would conflate them."""
+    return any("rating(s) from" in i.lower() and "rater(s)" in i.lower() and "taste" not in i.lower() for i in info_texts)
+
+
+def _has_taste_real_data(info_texts: list[str]) -> bool:
+    return any("taste rating(s) from" in i.lower() and "rater(s)" in i.lower() for i in info_texts)
+
+
 def test_results_page_calibration_tab_reports_honestly_either_way(results_at):
     """This section is computed LIVE from whatever's actually in
     calibration_ratings (sonic_explorer.evaluation.blend_weight_regression),
@@ -76,9 +88,8 @@ def test_results_page_calibration_tab_reports_honestly_either_way(results_at):
     number with no ratings behind it, would not be."""
     warning_texts = [w.value for w in results_at.tabs[1].warning]
     info_texts = [i.value for i in results_at.tabs[1].info]
-    no_ratings_yet = any("no ratings yet" in w.lower() for w in warning_texts)
-    has_real_data = any("rating(s) from" in i.lower() and "rater(s)" in i.lower() for i in info_texts)
-    assert no_ratings_yet or has_real_data
+    no_ratings_yet = any("no ratings yet" in w.lower() and "taste" not in w.lower() for w in warning_texts)
+    assert no_ratings_yet or _has_blend_real_data(info_texts)
 
 
 def test_results_page_calibration_tab_shows_agreement_and_regression_sections_when_data_exists(results_at):
@@ -89,12 +100,36 @@ def test_results_page_calibration_tab_shows_agreement_and_regression_sections_wh
     ratings" note) rather than either crashing or silently showing
     nothing."""
     info_texts = [i.value for i in results_at.tabs[1].info]
-    has_real_data = any("rating(s) from" in i.lower() and "rater(s)" in i.lower() for i in info_texts)
-    if not has_real_data:
+    if not _has_blend_real_data(info_texts):
         return  # nothing to check further -- the honest "no ratings yet" test above covers this state
     markdown_texts = " ".join(m.value for m in results_at.tabs[1].markdown)
     assert "Per-facet agreement rate" in markdown_texts
     assert "Blend-weight regression" in markdown_texts
+
+
+def test_results_page_calibration_tab_taste_section_reports_honestly_either_way(results_at):
+    """Groundwork section, added alongside the similarity blend-weight
+    regression -- same live-computation, same honest either/or pattern,
+    computed from taste_ratings (sonic_explorer.evaluation.
+    taste_weight_regression) rather than a placeholder."""
+    warning_texts = [w.value for w in results_at.tabs[1].warning]
+    info_texts = [i.value for i in results_at.tabs[1].info]
+    no_taste_ratings_yet = any("no taste ratings yet" in w.lower() for w in warning_texts)
+    assert no_taste_ratings_yet or _has_taste_real_data(info_texts)
+
+
+def test_results_page_calibration_tab_taste_section_shows_a_regression_or_honest_note_when_data_exists(results_at):
+    info_texts = [i.value for i in results_at.tabs[1].info]
+    if not _has_taste_real_data(info_texts):
+        return  # nothing to check further -- the honest "no taste ratings yet" test above covers this state
+    markdown_texts = " ".join(m.value for m in results_at.tabs[1].markdown)
+    caption_texts = " ".join(c.value for c in results_at.tabs[1].caption)
+    assert "does a song's own dna predict liked vs. disliked" in markdown_texts.lower()
+    # Either a real fitted regression chart, or an honest "too few"/"same
+    # side" note -- never silently nothing.
+    has_regression_chart = "corpus-normalized to [0, 1]" in caption_texts
+    has_honest_note = "too few" in caption_texts.lower() or "same" in caption_texts.lower()
+    assert has_regression_chart or has_honest_note
 
 
 def test_results_page_dj_gallery_tab_includes_sound_recognition_query(results_at):

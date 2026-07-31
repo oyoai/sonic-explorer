@@ -10,6 +10,7 @@ import streamlit as st
 from comparison_data import build_metadata_vs_real_graphs, get_demo_pairs
 from components.plotting import network_graph_figure
 from resources import (
+    build_dna_normalizer,
     facet_display_name,
     get_agent,
     get_calibration_repositories,
@@ -21,6 +22,7 @@ from resources import (
     show_logo,
 )
 from sonic_explorer.evaluation.blend_weight_regression import compute_blend_weights
+from sonic_explorer.evaluation.taste_weight_regression import compute_taste_weights
 
 # Headers below sit inside st.tabs() -- see render_toc's own docstring for
 # the real limitation this creates (a link into a header under a tab that
@@ -370,7 +372,7 @@ with tab_calibration:
     # precomputed number, so this section starts reporting real numbers the
     # moment the first rating is submitted, and keeps updating as more come
     # in, rather than waiting on a manual content update.
-    calibration_repo, _calibration_guest_repo, _taste_repo, _taste_guest_repo = get_calibration_repositories()
+    calibration_repo, _calibration_guest_repo, taste_repo, _taste_guest_repo = get_calibration_repositories()
     blend_result = compute_blend_weights(calibration_repo, song_repo, embedding_repo)
 
     if blend_result.n_ratings == 0:
@@ -423,6 +425,48 @@ with tab_calibration:
                 for f, w in blend_result.regression_weights.items()
             ])
             st.bar_chart(weights_df.set_index("Facet")["Coefficient"], height=220)
+
+    st.markdown("###### Taste: does a song's own DNA predict liked vs. disliked?")
+    st.write(
+        "A deliberately separate judgment from the similarity ratings above: not \"is A or B more "
+        "similar to X,\" but \"do you like this specific segment\" -- one profile's own taste, not a "
+        "consensus. The rating tool collects this alongside similarity XAB rounds (see Methodology §8 "
+        "and Calibration's own methodological caveat on segment-level taste as a proxy for whole-song "
+        "taste). Groundwork for when real multi-user taste data exists -- laid down now, computed live "
+        "from whatever's actually in taste_ratings today, the same honest-degrade pattern as the "
+        "blend-weight regression above rather than a placeholder."
+    )
+    dna_normalizer = build_dna_normalizer(song_repo, len(song_repo.list_songs()))
+    taste_result = compute_taste_weights(taste_repo, song_repo, dna_normalizer)
+
+    if taste_result.n_ratings == 0:
+        st.warning(
+            "**No taste ratings yet.** Same live-computation approach as similarity above -- this "
+            "section starts reporting real numbers the moment the first taste rating is submitted."
+        )
+    else:
+        st.info(
+            f"**Live, computed from real data: {taste_result.n_ratings} taste rating(s) from "
+            f"{taste_result.n_raters} rater(s)** ({taste_result.n_liked} liked, "
+            f"{taste_result.n_disliked} disliked). Same caveat as above -- early data, a first look, "
+            "not a settled result."
+        )
+        if taste_result.regression_weights is None:
+            st.caption(taste_result.regression_note)
+        else:
+            st.caption(
+                "L2-regularized logistic regression coefficients (each DNA axis, corpus-normalized to "
+                "[0, 1] -> liked vs. disliked). A positive weight means higher values on that axis lean "
+                "toward liked; magnitude is how influential. DNA is a per-SONG scalar, not per-moment "
+                "(the same disclosed limitation Song DNA carries everywhere else in this app), so a "
+                "liked/disliked SEGMENT is scored against its parent song's DNA -- the closest real "
+                "signal available, not a segment-specific measurement."
+            )
+            taste_weights_df = pd.DataFrame([
+                {"Axis": AXIS_LABELS[axis], "Coefficient": w}
+                for axis, w in taste_result.regression_weights.items()
+            ])
+            st.bar_chart(taste_weights_df.set_index("Axis")["Coefficient"], height=220)
 
     nav_button("Open the rating tool →", "pages/9_Calibration.py", key="nav_results_to_calibration")
 
