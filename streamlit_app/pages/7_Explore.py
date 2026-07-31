@@ -159,6 +159,7 @@ from sonic_explorer.facets.registry import default_registry
 from sonic_explorer.facets.structure import repetition_rate
 from sonic_explorer.llm.search import explanation_for_search_match, nl_search
 from sonic_explorer.pipeline.sound_tagging import deserialize_tags
+from sonic_explorer.retrieval.song_level_index import build_song_level_index, query_song_level
 from components.plotting import (
     chord_strip_figure,
     composite_fingerprint_image_data_uri,
@@ -329,6 +330,23 @@ def build_taste_map_points(_song_repo, _embedding_repo, facet_name: str, index_s
 
 
 @st.cache_data(show_spinner=False)
+def _cached_song_vectors(_song_repo, _embedding_repo, facet_name: str, index_size: int):
+    return mean_pool_song_vectors(_song_repo, _embedding_repo, facet_name=facet_name)
+
+
+@st.cache_resource(show_spinner="Building song-level index...")
+def _cached_song_level_index(_song_repo, _embedding_repo, facet_name: str, index_size: int):
+    """Whole-song retrieval for the Full Song tab's results list -- the same
+    mean-pooled index pages/5_Moment_Matcher.py's own "Whole songs" mode
+    already uses (retrieval/song_level_index.py), not a new mechanism built
+    for this tab. cache_resource (not cache_data) because IndexIDMap2
+    objects aren't picklable, same reasoning as get_repositories() caching
+    the segment-level indexes; keyed on index_size so it rebuilds when new
+    embeddings land."""
+    return build_song_level_index(_song_repo, _embedding_repo, facet_name)
+
+
+@st.cache_data(show_spinner=False)
 def _cached_row_fingerprint(_embedding_repo, song_id: int):
     """Precomputed/cached per-song thumbnail IMAGE (not a Plotly figure) for
     the list and result cards -- computed once per song per session
@@ -477,12 +495,15 @@ def _estimated_key_for_song(song_id: int, audio_path: str):
 
 
 @st.cache_data(show_spinner=False)
-def _estimated_chords_for_song(song_id: int, audio_path: str):
+def _estimated_chords_for_song(song_id: int, audio_path: str, tempo_bpm: float | None):
     """Reuses the exact chroma chroma_for_display() already computes for key
     estimation above -- estimate_chords() takes that same (chroma, times)
-    pair (see its own docstring: "no separate computation")."""
+    pair (see its own docstring: "no separate computation"). tempo_bpm is
+    this song's own already-computed Song DNA tempo, passed through so the
+    minimum-segment floor tracks this song's actual harmonic rhythm
+    instead of one flat number for every song (see key_chord.py)."""
     chroma, times = chroma_for_display(audio_path)
-    return estimate_chords(chroma, times)
+    return estimate_chords(chroma, times, tempo_bpm=tempo_bpm)
 
 
 @st.cache_data(show_spinner=False)
@@ -1005,7 +1026,7 @@ with mid_col, st.container(height=PANEL_HEIGHT, border=False, gap="xxsmall", key
                     )
 
                 st.markdown("###### Chord progression")
-                chord_segments = _estimated_chords_for_song(song.id, song_audio_path)
+                chord_segments = _estimated_chords_for_song(song.id, song_audio_path, song.tempo_bpm)
                 if chord_segments:
                     st.plotly_chart(
                         chord_strip_figure(chord_segments), width="stretch", key="dna_chord_strip",
@@ -1172,6 +1193,74 @@ with right_col, st.container(height=PANEL_HEIGHT, border=False, gap="xxsmall", k
                     if clicked_id is not None and clicked_id != selected_id:
                         st.session_state.explore_selected_song_id = clicked_id
                         st.rerun()
+
+                # -- Retrieval results, same list-of-cards treatment the
+                # Moment tab below already gives its own matches -- the
+                # graph above answers "where does this song sit relative to
+                # its neighbors," this answers "which specific songs match
+                # it, ranked." Whole-song ranking via retrieval/song_level_
+                # index.py -- the same mean-pooled index pages/5_Moment_
+                # Matcher.py's own "Whole songs" mode already uses, not a
+                # new mechanism. No LLM re-ranking/explanation here (unlike
+                # the Moment tab's cards): those compare one specific
+                # moment against another, which a whole-song comparison
+                # doesn't have -- same reasoning Moment Matcher's own
+                # whole-song mode already follows.
+                song_vectors = _cached_song_vectors(
+                    song_repo, embedding_repo, full_song_facet, embedding_repo.index_size(full_song_facet)
+                )
+                if selected_id not in song_vectors:
+                    st.caption(f"This song hasn't been embedded for {facet_display_name(full_song_facet)} yet.")
+                else:
+                    song_level_index = _cached_song_level_index(
+                        song_repo, embedding_repo, full_song_facet, embedding_repo.index_size(full_song_facet)
+                    )
+                    song_results = query_song_level(
+                        song_level_index, song_vectors[selected_id], k=10, exclude_song_id=selected_id
+                    )
+                    if not song_results:
+                        st.info("No matches found elsewhere in the library yet.")
+                    else:
+                        st.markdown(f"#### Top {len(song_results)} results")
+                        st.caption(
+                            "Whole-song ranking -- each song's segments mean-pooled into one vector before "
+                            "ranking (see Methodology §7d for real measured trade-offs by facet: this "
+                            "sharpens ranking margin everywhere, but currently helps genre-cohesion for "
+                            "some facets and hurts it for others)."
+                        )
+                        with st.container(height=480):
+                            for match_song_id, score in song_results:
+                                match_song = songs_by_id.get(match_song_id)
+                                if match_song is None:
+                                    continue
+                                with st.container(border=True):
+                                    card_cols = st.columns([1, 3])
+                                    with card_cols[0]:
+                                        thumb = _cached_row_fingerprint(embedding_repo, match_song.id)
+                                        if thumb is not None:
+                                            st.image(thumb, width=56)
+                                    with card_cols[1]:
+                                        pct = max(0.0, score) * 100
+                                        st.markdown(
+                                            f"**{match_song.title}**  \n{match_song.artist} · "
+                                            f"{match_song.genre_top}  \n"
+                                            + badge(f"{pct:.0f}% match", kind="match"),
+                                            unsafe_allow_html=True,
+                                        )
+
+                                    result_envelope = _cached_full_waveform(
+                                        match_song.id, str(audio_path_for(match_song))
+                                    )
+                                    result_fig = waveform_figure(
+                                        result_envelope, duration_sec=match_song.duration_sec,
+                                        height=70, color="rgb(99,110,250)",
+                                    )
+                                    st.plotly_chart(
+                                        result_fig, width="stretch", key=f"full_song_result_wave_{match_song.id}",
+                                        config={"staticPlot": True},
+                                    )
+                                    st.caption("Play song:")
+                                    st.audio(str(audio_path_for(match_song)))
 
         with moment_tab:
             if not song.segments:

@@ -528,6 +528,21 @@ def test_explore_page_full_song_tab_has_its_own_facet_selector_and_mini_graph(ex
     assert len(toggles) == 1
 
 
+def test_explore_page_full_song_tab_shows_whole_song_retrieval_results(explore_at):
+    """Real regression coverage for the point of this section existing: the
+    Full Song tab must show ranked matched-song results (not just the
+    network/map graph on its own) -- the same mean-pooled song-level index
+    pages/5_Moment_Matcher.py's own "Whole songs" mode already uses."""
+    full_song_tab = next(t for t in explore_at.tabs if t.label == "Full Song")
+    markdown_texts = " ".join(m.value for m in full_song_tab.markdown)
+    info_texts = " ".join(i.value for i in full_song_tab.info)
+    caption_texts = " ".join(c.value for c in full_song_tab.caption)
+
+    has_results = "results" in markdown_texts.lower() and "whole-song ranking" in caption_texts.lower()
+    has_honest_empty_state = "no matches found" in info_texts.lower()
+    assert has_results or has_honest_empty_state
+
+
 def test_explore_page_moment_tab_has_its_own_facet_selector_and_segment_pills(explore_at):
     moment_tab = next(t for t in explore_at.tabs if t.label == "Moment")
     facet_selects = [sb for sb in moment_tab.selectbox if sb.label == "Match by"]
