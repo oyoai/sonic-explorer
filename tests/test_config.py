@@ -63,3 +63,25 @@ def test_album_art_path_for_returns_none_not_a_guessed_path_when_missing(tmp_pat
     resolved = config.album_art_path_for(make_song_with_id(song_id=123))
 
     assert resolved is None
+
+
+def test_album_art_v1_path_for_resolves_independently_of_the_live_album_art_dir(tmp_path, monkeypatch):
+    """album_art_v1_path_for() must resolve against ALBUM_ART_V1_DIR, not
+    the live ALBUM_ART_DIR -- Methodology's before/after section depends on
+    both resolving independently so it can show the real old image even
+    after ALBUM_ART_DIR moves on to a future regeneration."""
+    import sonic_explorer.config as config
+
+    live_dir = tmp_path / "live"
+    v1_dir = tmp_path / "v1"
+    live_dir.mkdir()
+    v1_dir.mkdir()
+    monkeypatch.setattr(config, "ALBUM_ART_DIR", live_dir)
+    monkeypatch.setattr(config, "ALBUM_ART_V1_DIR", v1_dir)
+    (v1_dir / "7.png").write_bytes(b"fake old png bytes")  # only in v1, not live
+
+    resolved_v1 = config.album_art_v1_path_for(make_song_with_id(song_id=7))
+    resolved_live = config.album_art_path_for(make_song_with_id(song_id=7))
+
+    assert resolved_v1 == v1_dir / "7.png"
+    assert resolved_live is None  # nothing under the live dir for this song

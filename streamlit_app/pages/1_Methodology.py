@@ -11,7 +11,7 @@ import streamlit as st
 
 from sonic_explorer.analysis.song_dna import AXES, AXIS_LABELS
 from sonic_explorer.analysis.taste_map import compute_taste_map, correlate_axes_with_features, mean_pool_song_vectors
-from sonic_explorer.config import HOP_SEC, WINDOW_SEC, album_art_path_for, audio_path_for
+from sonic_explorer.config import HOP_SEC, WINDOW_SEC, album_art_path_for, album_art_v1_path_for, audio_path_for
 from sonic_explorer.facets.fingerprint import composite_fingerprint, structure_fingerprint
 from sonic_explorer.pipeline.sound_tagging import deserialize_tags
 from components.plotting import (
@@ -917,7 +917,9 @@ st.caption(
     "selection seed so two similarly-described songs don't necessarily read identically."
 )
 
-st.markdown("**Real before/after prompt text, same songs, same underlying audio descriptors:**")
+st.markdown("**Real before/after -- same songs, same underlying audio descriptors, real regenerated art:**")
+
+
 def _render_album_art_example(example: dict) -> None:
     st.markdown(f"**\"{example['title']}\"** — {example['artist']} ({example['genre']})")
     st.markdown(f"*Before:* {example['old_prompt']}")
@@ -926,23 +928,28 @@ def _render_album_art_example(example: dict) -> None:
 
 for example in ALBUM_ART_PROMPT_EXAMPLES:
     art_song = songs_by_title.get(example["title"])
-    art_path = album_art_path_for(art_song) if art_song is not None else None
-    if art_path is not None:
-        img_col, text_col = st.columns([1, 3])
-        with img_col:
-            st.image(str(art_path), caption="Current art (generated under the OLD prompt)", width="stretch")
-        with text_col:
-            _render_album_art_example(example)
+    old_path = album_art_v1_path_for(art_song) if art_song is not None else None
+    new_path = album_art_path_for(art_song) if art_song is not None else None
+    if old_path is not None or new_path is not None:
+        img_cols = st.columns(2)
+        if old_path is not None:
+            with img_cols[0]:
+                st.image(str(old_path), caption="Before (v1, the buggy prompt)", width="stretch")
+        if new_path is not None:
+            with img_cols[1]:
+                st.image(str(new_path), caption="After (v2, the fixed prompt)", width="stretch")
+        _render_album_art_example(example)
     else:
         _render_album_art_example(example)
-st.warning(
-    "**Honest gap: the fix is in the prompt generator, not yet in the images.** "
-    "`album_art/prompts.json`/`.csv` have been regenerated with the fixed logic and are ready to "
-    "feed the Colab image-generation step whenever it's next run -- but the actual `.png` files "
-    "shown above (and throughout Explore/Song X-Ray) were generated under the OLD, buggy prompts and "
-    "haven't been re-rendered yet. Re-running `notebooks/12_album_art_generation.ipynb` against the "
-    "new prompts is a real, external, manual step (Colab + image-generation cost) that hasn't "
-    "happened yet -- disclosed here rather than left implicit."
+
+st.write(
+    "The prompt fix landed in `analysis/album_art_prompt.py`, `album_art/prompts.json`/`.csv` were "
+    "regenerated against it, and `notebooks/12_album_art_generation.ipynb` was re-run against the new "
+    "prompts to produce a real second image set (`deploy_data/album_art_v2/`) -- not just improved "
+    "text with no visual to check it against. The original `v1` set (`deploy_data/album_art_v1/`) was "
+    "deliberately kept rather than overwritten, specifically so this section could show a real "
+    "before/after rather than describing the old art from memory. The live app (Explore, Song X-Ray) "
+    "now serves `v2` -- `album_art_path_for()` resolves against it directly."
 )
 
 st.divider()

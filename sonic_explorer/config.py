@@ -72,7 +72,16 @@ def audio_path_for(song) -> Path:
     return candidate if candidate.exists() else Path(song.filepath)
 
 
-ALBUM_ART_DIR = DATA_DIR / "album_art"
+ALBUM_ART_DIR = DATA_DIR / "album_art_v2"
+
+# ALBUM_ART_DIR points at _v2 (regenerated under the fixed prompt logic --
+# see analysis/album_art_prompt.py's module docstring for the real bucketing-
+# skew + minor-key-mood bug that _v1 was generated under) not because a v3
+# is expected imminently, but because the v1 set was deliberately KEPT
+# rather than overwritten, specifically so Methodology's 5c section can show
+# a real, still-on-disk "before" image next to the fixed prompt text -- not
+# a hypothetical description of what the old art looked like.
+ALBUM_ART_V1_DIR = DATA_DIR / "album_art_v1"
 
 
 def album_art_path_for(song) -> Path | None:
@@ -95,4 +104,15 @@ def album_art_path_for(song) -> Path | None:
     this correctly returns None rather than risking a same-numbered-but-
     different-song mismatch by reaching into deploy_data's art from there."""
     candidate = ALBUM_ART_DIR / f"{song.id}.png"
+    return candidate if candidate.exists() else None
+
+
+def album_art_v1_path_for(song) -> Path | None:
+    """Same resolution as album_art_path_for, against ALBUM_ART_V1_DIR (the
+    pre-fix set) instead of the live ALBUM_ART_DIR -- exists specifically
+    for Methodology's 5c "before" image, which needs to keep showing the
+    real old art even after ALBUM_ART_DIR moves on to a future regeneration.
+    Everywhere else in the app (Explore, Song X-Ray) should keep using
+    album_art_path_for(), never this one."""
+    candidate = ALBUM_ART_V1_DIR / f"{song.id}.png"
     return candidate if candidate.exists() else None
