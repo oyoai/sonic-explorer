@@ -534,6 +534,49 @@ def test_explore_page_mini_graph_toggle_defaults_to_network(explore_at):
 def test_explore_page_mini_graph_network_mode_shows_neighbors_only_caption(explore_at):
     caption_texts = " ".join(c.value for c in explore_at.caption)
     assert "direct" in caption_texts and "neighbors only" in caption_texts
+    assert "distance from the selected song" in caption_texts.lower()
+
+
+def test_explore_page_mini_graph_network_mode_node_distance_reflects_real_similarity(explore_at):
+    """Real regression guard for the fix itself: node position in the
+    rendered network figure must come from radial_layout_around (distance
+    = real similarity, relative to what's shown), not the full library's
+    inherited spring_layout position -- a real reported bug where a node
+    could look "visually closest" without being the most similar by
+    score. Checked directly against the actual rendered figure's JSON
+    spec (AppTest's plotly_chart elements are UnknownElement, exposing
+    .spec -- a JSON string -- not a reconstructed go.Figure), not just
+    that radial_layout_around itself works in isolation (that's
+    network_graph.py's own unit test coverage). Exactly one node sitting
+    at the exact origin is itself strong evidence this is the radial
+    layout and not spring_layout -- spring_layout's force equilibrium has
+    no reason to ever place a node at precisely (0, 0)."""
+    import base64
+    import json
+
+    import numpy as np
+
+    def _plotly_array(value):
+        """Plotly's JSON serialization packs numeric arrays as base64-
+        encoded binary (real, confirmed by inspection: {"dtype": "f8",
+        "bdata": "..."}), not a plain JSON list -- decode that format
+        specifically, don't assume plain numbers."""
+        if isinstance(value, dict) and "bdata" in value:
+            return np.frombuffer(base64.b64decode(value["bdata"]), dtype=value["dtype"]).tolist()
+        return value
+
+    charts = explore_at.get("plotly_chart")
+    network_charts = [c for c in charts if "explore_mini_network" in c.proto.id]
+    if not network_charts:
+        pytest.skip("no network chart rendered -- selected song has no embedded neighbors to show")
+    spec = json.loads(network_charts[0].spec)
+    node_trace = spec["data"][1]  # data[0] is the edge trace, data[1] is nodes
+    xs, ys = _plotly_array(node_trace["x"]), _plotly_array(node_trace["y"])
+    if len(xs) < 2:
+        pytest.skip("fewer than 2 nodes rendered -- nothing to compare distances between")
+
+    at_origin = [i for i, (x, y) in enumerate(zip(xs, ys, strict=True)) if x == 0.0 and y == 0.0]
+    assert len(at_origin) == 1  # exactly the selected/center song, never a spring_layout coincidence
 
 
 def test_explore_page_mini_graph_switching_to_map_mode_renders_without_exception():

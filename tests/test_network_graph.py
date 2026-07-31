@@ -14,6 +14,7 @@ from sonic_explorer.analysis.network_graph import (
     cross_genre_edge_fraction,
     pick_metadata_mismatch_pair,
     pick_real_cross_genre_pair,
+    radial_layout_around,
 )
 
 
@@ -461,3 +462,75 @@ def test_build_metadata_similarity_graph_custom_weights_change_edge_selection():
 
     assert frozenset((1, 3)) in genre_heavy_pairs  # same genre wins when genre is all that's weighted
     assert frozenset((1, 2)) in tags_heavy_pairs  # same tags wins when tags is all that's weighted
+
+
+def test_radial_layout_around_places_center_at_origin():
+    edges = [GraphEdge(song_id_a=1, song_id_b=2, weight=0.8)]
+
+    positions = radial_layout_around(1, edges)
+
+    assert positions[1] == (0.0, 0.0)
+
+
+def test_radial_layout_around_handles_no_neighbors():
+    positions = radial_layout_around(1, edges=[])
+
+    assert positions == {1: (0.0, 0.0)}
+
+
+def test_radial_layout_around_distance_reflects_real_similarity_not_layout_physics():
+    """The whole point of this function existing: a real reported UX bug
+    where a node could look "visually closest" on a spring_layout graph
+    without actually being the most similar by score. Here, the highest-
+    weight neighbor must be strictly closer to the center than a
+    lower-weight one, deterministically -- not "usually," always."""
+    edges = [
+        GraphEdge(song_id_a=1, song_id_b=2, weight=0.95),  # most similar -- should be closest
+        GraphEdge(song_id_a=1, song_id_b=3, weight=0.50),  # least similar -- should be farthest
+        GraphEdge(song_id_a=1, song_id_b=4, weight=0.75),  # in between
+    ]
+
+    positions = radial_layout_around(1, edges)
+
+    def dist(sid):
+        x, y = positions[sid]
+        return (x**2 + y**2) ** 0.5
+
+    assert dist(2) < dist(4) < dist(3)
+
+
+def test_radial_layout_around_reads_edges_from_either_direction():
+    """A k-NN graph's edges aren't necessarily symmetric (see
+    filter_to_neighbors) -- an edge with the center as song_id_b must
+    contribute a position exactly the same way as one with the center as
+    song_id_a."""
+    edges = [GraphEdge(song_id_a=2, song_id_b=1, weight=0.6)]  # center (1) is song_id_b here
+
+    positions = radial_layout_around(1, edges)
+
+    assert 2 in positions
+    assert positions[2] != (0.0, 0.0)
+
+
+def test_radial_layout_around_equal_weights_still_spread_around_the_circle():
+    """No real similarity range to scale by (every neighbor tied) must
+    still produce a usable, non-overlapping layout -- not a divide-by-zero
+    crash, and not every neighbor stacked on the exact same point."""
+    edges = [
+        GraphEdge(song_id_a=1, song_id_b=2, weight=0.7),
+        GraphEdge(song_id_a=1, song_id_b=3, weight=0.7),
+        GraphEdge(song_id_a=1, song_id_b=4, weight=0.7),
+    ]
+
+    positions = radial_layout_around(1, edges)
+
+    assert len({positions[sid] for sid in (2, 3, 4)}) == 3  # three genuinely distinct positions
+
+
+def test_radial_layout_around_min_radius_keeps_closest_neighbor_off_dead_center():
+    edges = [GraphEdge(song_id_a=1, song_id_b=2, weight=1.0)]
+
+    positions = radial_layout_around(1, edges)
+
+    x, y = positions[2]
+    assert (x**2 + y**2) ** 0.5 > 0.0  # never lands exactly on the center itself

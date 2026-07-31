@@ -70,6 +70,60 @@ class NetworkGraphResult:
     edges: list[GraphEdge]
 
 
+# Keeps even the single most-similar shown neighbor a little away from
+# dead-center, so its marker never overlaps the center node itself.
+RADIAL_MIN_RADIUS = 0.15
+RADIAL_MAX_RADIUS = 1.0
+
+
+def radial_layout_around(center_song_id: int, edges: list[GraphEdge]) -> dict[int, tuple[float, float]]:
+    """Positions center_song_id at the origin and every song directly
+    connected to it (via `edges`, from either direction -- a k-NN graph's
+    edges aren't necessarily symmetric, see filter_to_neighbors) on a
+    circle around it, at a radius that reflects its real similarity to
+    the center -- unlike spring_layout's whole-graph force equilibrium
+    (where a node's position also depends on its OTHER neighbors' mutual
+    attractions, not just its own edge to the center), so a real, reported
+    confusion -- a node reading as "visually closest" without actually
+    being the most similar by score -- can't happen here: distance and
+    similarity are now the same claim by construction.
+
+    Radius is relative to the similarity RANGE of the songs actually being
+    shown (min-max scaled, same "corpus-relative, not an absolute unit"
+    discipline analysis/song_dna.py's DNANormalizer already uses for a
+    different axis), not an absolute 1-similarity distance -- real edge
+    weights in this app cluster fairly high (commonly 0.7-0.85), so an
+    absolute mapping would visually bunch every neighbor near the center
+    regardless of which one is relatively closer; a relative mapping keeps
+    the view legible while still preserving real rank order.
+
+    Angles are assigned in similarity-rank order (most similar first) but
+    are otherwise just evenly spaced around the circle -- angle carries no
+    meaning here, only radius does; don't read anything into which side of
+    the circle a node lands on."""
+    neighbor_weights: dict[int, float] = {}
+    for edge in edges:
+        if edge.song_id_a == center_song_id:
+            neighbor_weights[edge.song_id_b] = edge.weight
+        elif edge.song_id_b == center_song_id:
+            neighbor_weights[edge.song_id_a] = edge.weight
+
+    positions = {center_song_id: (0.0, 0.0)}
+    if not neighbor_weights:
+        return positions
+
+    lo, hi = min(neighbor_weights.values()), max(neighbor_weights.values())
+    spread = hi - lo
+    ranked_ids = sorted(neighbor_weights, key=lambda sid: -neighbor_weights[sid])
+    n = len(ranked_ids)
+    for i, sid in enumerate(ranked_ids):
+        normalized = (neighbor_weights[sid] - lo) / spread if spread > 0 else 0.5
+        radius = RADIAL_MIN_RADIUS + (1.0 - normalized) * (RADIAL_MAX_RADIUS - RADIAL_MIN_RADIUS)
+        angle = 2 * np.pi * i / n
+        positions[sid] = (float(radius * np.cos(angle)), float(radius * np.sin(angle)))
+    return positions
+
+
 def _cosine_similarity_matrix(matrix: np.ndarray) -> np.ndarray:
     norms = np.linalg.norm(matrix, axis=1, keepdims=True)
     norms[norms == 0] = 1.0

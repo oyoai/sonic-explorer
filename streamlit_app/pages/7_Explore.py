@@ -149,7 +149,7 @@ from resources import (
     show_logo,
 )
 from sonic_explorer.analysis.key_chord import estimate_chords, estimate_key
-from sonic_explorer.analysis.network_graph import build_similarity_graph
+from sonic_explorer.analysis.network_graph import build_similarity_graph, radial_layout_around
 from sonic_explorer.analysis.song_dna import AXES, AXIS_LABELS
 from sonic_explorer.analysis.taste_map import compute_taste_map, mean_pool_song_vectors
 from sonic_explorer.analysis.waveform_preview import beat_times_for_song, chroma_for_display, rms_contour, waveform_envelope
@@ -1210,6 +1210,25 @@ with right_col, st.container(height=PANEL_HEIGHT, border=False, gap="xxsmall", k
                 if mini_graph_mode == "network":
                     neighbor_nodes, neighbor_edges = filter_to_neighbors(mini_points_df, mini_edges, selected_id)
 
+                    # Real reported confusion: a node could look "visually
+                    # closest" to the selected song without actually being
+                    # the most similar by score, since the positions
+                    # inherited from mini_points_df come from the FULL
+                    # library's force-directed spring_layout -- every OTHER
+                    # neighbor's mutual attraction shifts a node's position
+                    # too, not just its own edge to the center. Recomputing
+                    # positions here with radial_layout_around fixes that
+                    # at the source: distance from the selected song now
+                    # directly reflects its real similarity, always.
+                    # Computed from the full neighbor_edges (before the
+                    # threshold slider below), not displayed_edges, so a
+                    # node's position stays fixed as the threshold moves --
+                    # only which edges/nodes are VISIBLE should change.
+                    radial_positions = radial_layout_around(selected_id, neighbor_edges)
+                    neighbor_nodes = neighbor_nodes.copy()
+                    neighbor_nodes["x"] = neighbor_nodes["song_id"].map(lambda sid: radial_positions[sid][0])
+                    neighbor_nodes["y"] = neighbor_nodes["song_id"].map(lambda sid: radial_positions[sid][1])
+
                     # Edge weight is the real cosine similarity that decided
                     # this connection in the first place (analysis/
                     # network_graph.py's GraphEdge.weight, clamped to
@@ -1248,7 +1267,9 @@ with right_col, st.container(height=PANEL_HEIGHT, border=False, gap="xxsmall", k
                     st.caption(
                         f"Selected song + its direct {facet_display_name(full_song_facet)} neighbors only -- "
                         f"showing {len(displayed_edges)} of {len(neighbor_edges)} edges at ≥{threshold:.2f} "
-                        "similarity. Click a node to select that song, hover an edge to see its real "
+                        "similarity. Distance from the selected song (center) reflects its real similarity "
+                        "to it, relative to the other neighbors shown -- closer really does mean more "
+                        "similar here. Click a node to select that song, hover an edge to see its real "
                         "similarity value. Color = genre."
                     )
                 else:
