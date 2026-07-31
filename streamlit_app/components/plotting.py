@@ -382,20 +382,23 @@ def taste_map_figure(points_df, selected_song_id=None, height: int = 180, click_
 
 def network_graph_figure(
     nodes_df, edges, selected_song_id=None, highlight_song_ids=None, center_song_id=None, zoom_radius=None,
-    height: int = 560, click_priority: bool = False,
+    height: int = 560, click_priority: bool = False, hide_isolated_nodes: bool = False,
 ) -> go.Figure:
     """Song-as-node similarity graph (spec 2.1's network/relationship view) --
     nodes_df needs columns song_id, x, y, cluster, title, artist, genre; edges
     is a list of analysis.network_graph.GraphEdge. Edges render as one line
     trace (None-separated segments -- the standard Plotly technique for
     drawing many disconnected line segments in a single trace) underneath the
-    node scatter. Nodes carry a real hover tooltip (title/artist/genre) --
-    reversed from an earlier "deliberately no hover tooltips, click is the
-    only way to see song info" design once hover was explicitly requested as
-    a first-class interaction alongside click, not instead of it; the earlier
-    reasoning (Plotly tooltips can't render the fingerprint imagery a click's
-    own payoff panel does) still holds for WHY a click is needed too, it just
-    no longer argues against hover existing at all.
+    node scatter, with a real per-edge hover (the cosine-similarity weight
+    that decided the connection) -- previously hoverinfo="skip", so a viewer
+    could see two nodes were connected but not by how much. Nodes carry a
+    real hover tooltip (title/artist/genre) -- reversed from an earlier
+    "deliberately no hover tooltips, click is the only way to see song info"
+    design once hover was explicitly requested as a first-class interaction
+    alongside click, not instead of it; the earlier reasoning (Plotly
+    tooltips can't render the fingerprint imagery a click's own payoff panel
+    does) still holds for WHY a click is needed too, it just no longer
+    argues against hover existing at all.
 
     highlight_song_ids: an iterable of song_ids (e.g. a search's matches) to
     draw with a distinct ring + larger marker, separate from selected_song_id
@@ -403,6 +406,16 @@ def network_graph_figure(
     center_song_id + zoom_radius: when both given, sets the axis ranges to a
     zoom_radius-sized window around that node's (x, y) position -- "center on
     a focused song" -- instead of the default autoranged full-graph view.
+
+    hide_isolated_nodes: drops any row in nodes_df with no edge touching it
+    (by this call's own `edges` -- e.g. after a caller has already filtered
+    edges down by a similarity threshold) from the rendered node scatter,
+    instead of always drawing every node as a dot regardless of whether it
+    has a surviving connection. Off by default -- "every requested node is
+    visible" is the existing, expected behavior at every other call site
+    (Results, App Walkthrough, Explore's own default view); this is an
+    opt-in for callers that specifically want "only show what's actually
+    connected right now."
 
     click_priority: when True, sets dragmode=False. Root cause of a real
     "clicking a node doesn't work reliably" report: Plotly's default pan
@@ -421,7 +434,8 @@ def network_graph_figure(
     no click to protect there, only free pan/zoom exploration to keep."""
     pos = {row.song_id: (row.x, row.y) for row in nodes_df.itertuples()}
     highlight_ids = frozenset(highlight_song_ids) if highlight_song_ids else frozenset()
-    edge_x, edge_y = [], []
+    edge_x, edge_y, edge_hover = [], [], []
+    connected_ids: set = set()
     for edge in edges:
         if edge.song_id_a not in pos or edge.song_id_b not in pos:
             continue
@@ -429,6 +443,19 @@ def network_graph_figure(
         x1, y1 = pos[edge.song_id_b]
         edge_x += [x0, x1, None]
         edge_y += [y0, y1, None]
+        # Each edge contributes 3 points (start, end, None separator) to the
+        # single shared line trace -- hovertext needs the same length, with
+        # the separator's own entry never actually shown (no point sits
+        # there to hover). Both ends repeat the same label since it's one
+        # edge's one weight, not two different values.
+        hover_label = f"{edge.weight:.0%} similarity"
+        edge_hover += [hover_label, hover_label, None]
+        connected_ids.add(edge.song_id_a)
+        connected_ids.add(edge.song_id_b)
+
+    if hide_isolated_nodes:
+        keep_ids = connected_ids | ({selected_song_id} if selected_song_id is not None else set())
+        nodes_df = nodes_df[nodes_df["song_id"].isin(keep_ids)]
 
     # Genre, not the unsupervised K-means cluster id -- a real reported
     # preference (cluster coloring read as "insignificant"/hard to learn
@@ -446,7 +473,7 @@ def network_graph_figure(
     fig.add_trace(go.Scatter(
         x=edge_x, y=edge_y, mode="lines",
         line=dict(width=0.6, color="rgba(150,150,150,0.35)"),
-        hoverinfo="skip", showlegend=False,
+        hovertext=edge_hover, hoverinfo="text", showlegend=False,
     ))
     fig.add_trace(go.Scatter(
         x=nodes_df["x"], y=nodes_df["y"], mode="markers",

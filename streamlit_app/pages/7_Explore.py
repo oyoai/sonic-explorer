@@ -157,6 +157,7 @@ from sonic_explorer.config import album_art_path_for, audio_path_for
 from sonic_explorer.facets.fingerprint import composite_fingerprint, structure_fingerprint
 from sonic_explorer.facets.registry import default_registry
 from sonic_explorer.facets.structure import repetition_rate
+from sonic_explorer.facets.tags import GENERIC_TAG_LABELS
 from sonic_explorer.llm.search import explanation_for_search_match, nl_search
 from sonic_explorer.pipeline.sound_tagging import deserialize_tags
 from sonic_explorer.retrieval.song_level_index import build_song_level_index, query_song_level
@@ -383,9 +384,18 @@ def _row_sound_tags(song) -> str:
     """Top 3 AST/AudioSet tags by score, comma-joined -- shared by the
     browsable list's "Sound Tags" column and the Selected Song panel's own
     Sound Tags metric, so both read the identical formatting for the same
-    song rather than two independently-drifting implementations."""
+    song rather than two independently-drifting implementations.
+
+    Excludes GENERIC_TAG_LABELS ("Music"/"Musical instrument") the same way
+    facets/tags.py's embedding path already does -- near-universal labels
+    that dominate almost every song's top scores (0.31-0.50 confidence
+    regardless of actual content, see that module's own comment) without
+    telling a viewer anything distinguishing. songs.sound_tags itself is
+    never filtered (it's the raw AST output, read elsewhere too), so this
+    filters at display time rather than mutating the persisted column."""
     tags = deserialize_tags(song.sound_tags)
-    top = sorted(tags, key=lambda t: t[1], reverse=True)[:3]
+    candidates = [t for t in tags if t[0] not in GENERIC_TAG_LABELS]
+    top = sorted(candidates, key=lambda t: t[1], reverse=True)[:3]
     return ", ".join(label for label, _score in top)
 
 
@@ -628,12 +638,18 @@ with left_col, st.container(height=PANEL_HEIGHT, border=False, gap="xxsmall", ke
             # wouldn't avoid that cost -- this table simply doesn't have
             # them at all, a known, deliberate gap (see Methodology) rather
             # than a slow page.
-            "Tempo": f"{s.tempo_bpm:.0f} BPM" if s.tempo_bpm is not None else "—",
-            "Energy": f"{s.energy:.2f}" if s.energy is not None else "—",
-            "Brightness": f"{s.brightness:.2f}" if s.brightness is not None else "—",
-            "Harmonic Complexity": f"{s.harmonic_complexity:.2f}" if s.harmonic_complexity is not None else "—",
-            "Rhythmic Density": f"{s.rhythmic_density:.2f}" if s.rhythmic_density is not None else "—",
-            "Repetition Rate": f"{repetition_value:.2f}" if repetition_value is not None else "—",
+            # Raw numeric values, NOT pre-formatted strings (a real bug this
+            # fixed: st.dataframe sorts a text column lexicographically, so
+            # "103 BPM"/"258 BPM"/"40 BPM" used to sort as "103, 258, 40,
+            # 99" -- string comparison, not numeric). Display formatting
+            # (units, decimal places) now lives in column_config's
+            # NumberColumn below, which sorts on the real underlying value.
+            "Tempo": s.tempo_bpm,
+            "Energy": s.energy,
+            "Brightness": s.brightness,
+            "Harmonic Complexity": s.harmonic_complexity,
+            "Rhythmic Density": s.rhythmic_density,
+            "Repetition Rate": repetition_value,
             "Novelty Curve": _cached_row_novelty_curve(embedding_repo, s.id) or [],
             "Structure": _cached_facet_fingerprint_data_uri(embedding_repo, s.id, "structure"),
             "Sound": _cached_facet_fingerprint_data_uri(embedding_repo, s.id, "sound"),
@@ -719,6 +735,15 @@ with left_col, st.container(height=PANEL_HEIGHT, border=False, gap="xxsmall", ke
             # curve's docstring) -- LineChartColumn renders that as a real
             # per-row sparkline, not a single scalar.
             "Novelty Curve": st.column_config.LineChartColumn(),
+            # Real numeric dtype (see _build_row's own comment on why) --
+            # format here is display-only, the underlying value (and its
+            # sort order) stays numeric.
+            "Tempo": st.column_config.NumberColumn(format="%.0f BPM"),
+            "Energy": st.column_config.NumberColumn(format="%.2f"),
+            "Brightness": st.column_config.NumberColumn(format="%.2f"),
+            "Harmonic Complexity": st.column_config.NumberColumn(format="%.2f"),
+            "Rhythmic Density": st.column_config.NumberColumn(format="%.2f"),
+            "Repetition Rate": st.column_config.NumberColumn(format="%.2f"),
         },
         hide_index=True,
         on_select="rerun",
@@ -944,6 +969,19 @@ with mid_col, st.container(height=PANEL_HEIGHT, border=False, gap="xxsmall", key
         normalized_dna = normalized_dna_by_song.get(song.id)
         if normalized_dna:
             with st.expander("Song DNA"):
+                st.markdown(
+                    "###### DNA axes",
+                    help="All five computed once per song from real librosa features (facets/song_dna.py), "
+                         "reusing the same audio load the structure pipeline already does -- no separate "
+                         "pass. **Tempo**: librosa.beat.beat_track's estimated BPM. **Energy**: mean RMS "
+                         "amplitude. **Brightness**: mean spectral centroid (Hz) -- where spectral energy "
+                         "is centered; higher = more treble-forward. **Harmonic complexity**: Shannon "
+                         "entropy of the mean chroma vector, normalized by max possible entropy -- a proxy "
+                         "(concentrated-vs-spread-out pitch-class energy), not a dedicated harmony-facet "
+                         "measurement; a drone/simple riff scores low, a harmonically busy song scores "
+                         "high. **Rhythmic density**: onset rate (onsets/sec via librosa.onset.onset_"
+                         "detect) -- also a proxy, not a dedicated rhythm facet.",
+                )
                 st.plotly_chart(
                     song_dna_bars([AXIS_LABELS[a] for a in AXES], [normalized_dna[a] for a in AXES]),
                     width="stretch", key="mid_dna_bars",
@@ -989,7 +1027,18 @@ with mid_col, st.container(height=PANEL_HEIGHT, border=False, gap="xxsmall", key
                 # StructureTimeline's docstring), so this costs one extra
                 # file read, not three separate matrix computations.
                 if matrix is not None:
-                    st.markdown("###### Self-similarity matrices")
+                    st.markdown(
+                        "###### Self-similarity matrices",
+                        help="**Structure**: downsampled tile of this song's own beat-synced self-"
+                             "similarity matrix (chroma synced to detected beats, then librosa.segment."
+                             "recurrence_matrix -- the same matrix Song X-Ray's structure view uses). "
+                             "**Sound**: a mel-spectrogram thumbnail -- real acoustic texture, but NOT a "
+                             "view of CLAP's actual embedding (see Approach's own Sound card for that "
+                             "caveat). **Harmony**: a chroma-gram strip, 12 real pitch-class rows. "
+                             "**Composite**: all three overlaid as RGB (structure=red, harmony=green, "
+                             "sound=blue) -- bright/neutral where they agree, a color cast where they "
+                             "diverge.",
+                    )
                     structure_fp = structure_fingerprint(matrix)
                     sound_fp = structure_timeline.sound_fingerprint if structure_timeline is not None else None
                     harmony_fp = structure_timeline.harmony_fingerprint if structure_timeline is not None else None
@@ -1025,7 +1074,14 @@ with mid_col, st.container(height=PANEL_HEIGHT, border=False, gap="xxsmall", key
                         "harmony=green, sound=blue)."
                     )
 
-                st.markdown("###### Chord progression")
+                st.markdown(
+                    "###### Chord progression",
+                    help="Per-frame chord-template correlation (24 major/minor triads) against this "
+                         "song's chroma, smoothed with a sliding-window mode filter to suppress frame-to-"
+                         "frame flicker, then a short-segment merge pass absorbs any residual sub-"
+                         "threshold segment into its longer neighbor (analysis/key_chord.py). Same "
+                         "detection Approach's Harmony card and Song X-Ray's chord verification track use.",
+                )
                 chord_segments = _estimated_chords_for_song(song.id, song_audio_path, song.tempo_bpm)
                 if chord_segments:
                     st.plotly_chart(
@@ -1036,7 +1092,14 @@ with mid_col, st.container(height=PANEL_HEIGHT, border=False, gap="xxsmall", key
 
                 novelty_cols = st.columns(2)
                 with novelty_cols[0]:
-                    st.markdown("###### Novelty curve")
+                    st.markdown(
+                        "###### Novelty curve",
+                        help="Foote (2000) checkerboard-kernel novelty: a checkerboard kernel is "
+                             "convolved along the diagonal of this song's self-similarity matrix -- a "
+                             "peak marks a real timbral/structural shift, not a loudness or energy event. "
+                             "The same signal that decides whether Structure (above) shows colored "
+                             "segments or falls back to this continuous curve instead.",
+                    )
                     if structure_timeline is not None and structure_timeline.novelty_curve is not None:
                         novelty_fig = waveform_figure(
                             structure_timeline.novelty_curve, duration_sec=song.duration_sec,
@@ -1053,7 +1116,13 @@ with mid_col, st.container(height=PANEL_HEIGHT, border=False, gap="xxsmall", key
                     else:
                         st.caption("Not yet computed for this song -- see Song X-Ray's structure pipeline.")
                 with novelty_cols[1]:
-                    st.markdown("###### Loudness contour")
+                    st.markdown(
+                        "###### Loudness contour",
+                        help="Frame-level RMS amplitude over time (librosa.feature.rms) -- a real, "
+                             "direct, time-varying measurement, not the same thing as the DNA axes' "
+                             "'Energy' above (that's this whole song's single mean RMS value; this is "
+                             "its full shape across time).",
+                    )
                     loudness_envelope = _cached_rms_contour(song.id, song_audio_path)
                     loudness_fig = waveform_figure(
                         loudness_envelope, duration_sec=song.duration_sec, height=90, color="rgb(0,204,150)",
@@ -1158,9 +1227,19 @@ with right_col, st.container(height=PANEL_HEIGHT, border=False, gap="xxsmall", k
                              "computed for the selected song.",
                     )
                     displayed_edges = [e for e in neighbor_edges if e.weight >= threshold]
+
+                    # Off by default -- every requested neighbor node stays
+                    # visible even with zero surviving edges at a high
+                    # threshold (today's existing, expected behavior). This
+                    # is an explicit opt-in for "only show what's actually
+                    # still connected," not a replacement for the default.
+                    hide_isolated = st.checkbox(
+                        "Hide songs with no edges above this threshold", value=False,
+                        key="explore_hide_isolated_nodes",
+                    )
                     mini_fig = network_graph_figure(
                         neighbor_nodes, displayed_edges, selected_song_id=selected_id, height=260,
-                        click_priority=True,
+                        click_priority=True, hide_isolated_nodes=hide_isolated,
                     )
                     mini_event = st.plotly_chart(
                         mini_fig, width="stretch", on_select="rerun", key="explore_mini_network",
@@ -1169,7 +1248,8 @@ with right_col, st.container(height=PANEL_HEIGHT, border=False, gap="xxsmall", k
                     st.caption(
                         f"Selected song + its direct {facet_display_name(full_song_facet)} neighbors only -- "
                         f"showing {len(displayed_edges)} of {len(neighbor_edges)} edges at ≥{threshold:.2f} "
-                        "similarity. Click a node to select that song. Color = genre."
+                        "similarity. Click a node to select that song, hover an edge to see its real "
+                        "similarity value. Color = genre."
                     )
                 else:
                     taste_points_df = build_taste_map_points(

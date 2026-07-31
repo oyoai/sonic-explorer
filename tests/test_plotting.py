@@ -257,8 +257,9 @@ def test_network_graph_figure_highlight_song_ids_widen_marker_and_ring():
 
 def test_network_graph_figure_nodes_have_real_hover_with_title_artist_genre():
     """Reversed from an earlier "no hover, click only" design -- see the
-    function's own docstring for why. Edge trace stays hoverinfo="skip"
-    (only nodes are a meaningful hover target)."""
+    function's own docstring for why. Edge trace now ALSO has real hover
+    (the similarity weight) -- see test_network_graph_figure_edges_show_
+    real_similarity_on_hover below, a later real feature request."""
     nodes_df = pd.DataFrame([
         {"song_id": 101, "x": 0.0, "y": 0.0, "cluster": 0, "title": "A Song", "artist": "Artist A", "genre": "Rock"},
     ])
@@ -268,7 +269,52 @@ def test_network_graph_figure_nodes_have_real_hover_with_title_artist_genre():
     node_trace = fig.data[1]
     assert node_trace.hoverinfo == "text"
     assert node_trace.hovertext[0] == "A Song<br>Artist A · Rock"
-    assert fig.data[0].hoverinfo == "skip"
+
+
+def test_network_graph_figure_edges_show_real_similarity_on_hover():
+    """Real feature request: a viewer could previously see two nodes were
+    connected but not by how much (edges were hoverinfo="skip"). Each
+    edge's real cosine-similarity weight must now be hoverable."""
+    from sonic_explorer.analysis.network_graph import GraphEdge
+
+    nodes_df = pd.DataFrame([
+        {"song_id": 1, "x": 0.0, "y": 0.0, "cluster": 0, "title": "A", "artist": "Artist A", "genre": "Rock"},
+        {"song_id": 2, "x": 1.0, "y": 1.0, "cluster": 0, "title": "B", "artist": "Artist B", "genre": "Rock"},
+    ])
+    edges = [GraphEdge(song_id_a=1, song_id_b=2, weight=0.876)]
+
+    fig = network_graph_figure(nodes_df, edges=edges)
+
+    edge_trace = fig.data[0]
+    assert edge_trace.hoverinfo == "text"
+    assert "88% similarity" in list(edge_trace.hovertext)
+
+
+def test_network_graph_figure_hide_isolated_nodes_drops_disconnected_songs():
+    """Off by default -- every node stays visible with zero edges (today's
+    existing behavior, unaffected). Opt-in (hide_isolated_nodes=True) drops
+    any node with no edge touching it, but the selected song stays visible
+    even if it's isolated -- it's the graph's own center, not just another
+    node."""
+    from sonic_explorer.analysis.network_graph import GraphEdge
+
+    nodes_df = pd.DataFrame([
+        {"song_id": 1, "x": 0.0, "y": 0.0, "cluster": 0, "title": "A", "artist": "Artist A", "genre": "Rock"},
+        {"song_id": 2, "x": 1.0, "y": 1.0, "cluster": 0, "title": "B", "artist": "Artist B", "genre": "Rock"},
+        {"song_id": 3, "x": 2.0, "y": 2.0, "cluster": 0, "title": "C", "artist": "Artist C", "genre": "Jazz"},
+    ])
+    edges = [GraphEdge(song_id_a=1, song_id_b=2, weight=0.9)]  # song 3 has no edge at all
+
+    default_fig = network_graph_figure(nodes_df, edges=edges)
+    assert len(default_fig.data[1].customdata) == 3  # song 3 still shown despite zero edges
+
+    hidden_fig = network_graph_figure(nodes_df, edges=edges, hide_isolated_nodes=True)
+    remaining_ids = {row[0] for row in hidden_fig.data[1].customdata}
+    assert remaining_ids == {1, 2}
+
+    centered_fig = network_graph_figure(nodes_df, edges=edges, selected_song_id=3, hide_isolated_nodes=True)
+    centered_ids = {row[0] for row in centered_fig.data[1].customdata}
+    assert 3 in centered_ids  # selected song stays visible even though it's isolated
 
 
 def test_network_graph_figure_click_priority_disables_dragmode():

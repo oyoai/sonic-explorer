@@ -159,6 +159,55 @@ def test_explore_page_list_is_a_dataframe_with_song_columns(explore_at):
     assert {"song_id", "Thumbnail", "Title", "Artist", "Genre"} <= columns
 
 
+def test_explore_page_numeric_dna_columns_are_real_numbers_not_formatted_strings(explore_at):
+    """Real reported bug: Tempo (and every other DNA column) used to be a
+    pre-formatted string ("103 BPM"), so clicking the column header sorted
+    lexicographically -- "103, 258, ..., 40, 99" instead of numeric order.
+    Display formatting now lives in column_config's NumberColumn instead,
+    so the underlying dtype (and therefore the sort) stays numeric."""
+    import pandas as pd
+
+    tables = [d for d in explore_at.get("dataframe") if d.key == "explore_song_table"]
+    df = tables[0].value
+    for col in ["Tempo", "Energy", "Brightness", "Harmonic Complexity", "Rhythmic Density", "Repetition Rate"]:
+        assert pd.api.types.is_numeric_dtype(df[col]), f"{col} is not a numeric dtype: {df[col].dtype}"
+
+
+def test_explore_page_sound_tags_column_never_shows_generic_labels():
+    """Real reported gap: "Music"/"Musical instrument" are excluded from the
+    Sound Tags FACET's embedding text (facets/tags.py's GENERIC_TAG_LABELS,
+    since they dominate almost every song's top scores without describing
+    anything distinguishing) -- but that exclusion never applied to the
+    raw songs.sound_tags column this page's own "Sound Tags" display reads,
+    a genuinely different code path. Finds a real song whose raw tags
+    include a generic label among its top scores and confirms the
+    displayed column excludes it -- a real regression check, not a
+    vacuous one that would pass even with no filtering at all."""
+    import json
+
+    from resources import get_repositories
+
+    song_repo, _, _ = get_repositories()
+    songs = song_repo.list_songs()
+    target = None
+    for s in songs:
+        if not s.sound_tags:
+            continue
+        tags = json.loads(s.sound_tags)
+        top_labels = [label for label, _score in sorted(tags, key=lambda t: t[1], reverse=True)[:3]]
+        if "Music" in top_labels or "Musical instrument" in top_labels:
+            target = s
+            break
+    assert target is not None, "no real song in this library has a generic tag in its raw top-3 -- can't test this"
+
+    at = _run_explore()
+    tables = [d for d in at.get("dataframe") if d.key == "explore_song_table"]
+    row = tables[0].value[tables[0].value["song_id"] == target.id].iloc[0]
+    shown_tags = [t.strip() for t in row["Sound Tags"].split(",") if t.strip()]
+    assert "Music" not in shown_tags
+    assert "Musical instrument" not in shown_tags
+
+
 def test_explore_page_list_row_selection_changes_selected_song():
     """Simulates a real row click the same way this codebase simulates any
     dataframe selection in AppTest (no interactive "click row N" API exists):
@@ -585,6 +634,36 @@ def test_explore_page_shows_song_dna_expander_with_chart(explore_at):
     assert "Song DNA" in expander_labels
     charts = explore_at.get("plotly_chart")
     assert any("mid_dna_bars" in c.proto.id for c in charts)
+
+
+def test_explore_page_song_dna_headers_have_explanatory_help_text(explore_at):
+    """Real request: every measured thing in Song DNA should explain how
+    it's computed and how to interpret it, not just show a number/chart
+    with no context -- st.plotly_chart doesn't support help= in this
+    Streamlit version, so each item's own section header carries it
+    instead (same visible "?" pattern the pre-existing Repetition rate/
+    Beats detected metrics already use)."""
+    headers_by_text = {m.value: m for m in explore_at.markdown if m.value.startswith("######")}
+
+    dna_axes_help = headers_by_text["###### DNA axes"].proto.help
+    assert "beat_track" in dna_axes_help.lower()
+    assert "spectral centroid" in dna_axes_help.lower()
+    assert "chroma" in dna_axes_help.lower()
+
+    matrices_help = headers_by_text["###### Self-similarity matrices"].proto.help
+    assert "recurrence_matrix" in matrices_help.lower()
+    assert "mel-spectrogram" in matrices_help.lower()
+
+    chords_help = headers_by_text["###### Chord progression"].proto.help
+    assert "mode filter" in chords_help.lower()
+    assert "merge pass" in chords_help.lower()
+
+    novelty_help = headers_by_text["###### Novelty curve"].proto.help
+    assert "foote" in novelty_help.lower()
+    assert "checkerboard" in novelty_help.lower()
+
+    loudness_help = headers_by_text["###### Loudness contour"].proto.help
+    assert "rms" in loudness_help.lower()
 
 
 def test_explore_page_song_dna_shows_chord_progression_strip(explore_at):
