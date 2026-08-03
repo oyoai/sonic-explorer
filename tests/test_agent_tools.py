@@ -3,12 +3,16 @@ import pytest
 
 from sonic_explorer.analysis.song_dna import AXES, fit_normalizer
 from sonic_explorer.llm.agent_tools import (
+    MAX_TASTE_ITEMS_PER_CATEGORY,
     execute_tool,
     find_song_by_title,
+    tool_compare_songs,
+    tool_get_random_song,
     tool_get_song_profile,
     tool_search_by_mood_profile,
     tool_search_by_sound_content,
     tool_search_similar_songs,
+    tool_update_taste_profile,
 )
 from sonic_explorer.models import Segment, Song
 from sonic_explorer.pipeline.sound_tagging import serialize_tags
@@ -226,6 +230,155 @@ def test_tool_search_by_sound_content_empty_query_returns_error(repos):
     assert "error" in result
 
 
+def test_tool_compare_songs_returns_axis_differences(repos):
+    song_repo, embedding_repo, _ = repos
+    add_song(song_repo, embedding_repo, "Bright Fast", "A", "Rock",
+              make_dna(tempo_bpm=180.0, brightness=4000.0))
+    add_song(song_repo, embedding_repo, "Dark Slow", "B", "Jazz",
+              make_dna(tempo_bpm=60.0, brightness=500.0))
+    normalizer = fit_normalizer([{axis: getattr(s, axis) for axis in AXES} for s in song_repo.list_songs()])
+
+    result = tool_compare_songs(song_repo, normalizer, "Bright Fast", "Dark Slow")
+
+    assert result["song_a"]["title"] == "Bright Fast"
+    assert result["song_b"]["title"] == "Dark Slow"
+    assert result["axis_differences"]["Tempo"] == pytest.approx(1.0)
+    assert result["axis_differences"]["Brightness"] == pytest.approx(1.0)
+    assert result["overall_dna_distance"] > 0
+    assert result["same_genre"] is False
+
+
+def test_tool_compare_songs_song_not_found(repos):
+    song_repo, embedding_repo, _ = repos
+    add_song(song_repo, embedding_repo, "Song A", "A", "Rock", make_dna())
+    normalizer = fit_normalizer([{axis: getattr(s, axis) for axis in AXES} for s in song_repo.list_songs()])
+
+    result = tool_compare_songs(song_repo, normalizer, "Song A", "Nonexistent")
+    assert "error" in result
+
+
+def test_tool_compare_songs_missing_dna(repos):
+    song_repo, embedding_repo, _ = repos
+    add_song(song_repo, embedding_repo, "Song A", "A", "Rock", make_dna())
+    add_song(song_repo, embedding_repo, "No DNA", "B", "Rock", None)
+    normalizer = fit_normalizer([{axis: getattr(s, axis) for axis in AXES} for s in song_repo.list_songs()])
+
+    result = tool_compare_songs(song_repo, normalizer, "Song A", "No DNA")
+    assert "error" in result
+
+
+def test_tool_compare_songs_rejects_same_song_twice(repos):
+    song_repo, embedding_repo, _ = repos
+    add_song(song_repo, embedding_repo, "Song A", "A", "Rock", make_dna())
+    normalizer = fit_normalizer([{axis: getattr(s, axis) for axis in AXES} for s in song_repo.list_songs()])
+
+    result = tool_compare_songs(song_repo, normalizer, "Song A", "song a")
+    assert "error" in result
+
+
+def test_tool_get_random_song_returns_a_song_with_profile(repos):
+    song_repo, embedding_repo, _ = repos
+    add_song(song_repo, embedding_repo, "Song A", "A", "Rock", make_dna())
+    normalizer = fit_normalizer([{axis: getattr(s, axis) for axis in AXES} for s in song_repo.list_songs()])
+
+    result = tool_get_random_song(song_repo, normalizer)
+
+    assert result["title"] == "Song A"
+    assert "profile" in result
+
+
+def test_tool_get_random_song_respects_genre_filter(repos):
+    song_repo, embedding_repo, _ = repos
+    add_song(song_repo, embedding_repo, "Rock Song", "A", "Rock", make_dna())
+    add_song(song_repo, embedding_repo, "Jazz Song", "B", "Jazz", make_dna())
+    normalizer = fit_normalizer([{axis: getattr(s, axis) for axis in AXES} for s in song_repo.list_songs()])
+
+    result = tool_get_random_song(song_repo, normalizer, genre="Jazz")
+    assert result["title"] == "Jazz Song"
+
+
+def test_tool_get_random_song_empty_genre_returns_error(repos):
+    song_repo, embedding_repo, _ = repos
+    add_song(song_repo, embedding_repo, "Rock Song", "A", "Rock", make_dna())
+    normalizer = fit_normalizer([{axis: getattr(s, axis) for axis in AXES} for s in song_repo.list_songs()])
+
+    result = tool_get_random_song(song_repo, normalizer, genre="Nonexistent Genre")
+    assert "error" in result
+
+
+def test_tool_get_random_song_no_dna_omits_profile(repos):
+    song_repo, embedding_repo, _ = repos
+    add_song(song_repo, embedding_repo, "No DNA Song", "A", "Rock", None)
+    normalizer = fit_normalizer([])
+
+    result = tool_get_random_song(song_repo, normalizer)
+    assert "profile" not in result
+
+
+def test_execute_tool_dispatches_compare_songs(repos):
+    song_repo, embedding_repo, retrieval_service = repos
+    add_song(song_repo, embedding_repo, "Song A", "A", "Rock", make_dna(tempo_bpm=100.0))
+    add_song(song_repo, embedding_repo, "Song B", "B", "Rock", make_dna(tempo_bpm=150.0))
+    normalizer = fit_normalizer([{axis: getattr(s, axis) for axis in AXES} for s in song_repo.list_songs()])
+
+    result = execute_tool(
+        "compare_songs", {"song_title_a": "Song A", "song_title_b": "Song B"},
+        song_repo, embedding_repo, retrieval_service, normalizer, {}, {},
+    )
+    assert "axis_differences" in result
+
+
+def test_execute_tool_dispatches_get_random_song(repos):
+    song_repo, embedding_repo, retrieval_service = repos
+    add_song(song_repo, embedding_repo, "Song A", "A", "Rock", make_dna())
+    normalizer = fit_normalizer([{axis: getattr(s, axis) for axis in AXES} for s in song_repo.list_songs()])
+
+    result = execute_tool(
+        "get_random_song", {},
+        song_repo, embedding_repo, retrieval_service, normalizer, {}, {},
+    )
+    assert result["title"] == "Song A"
+
+
+def test_tool_update_taste_profile_adds_new_tags():
+    profile = {"liked": [], "disliked": []}
+    result = tool_update_taste_profile(profile, liked=["dark", "minimal"], disliked=["heavy drums"])
+    assert result == {"liked": ["dark", "minimal"], "disliked": ["heavy drums"]}
+    assert profile == {"liked": ["dark", "minimal"], "disliked": ["heavy drums"]}
+
+
+def test_tool_update_taste_profile_merges_into_existing_profile():
+    profile = {"liked": ["dark"], "disliked": []}
+    result = tool_update_taste_profile(profile, liked=["low energy"])
+    assert result["liked"] == ["dark", "low energy"]
+
+
+def test_tool_update_taste_profile_deduplicates_case_insensitively():
+    profile = {"liked": ["Dark"], "disliked": []}
+    result = tool_update_taste_profile(profile, liked=["dark", "minimal"])
+    assert result["liked"] == ["Dark", "minimal"]
+
+
+def test_tool_update_taste_profile_ignores_blank_or_empty_tags():
+    profile = {"liked": [], "disliked": []}
+    result = tool_update_taste_profile(profile, liked=["  ", ""], disliked=None)
+    assert result == {"liked": [], "disliked": []}
+
+
+def test_tool_update_taste_profile_no_args_is_a_no_op_read():
+    profile = {"liked": ["dark"], "disliked": ["loud"]}
+    result = tool_update_taste_profile(profile)
+    assert result == {"liked": ["dark"], "disliked": ["loud"]}
+
+
+def test_tool_update_taste_profile_caps_and_drops_oldest_first():
+    profile = {"liked": [f"tag{i}" for i in range(MAX_TASTE_ITEMS_PER_CATEGORY)], "disliked": []}
+    result = tool_update_taste_profile(profile, liked=["newest"])
+    assert len(result["liked"]) == MAX_TASTE_ITEMS_PER_CATEGORY
+    assert "tag0" not in result["liked"]  # oldest dropped
+    assert result["liked"][-1] == "newest"
+
+
 def test_execute_tool_dispatches_correctly(repos):
     song_repo, embedding_repo, retrieval_service = repos
     add_song(song_repo, embedding_repo, "Song A", "Artist A", "Rock", make_dna())
@@ -233,7 +386,7 @@ def test_execute_tool_dispatches_correctly(repos):
 
     result = execute_tool(
         "get_song_profile", {"song_title": "Song A"},
-        song_repo, embedding_repo, retrieval_service, normalizer, {},
+        song_repo, embedding_repo, retrieval_service, normalizer, {}, {},
     )
     assert result["title"] == "Song A"
 
@@ -245,14 +398,14 @@ def test_execute_tool_dispatches_search_by_sound_content(repos):
 
     result = execute_tool(
         "search_by_sound_content", {"query": "crow"},
-        song_repo, embedding_repo, retrieval_service, None, {},
+        song_repo, embedding_repo, retrieval_service, None, {}, {},
     )
     assert result["matches"][0]["title"] == "Crow Song"
 
 
 def test_execute_tool_unknown_tool_name_returns_error(repos):
     song_repo, embedding_repo, retrieval_service = repos
-    result = execute_tool("nonexistent_tool", {}, song_repo, embedding_repo, retrieval_service, None, {})
+    result = execute_tool("nonexistent_tool", {}, song_repo, embedding_repo, retrieval_service, None, {}, {})
     assert "error" in result
 
 
@@ -260,6 +413,18 @@ def test_execute_tool_invalid_arguments_returns_error_not_exception(repos):
     song_repo, embedding_repo, retrieval_service = repos
     result = execute_tool(
         "get_song_profile", {"unexpected_arg": "x"},
-        song_repo, embedding_repo, retrieval_service, None, {},
+        song_repo, embedding_repo, retrieval_service, None, {}, {},
     )
     assert "error" in result
+
+
+def test_execute_tool_dispatches_update_taste_profile(repos):
+    song_repo, embedding_repo, retrieval_service = repos
+    profile = {"liked": [], "disliked": []}
+
+    result = execute_tool(
+        "update_taste_profile", {"liked": ["dark"]},
+        song_repo, embedding_repo, retrieval_service, None, {}, profile,
+    )
+    assert result["liked"] == ["dark"]
+    assert profile["liked"] == ["dark"]  # mutated in place, unlike every other tool

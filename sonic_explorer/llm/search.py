@@ -87,7 +87,7 @@ def nl_search(
     block = tool_use_blocks[0]
     result = _sanitize_tool_result(execute_tool(
         block.name, block.input, song_repo, embedding_repo, retrieval_service,
-        dna_normalizer, normalized_dna_by_song,
+        dna_normalizer, normalized_dna_by_song, {},
     ))
     result["tool_name"] = block.name
     result["tool_input"] = block.input
