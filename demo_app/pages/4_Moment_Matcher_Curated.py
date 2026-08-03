@@ -1,9 +1,13 @@
-"""Local Similarity -- Curated: a static, presentation-safe alternative to
-Local Similarity (pages/1_Moment_Matcher.py) for a live talk where picking
-a song/moment on stage and waiting on retrieval would be a reliability
-risk. That page is completely untouched by this one -- this is a new,
-separate page added alongside it in Demo.py's navigation, not a
-replacement or a redesign of how it works.
+"""Moment Matcher (nav title in Demo.py) -- a static, presentation-safe
+alternative to the live, pick-your-own-song Moment Matcher
+(pages/1_Moment_Matcher.py) for a live talk where picking a song/moment on
+stage and waiting on retrieval would be a reliability risk. That page is
+completely untouched by this one -- it used to sit alongside this page in
+Demo.py's navigation for comparison, but was pulled from the router (not
+deleted) once this curated version became the one actually used on stage;
+see Demo.py's own module docstring for that decision. Filename kept as
+4_Moment_Matcher_Curated.py -- the nav title, not the filename, is what a
+viewer actually sees, same convention every other page in this app follows.
 
 CURATED_PAIRS is six fixed query/match pairs, one per facet, identified by
 song_id + segment_id (not song titles -- exact, unambiguous, and immune to
@@ -24,7 +28,19 @@ and hardcoded here afterward. These pairs were hand-picked, not each
 facet's literal top-1 nearest neighbor by construction, so the percentages
 run lower (48-70%) than the near-100% pairs a real top-1 search tends to
 surface -- an honest number for the pair actually shown, not a cherry-picked
-high score."""
+high score.
+
+LISTEN_FOR gives each tab one line on what to actually pay attention to --
+a match percentage alone doesn't tell a listener what the comparison is
+even about. Phrased in real musical vocabulary (tonal color, phrasing,
+groove) rather than restating the facet name back at the listener ("for
+bass, listen for the bass" says nothing a title doesn't already). For the
+four stem facets (vocal/drums/bass/instrumental), it also says plainly
+that playback is still the full mix, not an isolated track -- no isolated-
+stem audio is ever persisted anywhere in this project (see
+pages/1_Moment_Matcher.py's own module docstring for why), so "listen for
+the voice" could otherwise read as a promise of an a cappella clip that
+isn't actually coming."""
 
 import sys
 from pathlib import Path
@@ -33,10 +49,24 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 import streamlit as st
 
-from plotting import FACET_WAVEFORM_COLORS, QUERY_WAVEFORM_COLOR, inject_match_pill_style, match_pill_html, waveform_figure
+from plotting import (
+    FACET_WAVEFORM_COLORS,
+    QUERY_WAVEFORM_COLOR,
+    inject_keyboard_shortcuts,
+    inject_match_pill_style,
+    match_pill_html,
+    waveform_figure,
+)
 from resources import audio_path_for, cached_full_waveform, facet_display_name, get_repositories
 
 inject_match_pill_style()
+# Same Q/M play-pause-query/match, stop-on-tab-switch shortcuts
+# pages/1_Moment_Matcher.py has -- see inject_keyboard_shortcuts()'s own
+# docstring for the full mechanics. Applies unchanged here: each facet tab
+# below renders query audio before match audio in the same DOM order that
+# function's offsetParent-visibility filtering relies on, so the identical
+# implementation works without modification.
+inject_keyboard_shortcuts()
 
 FACETS = ["sound", "harmony", "vocal", "drums", "bass", "instrumental"]
 
@@ -75,6 +105,25 @@ CURATED_PAIRS: dict[str, dict] = {
     },
 }
 
+# One line per facet on what the match is actually grounded in, since the
+# match percentage alone doesn't tell a listener what to pay attention to.
+# Sound/harmony run on the full mix natively, so no caveat needed; vocal/
+# drums/bass/instrumental run on an isolated Demucs stem's embedding, but
+# no isolated-stem audio is ever persisted (see pages/1_Moment_Matcher.py's
+# own module docstring for the real reason), so playback is still the full
+# mix for those four -- worth saying plainly rather than letting "vocal"
+# sound like you're about to hear an a cappella track.
+LISTEN_FOR: dict[str, str] = {
+    "sound": "Overall texture and production character -- the full mix's timbre, not any single element.",
+    "harmony": "Chord movement and tonal color, underneath the rhythm and melody.",
+    "vocal": "The voice's phrasing and tone -- matched from the isolated vocal, though you're hearing the full track.",
+    "drums": "Rhythm and hit character -- matched from the isolated drum stem, though you're hearing the full track.",
+    "bass": "The bassline's movement and tone -- matched from the isolated bass stem, though you're hearing the full track.",
+    "instrumental": (
+        "The backing instrumentation -- everything but vocals, drums, and bass -- matched from that isolated stem."
+    ),
+}
+
 st.title("Local Similarity — Curated")
 
 song_repo, embedding_repo, retrieval_service = get_repositories()
@@ -87,6 +136,8 @@ for facet, tab in zip(FACETS, facet_tabs, strict=False):
         query_segment = song_repo.get_segment(pair["query_segment_id"])
         match_song = song_repo.get_song(pair["match_song_id"])
         match_segment = song_repo.get_segment(pair["match_segment_id"])
+
+        st.caption(f"🎧 What to listen for: {LISTEN_FOR[facet]}")
 
         query_col, match_col = st.columns(2)
 

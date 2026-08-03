@@ -2,7 +2,7 @@
 Streamlit app whose only job is proving the retrieval system works. Nothing
 in streamlit_app/ or sonic_explorer/ was touched to build this.
 
-Four exploration modes, each its own page (real st.navigation, same
+Three exploration modes, each its own page (real st.navigation, same
 mechanism streamlit_app/Overview.py uses -- chosen over Streamlit's classic
 auto-discovered pages/ directory specifically so each page keeps an
 explicit, human-written sidebar title rather than one derived from its
@@ -16,19 +16,19 @@ numeric prefix, which is why "Audio Space" (file 2) is listed first:
    the main app, reused here as a real, clickable exploration tool rather
    than static illustration. Listed first: it's the broadest, most
    immediately visual entry point into "does this actually work."
-2. Local Similarity (pages/1_Moment_Matcher.py) -- local, facet-level
-   similarity: pick a song and a moment, see what each facet independently
-   retrieves for it.
-3. Local Similarity -- Curated (pages/4_Moment_Matcher_Curated.py) -- a
-   static, presentation-safe sibling of #2: six fixed query/match pairs
-   (one per facet, real precomputed match percentages, no live
-   retrieval_service call at all), for a live talk where picking a
-   song/moment on stage and waiting on retrieval would be a reliability
-   risk. Doesn't touch #2 or its underlying code -- see that page's own
-   module docstring for the full "why" and exactly how its numbers were
-   computed. Listed right after #2 since they cover the same ground, one
-   live and one fixed.
-4. Ask the DJ (pages/3_Ask_The_DJ.py) -- a conversational front end over
+2. Moment Matcher (pages/4_Moment_Matcher_Curated.py) -- local, facet-level
+   similarity: six fixed query/match pairs, one per facet, with real
+   precomputed match percentages and no live retrieval_service call at
+   all -- presentation-reliable by design. The LIVE, pick-your-own-song
+   version (pages/1_Moment_Matcher.py) used to also be listed here for
+   comparison, but was pulled from this app's navigation (not deleted --
+   still a real, working page in the repo, just not wired into this
+   router) once the curated version became the one actually used on
+   stage; a live, latency-and-variance-exposed second entry next to it
+   added risk with no presentation benefit. See pages/
+   4_Moment_Matcher_Curated.py's own module docstring for the full "why"
+   and exactly how its numbers were computed.
+3. Ask the DJ (pages/3_Ask_The_DJ.py) -- a conversational front end over
    the same retrieval system, adapted from streamlit_app/pages/
    6_Ask_The_DJ.py's already-built, already-tested MusicAgent integration
    (see docs/ASK_THE_DJ_HANDOFF.md) -- the agent itself was untouched here,
@@ -62,8 +62,7 @@ st.set_page_config(page_title="Sonic Explorer -- AI Demo", layout="wide")
 
 pg = st.navigation([
     st.Page("pages/2_Visual_Exploration.py", title="Audio Space"),
-    st.Page("pages/1_Moment_Matcher.py", title="Local Similarity"),
-    st.Page("pages/4_Moment_Matcher_Curated.py", title="Local Similarity — Curated"),
+    st.Page("pages/4_Moment_Matcher_Curated.py", title="Moment Matcher"),
     st.Page("pages/3_Ask_The_DJ.py", title="Ask the DJ"),
 ])
 pg.run()

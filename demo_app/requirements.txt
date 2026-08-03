@@ -1,15 +1,17 @@
-# This app needs nothing beyond what's already declared for the main app --
-# no separate dependency set. Two ways this gets satisfied:
+# Streamlit Community Cloud auto-selects a requirements.txt in the SAME
+# DIRECTORY as the app's main file over the repo-root one, regardless of
+# the dashboard's "Requirements file" setting -- confirmed the hard way:
+# a fresh app pointed at demo_app/Demo.py failed at import time with
+# ModuleNotFoundError (plotly), because this file used to be comments-only
+# ("not meant to be passed to pip directly"), so Cloud picked it up anyway
+# and installed nothing beyond bare Streamlit.
 #
-# Local dev: activate the repo's existing .venv (pip install -e . from the
-# repo root) -- already has everything (streamlit, plotly, anthropic,
-# librosa/soundfile, faiss-cpu, ...) per pyproject.toml's base dependencies.
-#
-# Streamlit Community Cloud: if this app is ever deployed as its own
-# separate Streamlit Cloud app pointed at demo_app/Demo.py, set its
-# "Requirements file" field to the repo ROOT requirements.txt (../requirements.txt
-# from this file), not this one -- that root file's `-e .` is what actually
-# installs sonic_explorer and pulls in pyproject.toml's dependencies. This
-# file exists purely so demo_app/ documents its own dependency story without
-# a reader needing to already know that -- it is not meant to be passed to
-# pip directly.
+# -e .. resolves relative to THIS file's own location (pip's documented
+# behavior for local-path editable installs in a requirements.txt -- NOT
+# relative to whatever directory pip happens to be invoked from), so it
+# reliably installs the repo-root sonic_explorer package + pyproject.toml's
+# full base dependencies (streamlit, plotly, anthropic, faiss-cpu, librosa,
+# soundfile, torch, ...) regardless of which requirements.txt Cloud
+# actually reads from -- identical real effect to root requirements.txt's
+# own `-e .`, just resolved from one directory over.
+-e ..
