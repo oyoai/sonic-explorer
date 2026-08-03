@@ -54,7 +54,18 @@ idempotency flag, so it's still cheap even though only one page uses it)."""
 import sys
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parent))
+_APP_DIR = Path(__file__).resolve().parent
+sys.path.insert(0, str(_APP_DIR))
+# Makes `import sonic_explorer` resolve as a plain source-tree import,
+# independent of whether pip's editable install of it actually succeeded --
+# see demo_app/requirements.txt's own comment for the real deployment
+# failure (a relative -e path resolving differently than expected under
+# Streamlit Community Cloud's installer) this is the belt to that file's
+# suspenders. Harmless if sonic_explorer IS already pip-installed (this
+# path just becomes a redundant, lower-priority entry on sys.path;
+# `pip install -e .` already puts the same source directory first via a
+# .pth file, so nothing here overrides it either way).
+sys.path.insert(0, str(_APP_DIR.parent))
 
 import streamlit as st
 

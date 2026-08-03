@@ -1,17 +1,33 @@
-# Streamlit Community Cloud auto-selects a requirements.txt in the SAME
-# DIRECTORY as the app's main file over the repo-root one, regardless of
-# the dashboard's "Requirements file" setting -- confirmed the hard way:
-# a fresh app pointed at demo_app/Demo.py failed at import time with
-# ModuleNotFoundError (plotly), because this file used to be comments-only
-# ("not meant to be passed to pip directly"), so Cloud picked it up anyway
-# and installed nothing beyond bare Streamlit.
+# Explicit third-party package list -- deliberately NOT `-e ..` (an earlier
+# version of this file used that, reasoning that pip resolves a requirements
+# file's local editable-install paths relative to the FILE's own location,
+# not the invocation directory; verified locally, but that local test ran
+# with cwd already inside demo_app/, which couldn't actually distinguish
+# "relative to the file" from "relative to cwd" since they were the same
+# directory -- a real gap in that verification. If Streamlit Community
+# Cloud's installer invokes pip from the repo root instead, `-e ..` resolves
+# to one level ABOVE the repo, finds no pyproject.toml there, and installs
+# nothing -- which is exactly the failure this file is now written to avoid
+# depending on either way.
 #
-# -e .. resolves relative to THIS file's own location (pip's documented
-# behavior for local-path editable installs in a requirements.txt -- NOT
-# relative to whatever directory pip happens to be invoked from), so it
-# reliably installs the repo-root sonic_explorer package + pyproject.toml's
-# full base dependencies (streamlit, plotly, anthropic, faiss-cpu, librosa,
-# soundfile, torch, ...) regardless of which requirements.txt Cloud
-# actually reads from -- identical real effect to root requirements.txt's
-# own `-e .`, just resolved from one directory over.
--e ..
+# This list mirrors pyproject.toml's own `dependencies` exactly (keep them
+# in sync by hand -- small, stable list, not worth a generation step). The
+# first-party `sonic_explorer` package itself is NOT pip-installed by this
+# file at all -- Demo.py inserts the repo root onto sys.path directly (see
+# its own comment), so `import sonic_explorer` resolves as a plain
+# source-tree import, independent of whatever pip/cwd quirks Cloud's
+# installer has. Two completely separate, independently-robust mechanisms
+# for the two different things this app needs: real PyPI packages here,
+# this repo's own package via sys.path.
+numpy
+scipy
+scikit-learn
+faiss-cpu
+plotly
+streamlit
+pandas
+anthropic
+networkx
+librosa
+soundfile
+torch
