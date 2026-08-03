@@ -58,13 +58,24 @@ _APP_DIR = Path(__file__).resolve().parent
 sys.path.insert(0, str(_APP_DIR))
 # Makes `import sonic_explorer` resolve as a plain source-tree import,
 # independent of whether pip's editable install of it actually succeeded --
-# see demo_app/requirements.txt's own comment for the real deployment
-# failure (a relative -e path resolving differently than expected under
-# Streamlit Community Cloud's installer) this is the belt to that file's
-# suspenders. Harmless if sonic_explorer IS already pip-installed (this
-# path just becomes a redundant, lower-priority entry on sys.path;
-# `pip install -e .` already puts the same source directory first via a
-# .pth file, so nothing here overrides it either way).
+# real, repeated deployment failures (ModuleNotFoundError for plotly, then
+# sonic_explorer itself) traced back to demo_app/ ever having its own
+# requirements.txt at all: Streamlit Community Cloud prefers a
+# requirements.txt in the same directory as the main file over the
+# repo-root one, and every version of that local file (relative -e paths,
+# even an explicit PyPI package list) hit some install-time issue on
+# Cloud's actual environment that never reproduced in local testing. Fixed
+# by deleting demo_app/requirements.txt entirely, so Cloud has no local
+# file to prefer and falls back to the repo-root requirements.txt (`-e .`)
+# -- the exact same one the OTHER, already-successfully-deployed app in
+# this repo (streamlit_app/) has used all along, so it's proven to work in
+# Cloud's real environment, not just locally. This sys.path insert is the
+# extra belt on top: even if some future change reintroduces a local
+# requirements.txt that breaks sonic_explorer's install again, the import
+# still succeeds via this explicit path. Harmless if sonic_explorer IS
+# pip-installed (this path just becomes a redundant, lower-priority entry
+# on sys.path; `pip install -e .` already puts the same source directory
+# first via a .pth file, so nothing here overrides it either way).
 sys.path.insert(0, str(_APP_DIR.parent))
 
 import streamlit as st

@@ -18,7 +18,10 @@ streamlit run demo_app/Demo.py
 ```
 
 Uses the repo's existing `.venv` / `pip install -e .` -- no separate
-install step (see `requirements.txt`'s own comment). Set `ANTHROPIC_API_KEY`
+install step. This app deliberately has NO requirements.txt of its own
+(see `Demo.py`'s own comment for the real deployment failures that led to
+deleting one) -- Streamlit Community Cloud deployment relies entirely on
+the repo-root `requirements.txt`. Set `ANTHROPIC_API_KEY`
 (env var or `.streamlit/secrets.toml`) to also see Ask the DJ's live chat;
 everything else runs and shows real matches without it, per this project's
 "LLM features are a value-add, never load-bearing" rule.
@@ -68,9 +71,11 @@ free-form chat section is live.
   Matcher's per-facet song/moment picks (see `resources.py`'s
   `persistent_song_and_moment()` docstring); unused while that page isn't
   in the nav.
-- `requirements.txt` -- NOT documentation-only despite appearances: `-e ..`
-  really does get installed if Streamlit Community Cloud picks this file
-  over the repo-root one (it prefers whichever requirements.txt sits in
-  the same directory as the app's main file) -- see this file's own
-  comment for a real incident where an earlier, comments-only version of
-  this file broke a fresh deployment.
+- No `requirements.txt` here, deliberately -- see `Demo.py`'s own comment.
+  Streamlit Community Cloud prefers a requirements.txt in the same
+  directory as the main file over the repo-root one; every version tried
+  here (a relative `-e ..` path, then an explicit PyPI package list) broke
+  a real deployment in ways that never reproduced locally, so this
+  directory now has none at all, forcing Cloud to fall back to the
+  repo-root file -- the one `streamlit_app/`'s own already-working
+  deployment has used all along.
