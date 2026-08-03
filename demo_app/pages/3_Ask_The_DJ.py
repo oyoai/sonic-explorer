@@ -31,30 +31,26 @@ Q&A stays below the static examples for anyone who wants to see a real call
 happen -- static and live coexist on this page, they're not a replacement
 for each other.
 
-STATIC_EXAMPLES (2 entries, each a list of "turns" -- usually one, but the
-second is a genuine two-turn exchange, see below):
-  A. "do you have any songs with crow sounds?" -- search_by_sound_content,
-     a literal AI-detected-tag keyword match. Resolves to "flekkefjord" by
-     Blear Moon (Experimental), verified live.
-  B. Two turns, demonstrating conversational follow-up refinement, not just
-     a single request/response: turn 1, "Find me something calm and
-     stripped-back." -- search_by_mood_profile alone (the 5-axis DNA
-     nearest-neighbor path, no keyword search involved), resolves to "Do
-     Easy" by Tasseomancy, verified live twice with an identical ranked
-     list of 5 both times. Turn 2, "I like that, find something similar
-     but more upbeat." -- verified live twice; both runs land on the same
-     top match ("Harmony To My Heartbeat" by Sally Seltmann), though the
-     exact tool sequence varied slightly run to run (the model sometimes
-     opened with get_song_profile/update_taste_profile before searching,
-     sometimes went straight to search_by_mood_profile) -- the RICHER of
-     the two verified runs is the one scripted here: get_song_profile
-     (resolving "that" = Do Easy) -> update_taste_profile (logging "I
-     like that" as liked=["calm", "stripped-back"]) -> search_by_mood_profile
-     (energy/tempo nudged up from Do Easy's real profile). Three tools in
-     one follow-up turn -- reference resolution, taste tracking, AND a new
-     search -- the fullest single-turn capability demonstration on this
-     page. Both turns are shown together specifically because turn 2 only
-     makes sense with turn 1's real context in view.
+STATIC_EXAMPLES (1 entry, a genuine two-turn exchange -- an earlier
+revision had a second, single-turn content-search example ahead of this
+one; removed for a tighter page, this one carries the demo alone now):
+turn 1, "Find me something calm and stripped-back." -- search_by_mood_profile
+alone (the 5-axis DNA nearest-neighbor path, no keyword search involved),
+resolves to "Do Easy" by Tasseomancy, verified live twice with an
+identical ranked list of 5 both times. Turn 2, "I like that, find
+something similar but more upbeat." -- verified live twice; both runs
+land on the same top match ("Harmony To My Heartbeat" by Sally Seltmann),
+though the exact tool sequence varied slightly run to run (the model
+sometimes opened with get_song_profile/update_taste_profile before
+searching, sometimes went straight to search_by_mood_profile) -- the
+RICHER of the two verified runs is the one scripted here: get_song_profile
+(resolving "that" = Do Easy) -> update_taste_profile (logging "I like
+that" as liked=["calm", "stripped-back"]) -> search_by_mood_profile
+(energy/tempo nudged up from Do Easy's real profile). Three tools in one
+follow-up turn -- reference resolution, taste tracking, AND a new search
+-- the fullest single-turn capability demonstration on this page. Both
+turns are shown together specifically because turn 2 only makes sense
+with turn 1's real context in view.
 Reply text and tool-call arguments below are copied verbatim from those
 live runs (deploy_data, the same DB this app always uses) -- not written by
 hand to sound plausible. Matched songs are resolved back to real Song rows
@@ -85,9 +81,9 @@ renders the FIRST song a turn mentions (song_ids[:1], matching what the
 DJ's own reply text already foregrounds as its top pick), and the
 historical-replay loop below only calls it for the single most recent
 assistant turn. This does NOT apply to STATIC_EXAMPLES, which render their
-own audio directly -- one fixed player per turn, by design, so example B's
-two turns each get their own player (Do Easy, then River) rather than
-either being dropped.
+own audio directly -- one fixed player per turn, by design, so its two
+turns each get their own player (Do Easy, then Harmony To My Heartbeat)
+rather than either being dropped.
 
 Taste profile panel is an st.expander directly under the "Try it yourself"
 caption (not the sidebar -- an earlier revision put it there; moved
@@ -97,12 +93,12 @@ there's something to show -- no gating: an earlier "wait until the guided
 walkthrough finishes" gate made sense when there was a live scripted flow
 to finish; that gate is gone now and the expander just renders the moment
 liked/disliked has content, full stop. That CAN now happen immediately on
-page load, not only from live chat: see the next paragraph -- example B's
-static card shows update_taste_profile(liked=["calm", "stripped-back"])
+page load, not only from live chat: see the next paragraph -- the static
+example's own card shows update_taste_profile(liked=["calm", "stripped-back"])
 firing during its turn 2, and "Try it yourself" replays that same two-turn
 exchange through a real API call to seed its starting context. Whether
 that replay ALSO calls update_taste_profile isn't guaranteed, though --
-verified directly: re-running example B's exact two prompts live, which
+verified directly: re-running the example's exact two prompts live, which
 tool gets called alongside the mood search varies run to run (sometimes
 update_taste_profile fires, sometimes the model goes straight to
 search_by_mood_profile without it), even though the retrieved song was
@@ -111,28 +107,30 @@ expander may or may not already have content the moment "Try it yourself"
 appears -- an honest, accepted consequence of seeding via a real call
 rather than replaying fixed text, not a bug to chase.
 
-"Try it yourself" continues STATIC_EXAMPLES[1]'s actual conversation, not a
+"Try it yourself" continues STATIC_EXAMPLES[0]'s actual conversation, not a
 fresh one -- explicit direction for this revision ("try it yourself should
 be the continuation of that conversation"). _reset_conversation() achieves
-this by actually replaying example B's two turns through a real
+this by actually replaying that example's two turns through a real
 agent.send_message() call (see its own docstring for the full mechanics),
 producing genuine Anthropic-API-shaped history rather than a hand-built
 approximation -- the one deliberate, bounded exception to this page's
-"static examples, not called live" rule: it happens once per session (or
-on explicit Restart), before any chat is shown, purely to seed invisible
-context for the section that's genuinely live anyway. STATIC_EXAMPLES'
-own card above is completely unaffected by this -- it stays 100% fixed
-text regardless of what the seeding call happens to return, so the two
-never visibly disagree even though they're generated differently.
+"static examples, not called live" rule: it happens once per session,
+before any chat is shown, purely to seed invisible context for the
+section that's genuinely live anyway. STATIC_EXAMPLES' own card above is
+completely unaffected by this -- it stays 100% fixed text regardless of
+what the seeding call happens to return, so the two never visibly
+disagree even though they're generated differently.
 
 Session-state keys (agent_history, agent_display_log, agent_message_count,
 taste_profile) are plain st.session_state, not st.query_params -- same
 precedent Audio Space's own selection state already follows on this app,
 and the one place persistence would be actively wrong: the taste-profile
 expander's own copy explicitly promises "reset on refresh," which a
-persisted-across-refresh session would silently break. "Restart demo"
-resets all of these together -- it only affects the live chat section,
-since STATIC_EXAMPLES has no state to reset."""
+persisted-across-refresh session would silently break. No "Restart demo"
+button on this revision (removed for a cleaner presentation page) -- a
+full browser refresh is the only way to reset the live chat section now,
+which re-triggers _reset_conversation() the same way a first-ever visit
+does (session_state starts empty either way)."""
 
 import sys
 from pathlib import Path
@@ -156,22 +154,6 @@ MAX_MESSAGES_PER_SESSION = 30  # simple abuse/cost guardrail -- see docs/ASK_THE
 # shown together, not just the final one in isolation.
 STATIC_EXAMPLES: list[dict] = [
     {
-        "label": "Content-based search -- search_by_sound_content",
-        "turns": [
-            {
-                "request": "do you have any songs with crow sounds?",
-                "tool_calls": [{"name": "search_by_sound_content", "input": {"query": "crow"}}],
-                "reply": (
-                    "Yes! There's \"flekkefjord\" by Blear Moon — an experimental track with sparse "
-                    "piano and distant crow sounds. If that's the kind of atmospheric, nature-infused "
-                    "vibe you're after, I can dig up something similar for you."
-                ),
-                "song_titles": ["flekkefjord"],
-            },
-        ],
-    },
-    {
-        "label": "Mood-profile search, then a follow-up refinement -- search_by_mood_profile (twice)",
         "turns": [
             {
                 "request": "Find me something calm and stripped-back.",
@@ -219,17 +201,7 @@ STATIC_EXAMPLES: list[dict] = [
     },
 ]
 
-title_col, restart_col = st.columns([5, 1])
-with title_col:
-    st.title("Ask the DJ")
-with restart_col:
-    st.write("")
-    restart_clicked = st.button("Restart demo", key="restart_demo", width="stretch")
-st.caption(
-    "A conversational companion to Audio Space and Local Similarity -- the same library, the same "
-    "underlying search (facet-based matching, mood-profile nearest-neighbor search), just reached "
-    "by describing what you want in plain language instead of picking a song and moment yourself."
-)
+st.title("Ask the DJ")
 
 song_repo, embedding_repo, retrieval_service = get_repositories()
 songs = song_repo.list_songs()
@@ -271,7 +243,6 @@ def _render_static_example(example: dict) -> None:
     uses) rather than a hardcoded song_id, so the audio players stay
     correct even if deploy_data is ever rebuilt and ids shift -- only the
     titles need to still exist."""
-    st.caption(example["label"])
     for turn in example["turns"]:
         with st.chat_message("user"):
             st.markdown(turn["request"])
@@ -285,7 +256,6 @@ def _render_static_example(example: dict) -> None:
                     st.audio(str(audio_path_for(song)))
 
 
-st.markdown("### A few things it can do")
 for example in STATIC_EXAMPLES:
     _render_static_example(example)
     st.divider()
@@ -310,17 +280,17 @@ def _reset_conversation() -> None:
     on screen. This is the one place on this page that DOES make live API
     calls before the presenter types anything -- see this file's module
     docstring for why that's an acceptable, bounded exception to "static,
-    not called live": it only runs once per session (or on explicit
-    Restart), it's invisible scene-setting for the live section specifically
-    (never shown as if it were itself a static example), and it degrades to
-    a plain, unseeded conversation on any failure rather than breaking the
+    not called live": it only runs once per session, it's invisible
+    scene-setting for the live section specifically (never shown as if it
+    were itself a static example), and it degrades to a plain, unseeded
+    conversation on any failure rather than breaking the
     page -- the live chat still works either way, it just won't already
     know about Do Easy/Harmony To My Heartbeat if seeding failed."""
     st.session_state.agent_display_log = []  # [(role, text, song_ids, tool_calls)] -- what actually gets rendered
     st.session_state.agent_message_count = 0
     try:
         with st.spinner("Loading conversation..."):
-            seed_turns = STATIC_EXAMPLES[1]["turns"]
+            seed_turns = STATIC_EXAMPLES[0]["turns"]
             reply1, history1, taste1 = agent.send_message([], seed_turns[0]["request"])
             reply2, history2, taste2 = agent.send_message(history1, seed_turns[1]["request"], taste1)
         st.session_state.agent_history = history2
@@ -335,9 +305,6 @@ def _reset_conversation() -> None:
 
 if "agent_history" not in st.session_state:
     _reset_conversation()
-elif restart_clicked:
-    _reset_conversation()
-    st.rerun()
 
 _profile = st.session_state.taste_profile
 if _profile["liked"] or _profile["disliked"]:
@@ -410,7 +377,7 @@ for i, (role, text, song_ids, tool_calls) in enumerate(display_log):
                 _render_inline_players(song_ids)
 
 if st.session_state.agent_message_count >= MAX_MESSAGES_PER_SESSION:
-    st.info("This session has reached its message limit -- restart the demo above to continue.")
+    st.info("This session has reached its message limit -- refresh the page to continue.")
 else:
     user_message = st.chat_input("Ask about songs in the library...")
     if user_message:
