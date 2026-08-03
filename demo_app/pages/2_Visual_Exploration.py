@@ -94,7 +94,8 @@ facet = st.radio(
 control_col, clear_col = st.columns([3, 1])
 with control_col:
     color_by_label = st.radio(
-        "Color nodes by", options=["Genre", "Cluster", "None"], horizontal=True, key="visual_color_by",
+        "Color nodes by", options=["Genre", "Cluster", "None"], index=2, horizontal=True,
+        key="visual_color_by",
         help="Genre is the fixed, human-assigned FMA label; Cluster is the unsupervised K-means "
              "grouping computed from this facet's own embeddings; None turns off category coloring "
              "entirely so the selected node itself is the only thing that stands out (in green).",

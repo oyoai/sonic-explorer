@@ -119,6 +119,17 @@ def inject_keyboard_shortcuts() -> None:
     design: it exists to make live A/B comparison during the talk faster
     than reaching for the mouse, not to be discovered by a random visitor.
 
+    Whichever clip is actually playing gets a visible highlight (a mint
+    outline/glow, .sonic-now-playing) directly on the <audio> element -- a
+    real, reported ambiguity otherwise: two near-identical player widgets
+    sitting side by side give no visual cue which one a listener is
+    currently hearing. Wired to the native play/pause/ended EVENTS, not
+    toggled by hand inside toggle()/pauseAll(), specifically because those
+    aren't the only ways playback stops -- Streamlit's own end_time
+    handling calls .pause() natively once a segment's 5s is up -- so
+    listening to the real events is the only way this stays correct
+    regardless of why playback stopped, not just when Q/M caused it.
+
     Call-once, guarded by session_state -- same pattern as this file's own
     inject_match_pill_style(), and for a stronger reason than just "avoid
     redundant work": an earlier version of this function called st.iframe()
@@ -207,11 +218,35 @@ def inject_keyboard_shortcuts() -> None:
             if (doc.__momentMatcherShortcutsInstalled) return;
             doc.__momentMatcherShortcutsInstalled = true;
 
+            var style = doc.createElement("style");
+            style.textContent = "audio.sonic-now-playing { outline: 3px solid #7CFCB4; " +
+                "outline-offset: 2px; border-radius: 6px; box-shadow: 0 0 14px rgba(124,252,180,0.65); }";
+            doc.head.appendChild(style);
+
+            // Wired to the native play/pause/ended events, not toggled by hand
+            // inside toggle()/pauseAll() -- those aren't the only ways an
+            // <audio> element starts or stops (Streamlit's own end_time
+            // handling calls .pause() natively once a segment's 5s is up),
+            // so listening to the real events is the only way the highlight
+            // stays correct regardless of WHY playback stopped. WeakSet guards
+            // against attaching duplicate listeners if a still-live element
+            // gets wired again on a later keypress.
+            var wiredAudios = new WeakSet();
+            function ensureHighlightWiring(audio) {
+                if (wiredAudios.has(audio)) return;
+                wiredAudios.add(audio);
+                audio.addEventListener("play", function() { audio.classList.add("sonic-now-playing"); });
+                audio.addEventListener("pause", function() { audio.classList.remove("sonic-now-playing"); });
+                audio.addEventListener("ended", function() { audio.classList.remove("sonic-now-playing"); });
+            }
+
             function visibleAudios() {
-                return Array.prototype.filter.call(
+                var audios = Array.prototype.filter.call(
                     doc.querySelectorAll("audio"),
                     function(a) { return a.offsetParent !== null; }
                 );
+                audios.forEach(ensureHighlightWiring);
+                return audios;
             }
 
             function pauseAll() {
