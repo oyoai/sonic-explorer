@@ -129,7 +129,7 @@ LISTEN_FOR: dict[str, str] = {
     ),
 }
 
-st.title("Local Similarity — Curated")
+st.title("Moment Matcher")
 
 song_repo, embedding_repo, retrieval_service = get_repositories()
 
