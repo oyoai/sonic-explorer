@@ -1,0 +1,15 @@
+# This app needs nothing beyond what's already declared for the main app --
+# no separate dependency set. Two ways this gets satisfied:
+#
+# Local dev: activate the repo's existing .venv (pip install -e . from the
+# repo root) -- already has everything (streamlit, plotly, anthropic,
+# librosa/soundfile, faiss-cpu, ...) per pyproject.toml's base dependencies.
+#
+# Streamlit Community Cloud: if this app is ever deployed as its own
+# separate Streamlit Cloud app pointed at demo_app/Demo.py, set its
+# "Requirements file" field to the repo ROOT requirements.txt (../requirements.txt
+# from this file), not this one -- that root file's `-e .` is what actually
+# installs sonic_explorer and pulls in pyproject.toml's dependencies. This
+# file exists purely so demo_app/ documents its own dependency story without
+# a reader needing to already know that -- it is not meant to be passed to
+# pip directly.

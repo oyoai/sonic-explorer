@@ -1,0 +1,26 @@
+{
+  "sound": {
+    "fma_track_id": 66690,
+    "segment_index": 7
+  },
+  "harmony": {
+    "fma_track_id": 76076,
+    "segment_index": 7
+  },
+  "vocal": {
+    "fma_track_id": 53578,
+    "segment_index": 6
+  },
+  "drums": {
+    "fma_track_id": 11306,
+    "segment_index": 4
+  },
+  "bass": {
+    "fma_track_id": 145756,
+    "segment_index": 7
+  },
+  "instrumental": {
+    "fma_track_id": 41020,
+    "segment_index": 9
+  }
+}
