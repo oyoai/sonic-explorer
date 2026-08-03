@@ -15,20 +15,25 @@ any future title/artist metadata edits) so real Song/Segment rows are
 looked up fresh via song_repo.get_song()/get_segment() at render time,
 keeping playback (waveform + audio player) genuinely real. What's fixed is
 only the RETRIEVAL step: no retrieval_service.query_by_segment() call
-happens anywhere on this page, so there is no live-query latency and no
-run-to-run variance -- always the same six pairs.
+happens anywhere on this page ITSELF, so there is no live-query latency
+and no run-to-run variance -- always the same six pairs.
 
-match_pct per pair is a REAL number, not invented to look plausible: the
-actual cosine similarity between that exact pair's two segment embeddings
-for that facet, computed once offline (L2-normalized dot product between
-embedding_repo.get_vector() for each segment -- the identical computation
-EmbeddingRepository.search()/RetrievalService use internally, just called
-directly on two specific, pre-chosen segments instead of as a k-NN search)
-and hardcoded here afterward. These pairs were hand-picked, not each
-facet's literal top-1 nearest neighbor by construction, so the percentages
-run lower (48-70%) than the near-100% pairs a real top-1 search tends to
-surface -- an honest number for the pair actually shown, not a cherry-picked
-high score.
+Each match IS each query's real top-1 nearest neighbor, not an arbitrary
+paired song -- an earlier version of this page used six hand-picked pairs
+instead (given as a fixed list of two songs per facet, paired first-with-
+second), and a real, reported problem followed directly from that: the
+displayed "match" didn't agree with what the LIVE Moment Matcher
+(pages/1_Moment_Matcher.py) showed for the same query, since a hand-picked
+pair isn't necessarily what real retrieval would surface (those six pairs
+scored a real but unremarkable 48-70% -- nowhere near the 88%+ a genuine
+top-1 typically scores). Fixed by actually calling
+retrieval_service.query_by_segment(query_segment_id, facet_name=facet,
+k=1) once per facet, offline, at authoring time, and hardcoding THAT
+result -- the exact same call the live page makes on every interaction,
+just made once here instead of on every page load. match_pct is that
+call's real .score (max(0.0, score) * 100, same convention as every other
+match-percentage display in this codebase), not invented to look
+plausible.
 
 LISTEN_FOR gives each tab one line on what to actually pay attention to --
 a match percentage alone doesn't tell a listener what the comparison is
@@ -74,34 +79,34 @@ FACETS = ["sound", "harmony", "vocal", "drums", "bass", "instrumental"]
 # See this file's module docstring for exactly how match_pct was computed.
 CURATED_PAIRS: dict[str, dict] = {
     "sound": {
-        "query_song_id": 5, "query_segment_id": 43,      # Sunshine -- Fancy Mike, 0.0s
-        "match_song_id": 14, "match_segment_id": 141,    # Her breath -- arizono kazuhiro, 17.5s
-        "match_pct": 63.5,
+        "query_song_id": 5, "query_segment_id": 43,        # Sunshine -- Fancy Mike, 0.0s
+        "match_song_id": 13, "match_segment_id": 124,      # Another Boring Lunchtime (edit) -- Psychadelik Pedestrian, 0.0s
+        "match_pct": 88.4,
     },
     "harmony": {
-        "query_song_id": 22, "query_segment_id": 219,    # ruby cactus -- I, Cactus, 5.0s
-        "match_song_id": 149, "match_segment_id": 1553,  # Tsymbaly Solo -- Koliadnyky of Kryvorivnia, 17.5s
-        "match_pct": 50.3,
+        "query_song_id": 22, "query_segment_id": 219,      # ruby cactus -- I, Cactus, 5.0s
+        "match_song_id": 231, "match_segment_id": 2417,    # Softer Place To Fall -- Mark Fosson, 15.0s
+        "match_pct": 91.8,
     },
     "vocal": {
-        "query_song_id": 145, "query_segment_id": 1510,  # Malka Moma -- Black Sea Hotel, 15.0s
-        "match_song_id": 66, "match_segment_id": 687,    # I Don't Care -- Mary Lorson, 15.0s
-        "match_pct": 56.5,
+        "query_song_id": 145, "query_segment_id": 1510,    # Malka Moma -- Black Sea Hotel, 15.0s
+        "match_song_id": 143, "match_segment_id": 1485,    # Ibish Aga -- Black Sea Hotel, 5.0s
+        "match_pct": 96.3,
     },
     "drums": {
-        "query_song_id": 218, "query_segment_id": 2274,  # Inspiration -- Abunai!, 10.0s
-        "match_song_id": 212, "match_segment_id": 2210,  # Lovedropper -- Boy Friend, 10.0s
-        "match_pct": 55.8,
+        "query_song_id": 218, "query_segment_id": 2274,    # Inspiration -- Abunai!, 10.0s
+        "match_song_id": 123, "match_segment_id": 1283,    # Hope -- Joao Picoito, 15.0s
+        "match_pct": 94.0,
     },
     "bass": {
-        "query_song_id": 108, "query_segment_id": 1130,  # Hots For Brooklyn Instrumental -- Ryan Cullinane, 22.5s
-        "match_song_id": 18, "match_segment_id": 184,    # Easy -- SPCZ, 17.5s
-        "match_pct": 69.9,
+        "query_song_id": 108, "query_segment_id": 1130,    # Hots For Brooklyn Instrumental -- Ryan Cullinane, 22.5s
+        "match_song_id": 87, "match_segment_id": 903,      # Domino's -- Alaclair Ensemble, 2.5s
+        "match_pct": 93.6,
     },
     "instrumental": {
-        "query_song_id": 136, "query_segment_id": 1410,  # Piece de Tarita -- Eastern Watershed Klezmer Quartet, 0.0s
-        "match_song_id": 141, "match_segment_id": 1472,  # Digital system -- Garage firm, 22.5s
-        "match_pct": 47.9,
+        "query_song_id": 136, "query_segment_id": 1410,    # Piece de Tarita -- Eastern Watershed Klezmer Quartet, 0.0s
+        "match_song_id": 147, "match_segment_id": 1527,    # Ne Si Jo Prodavaj Chiflikot -- Gogofski, 5.0s
+        "match_pct": 89.7,
     },
 }
 
